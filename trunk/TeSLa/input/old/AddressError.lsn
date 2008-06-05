@@ -1,0 +1,9 @@
+VAR INT BASE;
+VAR INT offset;
+
+//ASSERT BASE > 0;
+//ASSERT offset < 0;
+
+LONG vAddr := sign_extend( offset ) + sign_extend( BASE );
+
+SITUATION AddressError WHEN vAddr[2..0] = 0.

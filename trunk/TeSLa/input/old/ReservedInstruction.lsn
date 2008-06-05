@@ -1,0 +1,3 @@
+VAR INT rd;
+
+SITUATION ReservedInstruction WHEN rd # 0 AND rd # 1 AND rd # 2 AND rd # 3.
