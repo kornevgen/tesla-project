@@ -1,0 +1,12 @@
+VAR INT x;
+VAR INT y;
+
+ASSERT x > 6 ;
+
+ASSERT x < y;
+
+ASSERT x * 2 > y ;
+
+z := y.y.y ;
+
+SITUATION test WHEN z < 4 * x .

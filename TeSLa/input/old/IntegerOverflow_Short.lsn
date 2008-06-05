@@ -1,0 +1,22 @@
+VAR INT RS;
+VAR INT immediate;
+
+//ASSERT RS < 0;
+//ASSERT immediate < 0;
+
+//ASSERT WordValue( RS );
+
+// wrong version: (because arguments of '+' have different sizes)
+//LONG temp := RS[31].RS + sign_extend( immediate );
+
+// right version: (with the same sizes of arguments)
+ASSERT RS >= 0 AND RS < 65536;
+ASSERT immediate >= 0 AND immediate < 65536;
+INT temp := RS[15].RS[15..0]; //дополнение нулями старших бит
+temp := temp + immediate;
+
+ASSERT temp[17] # temp[16];
+
+ASSERT temp[15] = 0;
+
+SITUATION IntegerOverflow WHEN temp[17] # temp[15].

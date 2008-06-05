@@ -1,0 +1,15 @@
+<project name="TeSLa" default="dist" basedir=".">
+  <!-- set global properties for this build -->
+  <property name="src" location="src"/>
+  <property name="target" location="src.target"></property>
+
+  <target name="dist">
+  	<antlr:antlr3
+  		xmlns:antlr="antlib:org/apache/tools/ant/antlr"
+  	    target="${src}/TeSLa.g"
+  	    outputdirectory="${target}/ru/kornevgen"
+  	    libdirectory="${target}"
+  	    multithreaded="true"
+  	/>
+  </target>
+</project>

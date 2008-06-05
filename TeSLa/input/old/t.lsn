@@ -1,0 +1,5 @@
+VAR INT immediate;
+
+LONG temp := immediate[ 16 -> 64 ];
+
+SITUATION IntegerOverflow WHEN temp[64] # temp[63].

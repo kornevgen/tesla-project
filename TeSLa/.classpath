@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="src.target"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Program Files/ECLiPSe 5.10/lib/eclipse.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="C:/Documents and Settings/kornevgen5/Desktop/diss!!!!/ConstGen/soft/antlr3/antlr-runtime-3.0.1.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
