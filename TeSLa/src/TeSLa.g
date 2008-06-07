@@ -177,46 +177,6 @@ andexpr returns [StringBuffer predicateName]
 	)
 	;
 	
-//boolexpr_brackets_savecopy returns [StringBuffer predicateName]
-////	: 'NOT' name1 = boolexpr { predicateName = newPredicate( "neg( " + name1 + varsc.getAllVarsAsParameters() + " )\n" );} | 
-//	: ( '(' boolexpr )=> '(' name1 = boolexpr ')' { predicateName = name1; }
-//	| ( expr[0000] COMPARESIGN ) => ar1 = expr[0000] COMPARESIGN ar2 = expr[0000]
-//	{
-//		String compareSign;
-//		String compareSignText = $COMPARESIGN.getText();
-//		
-//		if ( compareSignText.equals( ">" ) )
-//			compareSign = " #> ";
-//		else if ( compareSignText.equals( ">=" ) )
-//			compareSign = " #>= ";
-//		else if ( compareSignText.equals( "<" ) )
-//			compareSign = " #< ";
-//		else if ( compareSignText.equals( "<=" ) )
-//			compareSign = " #=< ";
-//		else if ( compareSignText.equals( "=" ) )
-//			compareSign = " #= ";
-//		else if ( compareSignText.equals( "#" ) )
-//			compareSign = " #\\= ";
-//		else
-//			compareSign = " " + compareSignText + " ";
-//		
-//		predicateName = predsc.newPredicate(
-//				ar1.expressionBody
-//				.append( ar2.expressionBody )
-//				.append( ar1.resultVarName ).append( compareSign ).append( ar2.resultVarName ),
-//				varsc.getAllVarsAsParameters()
-//			);
-//	}
-//	| ID '(' pars = parameters ')'
-//		{
-//			predicateName = predsc.newPredicate( 
-//				new StringBuffer( "predicates:'" ).append( $ID.getText() )
-//				.append( "'( " ).append( pars ).append( " )" ),
-//				varsc.getAllVarsAsParameters()
-//			);
-//		}
-//	;
-
 boolexpr_brackets returns [StringBuffer predicateName]
 options { backtrack = true; }
 @init{ Token first = input.LT(1); }
@@ -529,34 +489,6 @@ parameters returns [StringBuffer pars]
  	   )?
 	;
 	
-type returns[VariableType t]
-	: 'INT' { t = VariableType.INT; }
-	| 'LONG' { t = VariableType.LONG; }
-	| 'NUMBER' { t = VariableType.NUMBER; }	
-	;
-
-//// INTEGER with format checking
-//integer returns [ExpressionResult name] 
-//	: INTEGER
-//		{
-//			name = new ExpressionResult();
-//			
-//     		try
-//      		{
-//     			long value = Long.decode( $INTEGER.text );
-//      			
-//     			long high = value / 4294967296L;
-//      			long low =  value \% 4294967296L;
-//				name.resultVarName = new StringBuffer( "number( " ).append( high ).append( ", " ).append( low ).append( " )" );
-//				name.size = 0; //???;
-// 			}
-//   			catch( NumberFormatException e )
-//       		{
-//          			throw new SemanticException( $INTEGER, e.getMessage() );
-//      		}
-//		}
-//	;
-
 knownId returns [ExpressionResult name]
 	: ID
 		{
