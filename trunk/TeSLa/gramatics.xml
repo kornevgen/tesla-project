@@ -14,10 +14,14 @@
   	/>
   </target>
 	
-	<target name="jardist">
+	<target name="distr.jar">
 		<delete file="${bin}/tesla.jar" />
 		<jar destfile="${bin}/tesla.jar"
 			basedir="${bin}"
 		/>
 	</target>
+	
+	<target name="distr.examples">
+		<zip destfile="${bin}/examples.zip" basedir=""></zip>
+		</target>
 </project>
