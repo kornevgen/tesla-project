@@ -19,7 +19,7 @@
 
 :- export random_result/1.
 
-chunksize( 51 ).  %parameter
+chunksize( 51 ).  %parameter MUST BE EQUAL WITH THE SAME IN Solver class !!!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -226,16 +226,16 @@ concat( Z, X, SizeOfX, Y, SizeOfY ) :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-pow( Y, X, SizeOfX, N ) :-
-	sizeof( X, SizeOfX ),
-	
-	chunksize( C ),
-	LastBitCount is SizeOfX mod C,
-	
-	X = [ Xh | Xt ],
-	
-	exp2( DLBC, LastBitCount ),
-	Xh #= Xa * 2^LBC + Xb,
+%pow( Y, X, SizeOfX, N ) :-
+%	sizeof( X, SizeOfX ),
+%	
+%	chunksize( C ),
+%	LastBitCount is SizeOfX mod C,
+%	
+%	X = [ Xh | Xt ],
+%	
+%	exp2( DLBC, LastBitCount ),
+%	Xh #= Xa * 2^LBC + Xb,
 	
 	
 

@@ -41,7 +41,7 @@ package ru.kornevgen;
 	PredicatesController predsc;
 }
 
-program[String path] returns [java.util.List<LogicalVariable> parameters]
+program[String path, boolean onlyParameters] returns [java.util.List<LogicalVariable> parameters]
 	: { 
 		varsc = new VarsController();
 		predsc = new PredicatesController();
@@ -51,7 +51,6 @@ program[String path] returns [java.util.List<LogicalVariable> parameters]
 		ecl.append(":- module( main )." ).append(eoln);
 		ecl.append(":- lib( ic ).").append(eoln);
 		ecl.append(":- use_module( numbers ).").append(eoln);
-//		ecl.append(":- use_module( functions ).").append(eoln);
 //		ecl.append(":- use_module( predicates ).").append(eoln);
 		ecl.append(eoln);
 	  }
@@ -61,6 +60,9 @@ program[String path] returns [java.util.List<LogicalVariable> parameters]
 				ecl.append( varsc.types() );
 				
 				parameters = varsc.getVarsCopy();
+				
+				if ( onlyParameters )
+					return parameters;
 			}
 		(operator)*
 		situationOperator '.'
@@ -82,7 +84,7 @@ program[String path] returns [java.util.List<LogicalVariable> parameters]
 				}
 				catch( java.io.IOException e )
 				{
-					System.out.println( e );
+					System.err.println( e );
 				}
 			}
 	;
@@ -250,7 +252,7 @@ addexpr returns [ExpressionResult name]
 					// do calculations and return
 					name = new ExpressionResult();
 					name.resultVarName = pred.bitlenMethod.c( name1.resultVarName, name2.resultVarName );
-					name.size = -1;
+					name.size = -1; // calculate later
 					return name;
 				}
 			}
@@ -296,7 +298,7 @@ mulexpr returns [ExpressionResult name]
 					// do calculations and return
 					name = new ExpressionResult();
 					name.resultVarName = BitLen.mul( name1.resultVarName, name2.resultVarName );
-					name.size = -1;
+					name.size = -1; // calculate later
 					return name;
 				}
 			}
@@ -332,7 +334,7 @@ arithmterm returns [ExpressionResult name]
 		{
 			name = new ExpressionResult();
 			name.resultVarName = new StringBuffer( $INTEGER.text );
-			name.size = -1;
+			name.size = -1; // calculate later
 		}
 	| '(' name2 = expr ')' { name = name2; }
 	;

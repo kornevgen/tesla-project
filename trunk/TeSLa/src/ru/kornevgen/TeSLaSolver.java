@@ -20,6 +20,7 @@ import com.parctechnologies.eclipse.Fail;
 
 public abstract class TeSLaSolver 
 {
+	///THIS CONSTANT MUST BE EQUAL TO THE SAME IN NUMBERS.ecl !!!!!!
 	private final static int WORD_VALUE = 51;
 	
 	/**
@@ -40,7 +41,7 @@ public abstract class TeSLaSolver
 			TeSLaLexer lexer = new TeSLaLexer( inputStream );
 			CommonTokenStream tokens = new CommonTokenStream(lexer);
 			TeSLaParser parser = new TeSLaParser(tokens);
-			return parser.program( output );
+			return parser.program( output, false );
 		}
 		catch( IOException e )
 		{
@@ -64,7 +65,31 @@ public abstract class TeSLaSolver
 	{
 		return generateValues( callECLiPSe( input, fixedValues ), fixedValues );
 	}
-	
+
+	/**
+	 * не парсит описание тестовой ситуации полностью, а лишь извлекает из него параметры операции
+	 * 
+	 * @param input					путь к файлу с описанием тестовой ситуации
+	 * @return						список переменных (его можно заполнять значениями)
+	 * @throws IOException			если проблема с файлом описания тестовой ситуации (например, не существует)
+	 * @throws RecognitionException если файл содержит нечто, что не является описанием тестовой ситуации
+	 */
+	public static List<LogicalVariable> getParameters( final String input )
+		throws IOException, RecognitionException
+	{
+		try
+		{
+			CharStream inputStream = new ANTLRFileStream( input );
+			TeSLaLexer lexer = new TeSLaLexer( inputStream );
+			CommonTokenStream tokens = new CommonTokenStream(lexer);
+			TeSLaParser parser = new TeSLaParser(tokens);
+			return parser.program( null, true );
+		}
+		catch( IOException e )
+		{
+			throw e;
+		}
+	}
 	
     /**
      * запускает ECLiPSe с учетом заданных значений некоторых параметров и возвращает результат выполнения в виде ECLiPSe-терма
@@ -143,7 +168,7 @@ public abstract class TeSLaSolver
 			else
 				a = BigInteger.valueOf( (Long)arg.get( 0 ) );
 			BigInteger pow = BigInteger.valueOf( 2 ).pow( WORD_VALUE );
-			System.out.print( "( " + arg.get(0) );
+//			System.out.print( "( " + arg.get(0) );
 			if ( arg.size() > 1 )
 				for( Object argValue : arg.subList(1, arg.size()) )
 				{
@@ -152,9 +177,9 @@ public abstract class TeSLaSolver
 						a = a.multiply( pow ).add( BigInteger.valueOf( ((Integer)argValue).longValue() ));
 					else
 						a = a.multiply( pow ).add( BigInteger.valueOf( ((Long)argValue).longValue() ));
-					System.out.print( ", " + argValue );
+//					System.out.print( ", " + argValue );
 				}
-			System.out.println(" )" );
+//			System.out.println(" )" );
 			values.get(i).setValue( a );
 		}
 		

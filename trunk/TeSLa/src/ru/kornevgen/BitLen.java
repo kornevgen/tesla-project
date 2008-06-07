@@ -12,7 +12,7 @@ public class BitLen
 		{
 			pow++;
 			bitpower = bitshift( bitpower );
-			System.out.println( bitpower );
+//			System.out.println( bitpower );
 		} while ( greaterorequal( number, bitpower ) );
 		
 		return pow;
