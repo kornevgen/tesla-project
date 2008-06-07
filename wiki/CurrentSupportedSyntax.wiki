@@ -1,9 +1,9 @@
 #summary Правильно транслируемая на данный момент часть грамматики
 {{{
 program :
-	( 'VAR' ID ':' INTEGER )-list[ ';' ]
-	( 'ASSERT' boolexpr | ID ':=' expr )-list[ ';' ]
-	'SITUATION' boolexpr 'IS' ID '.'
+	( 'VAR' ID ':' INTEGER )-list[ ';' ] //параметры инструкции
+	( 'ASSERT' boolexpr | ID ':=' expr )-list[ ';' ] //операторы
+	'SITUATION' boolexpr 'IS' ID '.'  //предикат тестовой ситуации
 	;
 	
 boolexpr : boolexpr_brackets-list[ 'AND', 'OR' ] ;
@@ -11,7 +11,7 @@ boolexpr : boolexpr_brackets-list[ 'AND', 'OR' ] ;
 	
 boolexpr_brackets 
 	: '(' boolexpr ')'
-	| expr ( '>+' | '<+' | '>=+' | '<=+' | '=' | '#' ) expr
+	| expr ( '>+' | '<+' | '>=+' | '<=+' | '=' | '#' ) expr // плюсик означает,что операции беззнаковые
 	;
 
 expr : bit_expr | ID | INTEGER ;
@@ -20,15 +20,13 @@ bit_expr : bit_bound_term-list[ '.' ] ;
 
 bit_bound_term 
 	: bit_term
-	| bit_term '[' INTEGER ']'
-	| bit_term '[' INTEGER .. INTEGER ']'
+	| bit_term '[' INTEGER ']'  // взятие бита с данным номером (биты нумеруются с 0)
+	| bit_term '[' INTEGER .. INTEGER ']' // взятие диапазона бит (от старшего к младшему)
 	;
 	
 bit_term : ID | INTEGER | '(' bit_expr ')' ;
 
 ID	: ('a'..'z'| 'A'..'Z' ) ('a'..'z' | '_' | 'A'..'Z' | '0'..'9')*;
 INTEGER :  ('0' .. '9' )+;
-WS  :  (' '|'\r'|'\t'|'\u000C'|'\n')  ;
-COMMENT :   '/*' .* '*/' ;
-LINE_COMMENT : '//' ~('\n'|'\r')* '\r'? '\n' ;
-}}}
+
+возможны многострочные комментарии и однострочные в стиле Java
