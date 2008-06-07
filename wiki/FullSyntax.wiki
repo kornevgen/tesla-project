@@ -1,5 +1,5 @@
 #summary Грамматика языка
-
+{{{
 program :
 	( 'VAR' ID ':' INTEGER )-list[ ';' ]
 	( 'ASSERT' boolexpr | ID ':=' expr )-list[ ';' ]
@@ -41,3 +41,4 @@ INTEGER :  ('0' .. '9' )+;
 WS  :  (' '|'\r'|'\t'|'\u000C'|'\n')  ;
 COMMENT :   '/*' .* '*/' ;
 LINE_COMMENT : '//' ~('\n'|'\r')* '\r'? '\n' ;
+}}}
