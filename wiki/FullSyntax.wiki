@@ -1,0 +1,43 @@
+#summary Грамматика языка
+
+program :
+	( 'VAR' ID ':' INTEGER )-list[ ';' ]
+	( 'ASSERT' boolexpr | ID ':=' expr )-list[ ';' ]
+	'SITUATION' boolexpr 'IS' ID '.'
+	;
+	
+boolexpr : boolexpr_brackets-list[ 'AND', 'OR' ] ;
+// AND приоритетнее, чем OR
+	
+boolexpr_brackets 
+	: '(' boolexpr ')'
+	| expr ( '>-' | '<-' | '>=-' | '<=-' | '>+' | '<+' | '>=+' | '<=+' | '=' | '#' ) expr
+	| ID '(' ID-list[','] ')'
+	;
+
+expr : arithterm-list[ '+', '-', '><+', '><-' ] ;
+// умножение (><+ и ><-) имеет выше приоритет, чем сложение и вычитание
+
+arithmterm 	: '(' expr ')' | bit_expr | ID | INTEGER ;
+
+bit_expr : bit_bound_term-list[ '.' ] ;
+
+bit_bound_term 
+	: bit_term
+	| bit_term '[' INTEGER ']'
+	| bit_term '[' INTEGER .. INTEGER ']'
+	| bit_term '^' INTEGER
+	;
+	
+bit_term 
+	: '(' INTEGER ')' bit_term2
+	| bit_term2
+	;
+
+bit_term2 : ID | INTEGER | '(' bit_expr ')' ;
+
+ID	: ('a'..'z'| 'A'..'Z' ) ('a'..'z' | '_' | 'A'..'Z' | '0'..'9')*;
+INTEGER :  ('0' .. '9' )+;
+WS  :  (' '|'\r'|'\t'|'\u000C'|'\n')  ;
+COMMENT :   '/*' .* '*/' ;
+LINE_COMMENT : '//' ~('\n'|'\r')* '\r'? '\n' ;
