@@ -34,16 +34,4 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>docs/todo.txt</name>
-			<type>1</type>
-			<location>C:/Documents and Settings/kornevgen5/Desktop/diss!!!!/ConstGen/todo.txt</location>
-		</link>
-		<link>
-			<name>docs/todo64.txt</name>
-			<type>1</type>
-			<location>C:/Documents and Settings/kornevgen5/Desktop/diss!!!!/ConstGen/todo64.txt</location>
-		</link>
-	</linkedResources>
 </projectDescription>
