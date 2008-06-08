@@ -8,6 +8,10 @@
 :- export lessUnsigned/3.
 :- export greaterORequalUnsigned/3.
 :- export lessORequalUnsigned/3.
+:- export greaterSigned/3.
+:- export lessSigned/3.
+:- export greaterORequalSigned/3.
+:- export lessORequalSigned/3.
 :- export notequal/3.
 :- export equal/3.
 
@@ -93,6 +97,56 @@ lessORequalUnsigned( X, Y, Size ) :-
 lessORequalUnsigned( [], [], 0 ).
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+greaterSigned( X, Y, Size ) :-
+	sizeof( X, Size ), sizeof( Y, Size ),
+
+	X = [ Xh | Xt ], Y = [ Yh | Yt ],
+	
+	chunksize( C ),
+	M is Size mod C,
+	( M = 0 -> C1 is C - 1 ; C1 is M - 1 ),
+	exp2( DC1, C1 ),
+	
+	( Xh #< DC1,  % X>=0
+		( Yh #>= DC1   % Y< 0
+		; Yh #< DC1, greaterUnsigned( X, Y, Size ) )  %Y>=0 
+	; Xh #>= DC1, % X< 0
+		Yh #>= DC1, % Y< 0
+		greaterUnsigned( Y, X, Size )
+	).
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+lessSigned( X, Y, Size ) :-
+	greaterSigned( Y, X, Size ).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+greaterORequalSigned( X, Y, Size ) :-
+	sizeof( X, Size ), sizeof( Y, Size ),
+
+	X = [ Xh | Xt ], Y = [ Yh | Yt ],
+	
+	chunksize( C ),
+	M is Size mod C,
+	( M = 0 -> C1 is C - 1 ; C1 is M - 1 ),
+	exp2( DC1, C1 ),
+
+	( Xh #< DC1,  % X>=0
+		( Yh #>= DC1   % Y< 0
+		; Yh #< DC1, greaterORequalUnsigned( X, Y, Size ) )  %Y>=0 
+	; Xh #>= DC1, % X< 0
+		Yh #>= DC1, % Y< 0
+		greaterORequalUnsigned( Y, X, Size )
+	).
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+lessORequalSigned( X, Y, Size ) :-
+	greaterORequalSigned( Y, X, Size ).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 notequal( X, Y, Size ) :-
 	sizeof( X, Size ), sizeof( Y, Size ),
