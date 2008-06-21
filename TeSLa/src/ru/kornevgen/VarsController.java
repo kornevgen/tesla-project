@@ -26,7 +26,7 @@ public class VarsController
 		// conformance of string representation and number representation
 		for( LogicalVariable var : vars.values() )
 		{
-			sb.append( "numbers:number2number( _" ).append( var.getCanonicalName() )
+			sb.append( "numbers:nstring2nlist( _" ).append( var.getCanonicalName() )
 			.append( ", " ).append( var.current() )
 			.append( ", " ).append( var.size )
 			.append( "),").append( eoln );
@@ -81,7 +81,7 @@ public class VarsController
 		for( LogicalVariable var : parameters )
 		{
 			result	
-			.append( "numbers:number2number( _" )
+			.append( "numbers:nlist2nstring( _" )
 				.append(var.getCanonicalName()).append(", ")
 				.append( var.getBaseName() ).append( ", " )
 				.append( var.size )

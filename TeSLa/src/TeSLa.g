@@ -317,6 +317,7 @@ mulexpr returns [ExpressionResult name]
 							
 				.append( pred ).append( "( " )
 					.append( name.resultVarName ).append( ", " )
+					.append( name.size ).append( ", " )					
 					.append( name1.resultVarName ).append( ", " )
 					.append( name2.resultVarName ).append( ", " )
 					.append( name1.size )
@@ -445,7 +446,7 @@ bit_bound_term returns [ExpressionResult name]
 				}
 				name.expressionBody
 				.append( name1.expressionBody )
-				.append( "numbers:power( " )
+				.append( "numbers:pow( " )
 					.append( name.resultVarName ).append( ", _, " )
 					.append( name1.resultVarName ).append( ", " )
 					.append( name1.size ).append( ", " )
@@ -460,16 +461,24 @@ bit_term returns [ExpressionResult name]
 	: ('(' INTEGER ')')=> '(' newsize = INTEGER ')' name1 = bit_term2
 			{
 				name = new ExpressionResult();
-				name.resultVarName = varsc.newVar();
 				name.size = Integer.parseInt( newsize.getText() );
-				name.expressionBody
-					.append( name1.expressionBody )
-					.append( "functions:'sign_extend'( " )
-						.append( name.resultVarName ).append( ", " )
-						.append( name1.resultVarName ).append( ", " )
-						.append( name1.size ).append( ", " )
-						.append( newsize.getText() )
-					.append( " )," ).append( eoln );
+				if ( name.size >= name1.size )
+				{
+					name.resultVarName = name1.resultVarName;
+					name.expressionBody = name1.expressionBody;
+				}
+				else
+				{
+					name.resultVarName = varsc.newVar();
+					name.expressionBody
+						.append( name1.expressionBody )
+						.append( "numbers:signExtend( " )
+							.append( name.resultVarName ).append( ", " )
+							.append( name1.resultVarName ).append( ", " )
+							.append( name1.size ).append( ", " )
+							.append( newsize.getText() )
+						.append( " )," ).append( eoln );
+				}
 			}
 	| name1 = bit_term2 { name = name1; }
 	;
