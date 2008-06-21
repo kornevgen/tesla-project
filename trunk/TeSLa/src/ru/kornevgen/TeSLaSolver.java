@@ -162,21 +162,15 @@ public abstract class TeSLaSolver
 		for( int i = 0; i < parameters.size(); i++ )
 		{
 			List arg = (List)logicalResult.arg( i + 2 );
-			BigInteger a;
-			if ( arg.get(0) instanceof Integer )
-				a = BigInteger.valueOf( (Integer)arg.get( 0 ) );
-			else
-				a = BigInteger.valueOf( (Long)arg.get( 0 ) );
+			assert arg.get(0) instanceof String;
+			BigInteger a = BigInteger.valueOf( Long.parseLong( (String)arg.get(0) )); 
 			BigInteger pow = BigInteger.valueOf( 2 ).pow( WORD_VALUE );
 //			System.out.print( "( " + arg.get(0) );
 			if ( arg.size() > 1 )
 				for( Object argValue : arg.subList(1, arg.size()) )
 				{
 					// a := a * 2^C + argValue
-					if ( argValue instanceof Integer )
-						a = a.multiply( pow ).add( BigInteger.valueOf( ((Integer)argValue).longValue() ));
-					else
-						a = a.multiply( pow ).add( BigInteger.valueOf( ((Long)argValue).longValue() ));
+					a = a.multiply( pow ).add( BigInteger.valueOf( Long.parseLong((String)argValue) ));
 //					System.out.print( ", " + argValue );
 				}
 //			System.out.println(" )" );
