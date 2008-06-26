@@ -7,34 +7,31 @@ program :
 	;
 	
 boolexpr : boolexpr_brackets-list[ 'AND', 'OR' ] ;
-// AND приоритетнее, чем OR
+// AND имеет более высокий приоритет, чем OR
 	
 boolexpr_brackets 
-	: '(' boolexpr ')'
+	: ID '(' ID-list[','] ')'
+	| '(' boolexpr ')'
 	| expr ( '>-' | '<-' | '>=-' | '<=-' | '>+' | '<+' | '>=+' | '<=+' | '=' | '#' ) expr
-	| ID '(' ID-list[','] ')'
 	;
 
-expr : arithterm-list[ '+', '-', '><+', '><-' ] ;
+expr : bit_expr-list[ '+', '-', '><+', '><-' ] ;
 // умножение (><+ и ><-) имеет выше приоритет, чем сложение и вычитание
 
-arithmterm 	: '(' expr ')' | bit_expr | ID | INTEGER ;
-
-bit_expr : bit_bound_term-list[ '.' ] ;
-
-bit_bound_term 
+bit_expr 
 	: bit_term
+	| '(' INTEGER ')' bit_expr  // знаковое расширение
+	| bit_expr '.' bit_expr 	// конкатенация
 	| bit_term '[' INTEGER ']'
 	| bit_term '[' INTEGER .. INTEGER ']'
 	| bit_term '^' INTEGER
 	;
-	
-bit_term 
-	: '(' INTEGER ')' bit_term2
-	| bit_term2
-	;
+// "знаковое расширение" имеет здесь самый низкий приоритет
+// затем следующий приоритет у конкатенации
+// все остальные операции имеют одинаковый самый высокий здесь приоритет
 
-bit_term2 : ID | INTEGER | '(' bit_expr ')' ;
+bit_term 
+	: ID | INTEGER | '(' expr ')' ;
 
 ID	: ('a'..'z'| 'A'..'Z' ) ('a'..'z' | '_' | 'A'..'Z' | '0'..'9')*;
 INTEGER :  ('0' .. '9' )+;
