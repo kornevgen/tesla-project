@@ -4,6 +4,8 @@
 	<property name="bin" location="bin" />
 	<property name="clp" location="clp" />
 	<property name="tools" location="tools" />
+	<property name="examples.dir" location="input" />
+	<property name="src.sample" location="src.sample" />
 	<property name="version.file" location="${tools}/version.properties" />
 
 	<taskdef
@@ -52,7 +54,7 @@
 		        filename="${bin}/${tesla.jar}" 
 		        targetfilename="${tesla.jar}"
 		        summary="Version ${tesla.version2} of TeSLa solver"
-		        labels="solver-modules, Featured" />
+		        labels="Featured" />
 	</target>
 	
 	<target name="distr.clp">
@@ -85,6 +87,42 @@
 		        filename="${bin}/${clp.zip}" 
 		        targetfilename="${clp.zip}"
 		        summary="Version ${clp.version2} of constraint modules"
-		        labels="logic-modules, Featured, Type-Archive" />
+		        labels="Featured, Type-Archive" />
+	</target>
+	
+	<target name="distr.examples">
+		<property file="${version.file}"/>
+		<property name="examples.version.x.y.z" value="${examples.version.major}.${examples.version.minor}.${examples.version.build}" />
+		<property name="examples.version" value="${examples.version.x.y.z}-${examples.version.status}-${examples.version.date}" />
+
+		<delete file="${bin}/examples-${examples.version}.zip" />
+		<!--хорошо бы поместить сюда операцию, убирающую метку Featured с прошлой выкладки на сервере google...-->
+
+		<tstamp>
+	      <format property="examples.version.date.new" pattern="yyMMdd"/>
+	    </tstamp>
+
+	    <propertyfile file="${version.file}"> 
+	      <entry key="examples.version.build" type="int" default="0" operation="+"/>
+	      <entry key="examples.version.date"  value="${examples.version.date.new}"/>
+	    </propertyfile>
+		
+		<property prefix="new" file="${version.file}"/>
+		<property name="examples.version2.x.y.z" value="${new.examples.version.major}.${new.examples.version.minor}.${new.examples.version.build}" />
+		<property name="examples.version2" value="${examples.version2.x.y.z}-${new.examples.version.status}-${new.examples.version.date}" />
+		<property name="examples.zip" value="examples-${examples.version2}.zip" />
+		
+		<zip destfile="${bin}/${examples.zip}">
+			<fileset dir="${examples.dir}" />
+			<fileset dir="${src.sample}" />
+		</zip>
+		<gcupload 
+		        username="${google.username}" 
+		        password="${google.passwd}" 
+		        projectname="tesla-project" 
+		        filename="${bin}/${examples.zip}" 
+		        targetfilename="${examples.zip}"
+		        summary="Version ${examples.version2} of examples"
+		        labels="Featured, Type-Archive" />
 	</target>
 </project>

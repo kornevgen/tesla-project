@@ -2,9 +2,7 @@ grammar TeSLa;
 
 options
 {
-	//k = 10;
 	language=Java;
-//	backtrack=true;
 }
 
 @header {
