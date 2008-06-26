@@ -1,4 +1,5 @@
 #summary Грамматика языка
+#labels Featured
 {{{
 program :
 	( 'VAR' ID ':' INTEGER )-list[ ';' ]
