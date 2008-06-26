@@ -2,7 +2,6 @@ package ru.kornevgen;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,9 +19,6 @@ import com.parctechnologies.eclipse.Fail;
 
 public abstract class TeSLaSolver 
 {
-	///THIS CONSTANT MUST BE EQUAL TO THE SAME IN NUMBERS.ecl !!!!!!
-	private final static int WORD_VALUE = 51;
-	
 	/**
 	 * компилирует данный файл с описанием ситуации в 
 	 * промежуточное представление
@@ -161,20 +157,8 @@ public abstract class TeSLaSolver
     			
 		for( int i = 0; i < parameters.size(); i++ )
 		{
-			List arg = (List)logicalResult.arg( i + 2 );
-			assert arg.get(0) instanceof String;
-			BigInteger a = BigInteger.valueOf( Long.parseLong( (String)arg.get(0) )); 
-			BigInteger pow = BigInteger.valueOf( 2 ).pow( WORD_VALUE );
-//			System.out.print( "( " + arg.get(0) );
-			if ( arg.size() > 1 )
-				for( Object argValue : arg.subList(1, arg.size()) )
-				{
-					// a := a * 2^C + argValue
-					a = a.multiply( pow ).add( BigInteger.valueOf( Long.parseLong((String)argValue) ));
-//					System.out.print( ", " + argValue );
-				}
-//			System.out.println(" )" );
-			values.get(i).setValue( a );
+			String arg = (String)logicalResult.arg( i + 2 );			
+			values.get(i).setValue( BitLen.string2bigint( arg ) );
 		}
 		
 		return values;

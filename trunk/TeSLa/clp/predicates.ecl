@@ -21,8 +21,8 @@
 'SNaN_single'( X, 32 ) :-
 	numbers:sizeof( X, 32 ),
 	numbers:nstring2nlist( "510", Degree, 9 ),
-	numbers:getbits( Degree, X, 30, 22 ),
-	numbers:getbits( A, X, 21, 0 ),
+	numbers:getbits( Degree, X, 32, 30, 22 ),
+	numbers:getbits( A, X, 32, 21, 0 ),
 	numbers:nstring2nlist( "0", Nol, 22 ),
 	numbers:notequal( A, Nol, 22 ). 
 
@@ -31,14 +31,14 @@
 'QNaN_single'( X, 32 ) :-
 	numbers:sizeof( X, 32 ),
 	numbers:nstring2nlist( "511", Degree, 9 ),
-	numbers:getbits( Degree, X, 30, 22 ).
+	numbers:getbits( Degree, X, 32, 30, 22 ).
 
 % X[62..51]=4094  /\  X[50..0]#0
 'SNaN_double'( X, 64 ) :-
 	numbers:sizeof( X, 64 ),
 	numbers:nstring2nlist( "4094", Degree, 12 ),
-	numbers:getbits( Degree, X, 62, 51 ),
-	numbers:getbits( A, X, 50, 0 ),
+	numbers:getbits( Degree, X, 64, 62, 51 ),
+	numbers:getbits( A, X, 64, 50, 0 ),
 	numbers:nstring2nlist( "0", Nol, 51 ),
 	numbers:notequal( A, Nol, 51 ). 
 
@@ -46,4 +46,4 @@
 'QNaN_double'( X, 64 ) :-
 	numbers:sizeof( X, 64 ),
 	numbers:nstring2nlist( "4095", Degree, 12 ),
-	numbers:getbits( Degree, X, 62, 51 ).
+	numbers:getbits( Degree, X, 64, 62, 51 ).

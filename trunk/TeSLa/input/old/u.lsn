@@ -1,5 +1,0 @@
-VAR INT x;
-
-ASSERT x = 0 - 1;
-
-SITUATION x >+ 0 IS IntegerOverflow.
