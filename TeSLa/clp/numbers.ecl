@@ -212,7 +212,7 @@ getbits( Bits, X, SizeOfX, EndIndex, StartIndex ) :-
 	IStart is StartIndex mod C,
 	IEnd is EndIndex mod C,
 	
-	( NStart #= NEnd ->
+	( NStart #= NEnd,
 		Bits = [ B ],
 		getbitsFromNumber( B, XhStart, IEnd, IStart )
 	; NStart #< NEnd,
@@ -338,6 +338,7 @@ powCycle( Result, CurrentY, SizeOfCurrentY, X, SizeOfX, N, Tail ) :-
 
 fillConst( [], 0, _	 ) .
 fillConst( [ Const | L ], Len, Const ) :-
+	Len > 0,
 	Len1 is Len - 1,
 	fillConst( L, Len1, Const ).
 
@@ -385,12 +386,12 @@ mulUnsigned( Z, SizeOfZ, X, Y, SizeOfX ) :-
 	mul2chunk( Z1, X, Yh, 0, SizeOfX ),
 
 	( Yt = [] ->
-		fitSize( Z, Z1, SizeOfZ )
+		fitSize( Z, Z1, SizeOfZ, 0 )
 	;
 		mulUnsigned( Z2, SizeOfZ, X, Yt, SizeOfX ),
 		append( Z2, [0], Z22 ),
-		fitSize( ZZ1, Z1, SizeOfZ ),
-		fitSize( ZZ22, Z22, SizeOfZ ),
+		fitSize( ZZ1, Z1, SizeOfZ, 0 ),
+		fitSize( ZZ22, Z22, SizeOfZ, 0 ),
 		sum( Z, ZZ1, ZZ22, SizeOfZ )
 	).
 	
@@ -470,22 +471,23 @@ mul2chunk( Z, X, Ychunk, CurryChunk, SizeOfX ) :-
 		append( Z9, [ Z8 ], Z )
 	).
 	
-fitSize( X, Xold, NewSize ) :-
+% if NewSize < sizeof(Xold) => trunk( high bits of Xold )
+fitSize( X, Xold, NewSize, HighBit ) :-
 	chunksize( C ),
 	
 	FullChunks is integer( ceiling( NewSize / C ) ),
 	
 	length( Xold, OldLength ),
 	
-	( OldLength #< FullChunks ->
+	( OldLength #< FullChunks,
 		D #= FullChunks - OldLength,
-		fillConst( Add0List, D, 0 ),
+		fillConst( Add0List, D, HighBit ),
 		append( Add0List, Xold, X )
 
 	;
-		( OldLength #= FullChunks ->
+		( OldLength #= FullChunks,
 			XN = Xold
-		; % OldLength #> FullChunks
+		; OldLength #> FullChunks,
 			D #= OldLength - FullChunks,
 			length( XD, D ),
 			append( XD, XN, Xold )
@@ -519,7 +521,7 @@ mulSigned( Z, SizeOfZ, X, Y, Size ) :-
 	; Xh #>= DC1, %X < 0,
 		% S2 = S1 - fit(Y << Size)
 		shiftLeft( Y1, Y, Size ),
-		fitSize( YS1, Y1, SizeOfZ ),
+		fitSize( YS1, Y1, SizeOfZ, 0 ),
 		sub( S2, S1, YS1, SizeOfZ )
 	),	
 	
@@ -528,7 +530,7 @@ mulSigned( Z, SizeOfZ, X, Y, Size ) :-
 	; Yh #>= DC1, %Y < 0,
 		% S3 = S2 - fit(X << Size)
 		shiftLeft( X1, X, Size ),
-		fitSize( XS1, X1, SizeOfZ ),
+		fitSize( XS1, X1, SizeOfZ, 0 ),
 		sub( S3, S2, XS1, SizeOfZ )
 	),
 	
@@ -537,7 +539,7 @@ mulSigned( Z, SizeOfZ, X, Y, Size ) :-
 	; % Z = S3 + fit(1 << 2*Size)
 		Size2 is 2 * Size,
 		shiftLeft( ES, [1], Size2 ),
-		fitSize( DS, ES, SizeOfZ ),
+		fitSize( DS, ES, SizeOfZ, 0 ),
 		sum( Z, S3, DS, SizeOfZ )
 	).
 	
@@ -579,7 +581,20 @@ lowShiftCycle( X, Xold, ShiftLen, High ) :-
 signExtend( Y, X, OldSize, NewSize ) :-
 	sizeof( X, OldSize ), sizeof( Y, NewSize ),
 	( OldSize =< NewSize -> 
-		Y = X
+		% copy high bit to fit a new size
+		X = [ Xh | Xt ],
+		chunksize( C ),
+		S is OldSize mod C,
+		( S = 0 -> M is C - 1 ; M is S - 1 ),
+		exp2( DM, M ),
+		( Xh #< DM, % x >- 0
+			fitSize( Y, X, NewSize, 0 )
+		; Xh #>= DM,  % x <- 0
+			exp2( DC, C ),
+			D is DC - 2 * DM,
+			Xh1 #= Xh + D,
+			fitSize( Y, [ Xh1 | Xt ], NewSize, 1 )
+		)
 	; 
 		chunksize( C ),
 		FullChunks is NewSize div C,

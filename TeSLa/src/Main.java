@@ -4,6 +4,7 @@ import java.util.List;
 import org.antlr.runtime.RecognitionException;
 
 import ru.kornevgen.LogicalVariable;
+import ru.kornevgen.SemanticException;
 import ru.kornevgen.TeSLaParser;
 import ru.kornevgen.TeSLaSolver;
 
@@ -25,6 +26,7 @@ public class Main
     	try
     	{
     		List<LogicalVariable> parameters = TeSLaSolver.compile( args[0], path );
+
     		parameters = TeSLaSolver.solve( path, parameters );
     		
     		for( LogicalVariable var: parameters )
@@ -46,7 +48,10 @@ public class Main
     		System.err.println("ECLiPSe error: " + e);
     		e.printStackTrace( System.err );
     	}
-    	catch( TeSLaParser.SemanticException e )
+    	catch( TeSLaParser.ParserException e )
+    	{
+    	}
+    	catch( SemanticException e )
     	{
     		System.err.println( "Semantic error: " + e.getMessage() );
     	}

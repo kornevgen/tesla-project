@@ -2,8 +2,9 @@ grammar TeSLa;
 
 options
 {
-	k = 1;
+	//k = 10;
 	language=Java;
+//	backtrack=true;
 }
 
 @header {
@@ -25,20 +26,34 @@ package ru.kornevgen;
 		public int size;
 	}
 	
-	public class SemanticException extends RuntimeException
+	private class Constant extends ExpressionResult
 	{
-		private static final long serialVersionUID = -4479856257644853038L;
-	
-		public SemanticException( Token token, String message )
+		public Constant( String value )
 		{
-			super( "line " + token.getLine() + ": " + message );
-		}
+			super();
+			resultVarName = new StringBuffer( value );
+			size = -1;			
+		}		
 	}
 	
 	StringBuffer ecl;
 	
 	VarsController varsc;
 	PredicatesController predsc;
+	
+	@Override
+	public void reportError( RecognitionException e )
+	{
+		throw new ParserException( e.getMessage() );
+	}
+	
+	public class ParserException extends RuntimeException
+	{
+		public ParserException( String s )
+		{
+			super( s );
+		}
+	}
 }
 
 program[String path, boolean onlyParameters] returns [java.util.List<LogicalVariable> parameters]
@@ -51,13 +66,12 @@ program[String path, boolean onlyParameters] returns [java.util.List<LogicalVari
 		ecl.append(":- module( main )." ).append(eoln);
 		ecl.append(":- lib( ic ).").append(eoln);
 		ecl.append(":- use_module( numbers ).").append(eoln);
-//		ecl.append(":- use_module( predicates ).").append(eoln);
+		ecl.append(":- use_module( predicates ).").append(eoln);
 		ecl.append(eoln);
 	  }
 		signature
 			{
 				ecl.append( varsc.createSignature() );
-				ecl.append( varsc.types() );
 				
 				parameters = varsc.getVarsCopy();
 				
@@ -122,20 +136,20 @@ assignOperator
 			// each variable can't change its size!!!
 			if ( varsc.isKnown( $ID.text ) )
 			{
-				if ( name.size != varsc.getVar( $ID.text ).size )
+				if ( name.size != varsc.getVar( $ID, $ID.text ).size )
 				{
-					throw new SemanticException( $ID, "Incompatible sizes: size of " + $ID.text + " is " +  varsc.getVar( $ID.text ).size + " bit(s) and size of expression is " + name.size + "; these sizes must be the same" );
+					throw new SemanticException( $ID, "Incompatible sizes: size of " + $ID.text + " is " +  varsc.getVar( $ID, $ID.text ).size + " bit(s) and size of expression is " + name.size + "; these sizes must be the same" );
 				}
 				
-				id = varsc.nextVersion( $ID.text );
+				id = varsc.nextVersion( $ID, $ID.text );
 			}
 			else
 			{
 				varsc.addVar( $ID.text, name.size );
-				id = varsc.getCurrent( $ID.text );			
+				id = varsc.getCurrent( $ID, $ID.text );			
 			}
 
-			ecl.append( varsc.getSizePredicate( varsc.getVar( $ID.text ) ) )
+			ecl.append( varsc.getSizePredicate( varsc.getVar( $ID, $ID.text ) ) )
 			.append( name.expressionBody )
 			.append( id ).append( " = " ).append( name.resultVarName ).append( "," ).append( eoln);
 		}
@@ -180,9 +194,17 @@ andexpr returns [StringBuffer predicateName]
 	;
 	
 boolexpr_brackets returns [StringBuffer predicateName]
-options { backtrack = true; }
+options { backtrack=true; }
 @init{ Token first = input.LT(1); }
-	: '(' be = boolexpr ')' { predicateName = be; }
+	: ID '(' pars = parameters ')'
+		{
+			predicateName = predsc.newPredicate( 
+				new StringBuffer( "predicates:'" ).append( $ID.getText() )
+				.append( "'( " ).append( pars ).append( " )" ),
+				varsc.getAllVarsAsParameters()
+			);
+		}
+	| '(' be = boolexpr ')' { predicateName = be; }
 	| name1 = expr pred = comparesign name2 = expr
 	{
 			if ( name1.size < 0 )
@@ -193,6 +215,7 @@ options { backtrack = true; }
 						throw new SemanticException( first, "size of constant " + name1.resultVarName + " must be not greater than " + name2.size ); 
 						
 					name1.size = name2.size;
+					name1.resultVarName = BitLen.number2nlist( name1.resultVarName, name1.size );
 				}
 				else //both arguments are constants
 				{
@@ -201,6 +224,17 @@ options { backtrack = true; }
 						pred.bitlenMethod.c( name1.resultVarName, name2.resultVarName ),
 						varsc.getAllVarsAsParameters() );
 				}
+			}
+			else // name1.size >= 0
+			{
+				if ( name2.size < 0 )
+				{
+					if ( BitLen.bitlen( name2.resultVarName ) > name1.size )
+						throw new SemanticException( first, "size of constant " + name2.resultVarName + " must be not greater than " + name1.size ); 
+						
+					name2.size = name1.size;
+					name2.resultVarName = BitLen.number2nlist( name2.resultVarName, name2.size );
+				}				 
 			}
 		
 		assert name1.size > 0 && name2.size > 0;
@@ -217,14 +251,6 @@ options { backtrack = true; }
 
 		predicateName = predsc.newPredicate( body, varsc.getAllVarsAsParameters() );
 	}
-	| ID '(' pars = parameters ')'
-		{
-			predicateName = predsc.newPredicate( 
-				new StringBuffer( "predicates:'" ).append( $ID.getText() )
-				.append( "'( " ).append( pars ).append( " )" ),
-				varsc.getAllVarsAsParameters()
-			);
-		}
 	;
 
 // return variable with evaluation result
@@ -234,9 +260,9 @@ expr returns [ExpressionResult name]
 	
 addexpr returns [ExpressionResult name]
 @init{ Token first = input.LT(1); }
-	: name1 = mulexpr (
-	 { name = name1; }
-	| pred = addsign name2 = addexpr
+	: name1 = mulexpr 
+	 	( { name = name1; }
+		| pred = addsign name2 = addexpr
 		{
 			if ( name1.size < 0 )
 			{
@@ -246,14 +272,21 @@ addexpr returns [ExpressionResult name]
 						throw new SemanticException( first, "size of constant " + name1.resultVarName + " must be not greater than " + name2.size ); 
 						
 					name1.size = name2.size;
+					name1.resultVarName = BitLen.number2nlist( name1.resultVarName, name1.size );
 				}
 				else //both arguments are constants
 				{
 					// do calculations and return
-					name = new ExpressionResult();
-					name.resultVarName = pred.bitlenMethod.c( name1.resultVarName, name2.resultVarName );
-					name.size = -1; // calculate later
+					name = new Constant( pred.bitlenMethod.c( name1.resultVarName, name2.resultVarName ).toString() );
 					return name;
+				}
+			}
+			else
+			{
+				if ( name2.size < 0 )
+				{
+					name2.size = name1.size;
+					name2.resultVarName = BitLen.number2nlist( name2.resultVarName, name2.size );	
 				}
 			}
 			
@@ -274,15 +307,15 @@ addexpr returns [ExpressionResult name]
 					.append( name1.size )
 				.append( " )," )
 				.append( eoln );
-		} 
-	)
+		}
+		) 
 	;
 
 mulexpr returns [ExpressionResult name]
 @init{ Token first = input.LT(1); }
-	: name1 = arithmterm (
-	 { name = name1; }
-	| pred = mulsign name2 = mulexpr
+	: name1 = arithmterm 
+		(  { name = name1; }
+		| pred = mulsign name2 = mulexpr
 		{
 			if ( name1.size < 0 )
 			{
@@ -292,14 +325,21 @@ mulexpr returns [ExpressionResult name]
 						throw new SemanticException( first, "size of constant " + name1.resultVarName + " must be not greater than " + name2.size ); 
 						
 					name1.size = name2.size;
+					name1.resultVarName = BitLen.number2nlist( name1.resultVarName, name1.size );	
 				}
 				else //both arguments are constants
 				{
 					// do calculations and return
-					name = new ExpressionResult();
-					name.resultVarName = BitLen.mul( name1.resultVarName, name2.resultVarName );
-					name.size = -1; // calculate later
+					name = new Constant( BitLen.mul( name1.resultVarName, name2.resultVarName ).toString() );
 					return name;
+				}
+			}
+			else
+			{
+				if ( name2.size < 0 )
+				{
+					name2.size = name1.size;
+					name2.resultVarName = BitLen.number2nlist( name2.resultVarName, name2.size );
 				}
 			}
 			
@@ -323,70 +363,122 @@ mulexpr returns [ExpressionResult name]
 					.append( name1.size )
 				.append( " )," )
 				.append( eoln );
-		} 
-	)
+		}
+		) 
 	;
 
 arithmterm returns [ExpressionResult name]
-	: ( bit_term ( '[' | '^' | '.' ) )=> name1 = bit_expr { name = name1; } 
-	// may be error: may be right version is bit_bound_term '.' | bit_term '[' | bit_term '^'
-	| name1 = knownId { name = name1; }
-	| INTEGER
-		{
-			name = new ExpressionResult();
-			name.resultVarName = new StringBuffer( $INTEGER.text );
-			name.size = -1; // calculate later
-		}
-	| '(' name2 = expr ')' { name = name2; }
+	: name1 = bit_expr { name = name1; } 
 	;
 
 bit_expr returns [ExpressionResult name]
-	: name1 = bit_concat_term { name = name1; } ;
+@init{ Token CT = null; int new_size = 0; }
+	: name1 = bit_concat_term { name = name1; }
+	| '(' newsize = INTEGER ')' { CT = input.LT(1); } name1 = bit_concat_term
+			{
+				try
+				{
+					new_size = Integer.decode( newsize.getText() );
+				}
+				catch( Exception e )
+				{
+					throw new SemanticException( newsize, "constants is too large: " + newsize.getText() );
+				}
+
+				if ( name1.size < 0 )
+				{
+					// do calculations
+					name = new Constant( BitLen.sign_extend( CT, name1.resultVarName, new_size ).toString() );
+					return name;
+				}
+				
+				name = new ExpressionResult();
+				name.size = new_size;
+				name.resultVarName = varsc.newVar();
+				name.expressionBody
+					.append( name1.expressionBody )
+					.append( "numbers:signExtend( " )
+						.append( name.resultVarName ).append( ", " )
+						.append( name1.resultVarName ).append( ", " )
+						.append( name1.size ).append( ", " )
+						.append( newsize.getText() )
+					.append( " )," ).append( eoln );
+			}
+	;
 	
 bit_concat_term returns [ExpressionResult name]
 @init{ Token N1 = input.LT(1); Token N2 = null; }
-	: name1 = bit_bound_term
-	(   { name = name1; }
-	| '.' { N2 = input.LT(1); } name2 = bit_concat_term
-		{
-			name = new ExpressionResult();
-			name.resultVarName = varsc.newVar();
-			name.size = name1.size + name2.size;
-			
-			name.expressionBody =
-				name1.expressionBody
-				.append( name2.expressionBody )
-											
-				.append( "numbers:concat( " )
-					.append( name.resultVarName ).append( ", _, " )
-					.append( name1.resultVarName ).append( ", " )
-					.append( name1.size ).append( ", " )
-					.append( name2.resultVarName ).append( ", " )
-					.append( name2.size )
-				.append( " )," )
-				.append( eoln );
-		}
-	)
+	: name1 = bit_bound_term  
+		(  { name = name1; }
+		| '.' { N2 = input.LT(1); } name2 = bit_concat_term
+			{
+				if ( name1.size < 0 )
+				{
+					if ( name2.size < 0 )
+					{
+						// do calculations
+						name = new Constant( BitLen.bitconcat( N1, N2, name1.resultVarName, name2.resultVarName ).toString() );
+						return name;
+					}
+					else
+					{
+						name1.size = BitLen.bitlen( name1.resultVarName );
+						name1.resultVarName = BitLen.number2nlist( name1.resultVarName, name1.size );
+					}
+				}
+				else
+				{
+					if ( name2.size < 0 )
+					{
+						name2.size = BitLen.bitlen( name2.resultVarName );
+						name2.resultVarName = BitLen.number2nlist( name2.resultVarName, name2.size );
+					}
+				}
+				
+				name = new ExpressionResult();
+				name.resultVarName = varsc.newVar();
+				name.size = name1.size + name2.size;
+				
+				name.expressionBody =
+					name1.expressionBody
+					.append( name2.expressionBody )
+												
+					.append( "numbers:concat( " )
+						.append( name.resultVarName ).append( ", " )
+						.append( name1.resultVarName ).append( ", " )
+						.append( name1.size ).append( ", " )
+						.append( name2.resultVarName ).append( ", " )
+						.append( name2.size )
+					.append( " )," )
+					.append( eoln );
+			}
+		)
 	;
 
 bit_bound_term returns [ExpressionResult name]
-@init{ Token first = input.LT(1); Token powToken = null; Token endToken = null; Token startToken = null; }
-	: name1 = bit_term
-		(   { name = name1; }
+@init{ Token first = input.LT(1); Token powToken = null; Token endToken = null; Token startToken = null; int endValue = 0; int startValue = 0; int powValue = 0; }
+	: name1 = bit_term   
+		(  { name = name1; }
 		| '[' { endToken = input.LT(1); } end = INTEGER 
 			{
 				try
 				{
-					Long.decode( end.getText() );
+					endValue = Integer.decode( end.getText() );
 				}
 				catch( Exception e )
 				{
 					throw new SemanticException( endToken, "constants is too large: " + end.getText() );
 				}
 			}
-			
-			( ']' // one bit
+			( ']'
 				{
+					if ( name1.size < 0 )
+					{
+						// do calculations
+						name = new Constant( BitLen.abit( first, name1.resultVarName, endValue ).toString() );
+						return name;
+					}
+					
 					name = new ExpressionResult();
 					name.resultVarName = varsc.newVar();
 					name.size = 1;
@@ -399,51 +491,65 @@ bit_bound_term returns [ExpressionResult name]
 							.append( end.getText() )
 						.append( " )," )
 						.append( eoln );
-				} 
-			|  '..' { startToken = input.LT(1); } start = INTEGER ']' // bit range
+				}
+			| '..' { startToken = input.LT(1); } start = INTEGER ']' // bit range
 				{
-					name = new ExpressionResult();
-					name.resultVarName = varsc.newVar();
 					try
 					{
-						long endValue = Long.decode( end.getText() );
-						long startValue = Long.decode( start.getText() );
+						startValue = Integer.decode( start.getText() );
 						if ( endValue < startValue )
 						{
 							throw new SemanticException( endToken, "End index must be greater than the start one" );
 						}
-						name.size = (int)(endValue - startValue + 1);
 					}
 					catch( Exception e )
 					{
 						throw new SemanticException( startToken, "constants is too large: " + start.getText() );
+					}					
+
+					if ( name1.size < 0 )
+					{
+						// it is a constant expression
+						name = new Constant( BitLen.bitrange( first, name1.resultVarName, endValue, startValue ).toString() );
+						return name;
 					}
 					
+					name = new ExpressionResult();
+					name.resultVarName = varsc.newVar();
+					name.size = endValue - startValue + 1;
 					name.expressionBody
 					.append( name1.expressionBody )
 					.append( "numbers:getbits( " )
-						.append( name.resultVarName ).append( ", _," )
+						.append( name.resultVarName ).append( ", " )
 						.append( name1.resultVarName ).append( ", " )
+						.append( name1.size ).append( ", " )
 						.append( end.getText() ).append( ", " )
 						.append( start.getText() )
 					.append( " )," )
 					.append( eoln );
 				}
-	
-		) | '^' { powToken = input.LT(1); } pow = INTEGER
+		)
+	 	| '^' { powToken = input.LT(1); } pow = INTEGER
 			{
-				name = new ExpressionResult();
-				name.resultVarName = varsc.newVar();
-				
 				try
 				{
-					long powValue = Long.decode( pow.getText() );
-					name.size = (int)(name1.size * powValue);
+					powValue = Integer.decode( pow.getText() );
 				}
 				catch( Exception e )
 				{
-					throw new SemanticException( powToken, "constant " + pow.getText() + " is too large" );
+					throw new ConstantIsTooLarge( powToken, pow.getText() );
 				}
+				
+				if ( name1.size < 0 )
+				{
+					// do calculations
+					name = new Constant( BitLen.bitpower( first, name1.resultVarName, powValue ).toString() );
+					return name;
+				}
+				
+				name = new ExpressionResult();
+				name.resultVarName = varsc.newVar();				
+				name.size = name1.size * powValue;
 				name.expressionBody
 				.append( name1.expressionBody )
 				.append( "numbers:pow( " )
@@ -458,35 +564,9 @@ bit_bound_term returns [ExpressionResult name]
 	;
 	
 bit_term returns [ExpressionResult name]
-	: ('(' INTEGER ')')=> '(' newsize = INTEGER ')' name1 = bit_term2
-			{
-				name = new ExpressionResult();
-				name.size = Integer.parseInt( newsize.getText() );
-				if ( name.size >= name1.size )
-				{
-					name.resultVarName = name1.resultVarName;
-					name.expressionBody = name1.expressionBody;
-				}
-				else
-				{
-					name.resultVarName = varsc.newVar();
-					name.expressionBody
-						.append( name1.expressionBody )
-						.append( "numbers:signExtend( " )
-							.append( name.resultVarName ).append( ", " )
-							.append( name1.resultVarName ).append( ", " )
-							.append( name1.size ).append( ", " )
-							.append( newsize.getText() )
-						.append( " )," ).append( eoln );
-				}
-			}
-	| name1 = bit_term2 { name = name1; }
-	;
-
-bit_term2 returns [ExpressionResult name]
-	: name1 = knownId { name = name1; }
-	| INTEGER { name = new ExpressionResult(); name.resultVarName = new StringBuffer( $INTEGER.text ); name.size = BitLen.bitlen( name.resultVarName ); }
-    | '(' name1 = bit_expr ')' { name = name1; }
+	: '(' name1 = expr ')' 	{ name = name1; }
+	| INTEGER 				{ name = new Constant( $INTEGER.text ); }
+	|  name1 = knownId		{ name = name1; }
 	;
 
 // returns a list constructed by parameters like:  
@@ -494,21 +574,17 @@ bit_term2 returns [ExpressionResult name]
 // NB: calling function converts parameters to signed-unsigned format 
 parameters returns [StringBuffer pars]
 	: { pars = new StringBuffer();}
-	|  name = knownId { pars = new StringBuffer( name.resultVarName ); }
-	   ( 
-		',' pars1 = parameters { pars.append( ", " ).append( pars1 ); }
- 	   )?
+	( name = knownId { pars.append( new StringBuffer( name.resultVarName ).append( ", " ).append( name.size ) ); }
+	   ( ',' name1 = knownId { pars.append( ", " ).append( name1.resultVarName ).append( ", " ).append( name1.size ); } )*
+	)?
 	;
 	
 knownId returns [ExpressionResult name]
 	: ID
 		{
-			if ( ! varsc.isKnown( $ID.text ) )
-				throw new SemanticException( $ID, "unknown variable " + $ID.text );
-				
 			name = new ExpressionResult();
-			name.resultVarName = new StringBuffer( varsc.getCurrent( $ID.text ) );
-			name.size = varsc.getVar( $ID.text ).size;
+			name.resultVarName = new StringBuffer( varsc.getCurrent( $ID, $ID.text ) );
+			name.size = varsc.getVar( $ID, $ID.text ).size;
 		}
 	;
 	

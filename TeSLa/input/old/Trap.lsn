@@ -1,4 +1,0 @@
-VAR INT RS;
-VAR SHORT immediate;
-
-SITUATION Trap WHEN 0.RS >= 0.sign_extend(immediate).

@@ -1,9 +1,0 @@
-VAR LONG RS;
-VAR INT immediate;
-
-// immediate is 16bit
-ASSERT immediate >= 0 AND immediate < 65536; 
-
-LONG temp := RS[63].RS + immediate[16->64];
-
-SITUATION IntegerOverflow WHEN temp[64] # temp[63].

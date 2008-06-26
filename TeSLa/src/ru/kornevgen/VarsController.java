@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.antlr.runtime.Token;
+
 public class VarsController
 {
 	private static final String eoln = System.getProperty( "line.separator" );
@@ -81,9 +83,9 @@ public class VarsController
 		for( LogicalVariable var : parameters )
 		{
 			result	
-			.append( "numbers:nlist2nstring( _" )
-				.append(var.getCanonicalName()).append(", ")
-				.append( var.getBaseName() ).append( ", " )
+			.append( "numbers:nlist2nstring( " )
+				.append( var.getBaseName() ).append( ", _" )
+				.append( var.getCanonicalName()).append(", ")
 				.append( var.size )
 			.append( " )," ).append( eoln );
 		}
@@ -113,43 +115,24 @@ public class VarsController
 		vars.put( name, new LogicalVariable( name, size ) );
 	}
 	
-	public int getSizeOfCurrent( final String name )
-	{
-		assert vars.containsKey( name );
-		
-		return vars.get( name ).size;
-	}
-	
 	private int newVarNumber = 0;
 	public StringBuffer newVar()
 	{
 		return new StringBuffer( "_" ).append( newVarNumber++ );
 	}
 	
-	public String getCurrent( final String name )
+	public String getCurrent( final Token ID, final String name )
 	{
-		assert vars.containsKey( name );
-		
-		return vars.get( name ).current();
+		return getVar( ID, name ).current();
 	}
 	
-	public String nextVersion( final String name )
+	public String nextVersion( final Token ID, final String name )
 	{
-		assert vars.containsKey( name );
-		
-		LogicalVariable var = vars.get( name );
-		try
-		{
-			var.nextVersion();
-		}
-		catch( NullPointerException e )
-		{
-			System.err.println( "Undefined variable '" + name + "'" );
-			throw e;
-		}
+		LogicalVariable var = getVar( ID, name );
+		var.nextVersion();
 		vars.put( name, var );
 		
-		return getCurrent( name );
+		return getCurrent( ID, name );
 	}
 	
 	public List<LogicalVariable> getVarsCopy()
@@ -163,9 +146,10 @@ public class VarsController
 		return result;
 	}
 	
-	public LogicalVariable getVar( final String name )
+	public LogicalVariable getVar( final Token ID, final String name )
 	{
-		assert vars.containsKey( name );
+		if ( ! vars.containsKey( name ) )
+			throw new UndefinedVariable( ID, name );
 		
 		return vars.get( name );
 	}

@@ -1,9 +1,0 @@
-VAR INT BASE;
-VAR INT offset;
-
-//ASSERT BASE > 0;
-//ASSERT offset < 0;
-
-INT vAddr := offset + BASE;
-
-SITUATION AddressError WHEN vAddr[2..0] = 0.

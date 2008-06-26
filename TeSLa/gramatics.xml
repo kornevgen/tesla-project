@@ -10,7 +10,7 @@
 		classname="net.bluecow.googlecode.ant.GoogleCodeUploadTask"
 		classpath="tools/ant-googlecode-0.0.1.jar"
 		name="gcupload"/>
-	
+		
 	<property file="${tools}/user.properties" />
 
   	<target name="distr.antlr">
@@ -52,7 +52,7 @@
 		        filename="${bin}/${tesla.jar}" 
 		        targetfilename="${tesla.jar}"
 		        summary="Version ${tesla.version2} of TeSLa solver"
-		        labels="solver-modules" />
+		        labels="solver-modules, Featured" />
 	</target>
 	
 	<target name="distr.clp">
@@ -61,6 +61,7 @@
 		<property name="clp.version" value="${clp.version.x.y.z}-${clp.version.status}-${clp.version.date}" />
 
 		<delete file="${bin}/clp-${clp.version}.zip" />
+		<!--хорошо бы поместить сюда операцию, убирающую метку Featured с прошлой выкладки на сервере google...-->
 
 		<tstamp>
 	      <format property="clp.version.date.new" pattern="yyMMdd"/>
@@ -84,6 +85,6 @@
 		        filename="${bin}/${clp.zip}" 
 		        targetfilename="${clp.zip}"
 		        summary="Version ${clp.version2} of constraint modules"
-		        labels="logic-modules" />
+		        labels="logic-modules, Featured, Type-Archive" />
 	</target>
 </project>
