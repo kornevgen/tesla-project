@@ -129,7 +129,7 @@ public abstract class TeSLaSolver
 	        	if ( var.getValue() == null )
 	        		goal.append( ",_" );
 	        	else
-	        		goal.append( "," + var.getValue() );
+	        		goal.append( ", \"" + var.getValue() + "\"" );
 	        }
 	        goal.append(")");
 	        
