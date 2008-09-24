@@ -16,10 +16,12 @@
 	<property file="${tools}/user.properties" />
 
   	<target name="distr.antlr">
+  		<property name="outputdir" location="${target}/ru/teslaprj/arithm" />
+  		<mkdir dir="${outputdir}" />
   		<antlr:antlr3
   			xmlns:antlr="antlib:org/apache/tools/ant/antlr"
   	    	target="${src}/TeSLa.g"
-  	    	outputdirectory="${target}/ru/kornevgen"
+  	    	outputdirectory="${outputdir}"
   	    	libdirectory="${target}"
   	    	multithreaded="true"
   		/>
