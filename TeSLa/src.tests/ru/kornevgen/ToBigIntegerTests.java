@@ -8,6 +8,8 @@ import java.text.NumberFormat;
 
 import org.junit.Test;
 
+import ru.teslaprj.arithm.BitLen;
+
 public class ToBigIntegerTests {
 	
 	@Test
