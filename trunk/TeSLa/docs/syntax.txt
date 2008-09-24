@@ -3,7 +3,6 @@
 program :
 	( 'VAR' ID ':' INTEGER )-list[ ';' ]
 	( 'ASSERT' boolexpr | ID ':=' expr )-list[ ';' ]
-	'SITUATION' boolexpr 'IS' ID '.'
 	;
 	
 boolexpr : boolexpr_brackets-list[ 'AND', 'OR' ] ;
