@@ -5,6 +5,8 @@ import static org.junit.Assert.assertEquals;
 import org.antlr.runtime.Token;
 import org.junit.Test;
 
+import ru.teslaprj.arithm.BitLen;
+
 public class BitPower
 {
 	@Test

@@ -3,10 +3,10 @@ import java.util.List;
 
 import org.antlr.runtime.RecognitionException;
 
-import ru.kornevgen.LogicalVariable;
-import ru.kornevgen.SemanticException;
-import ru.kornevgen.TeSLaParser;
-import ru.kornevgen.TeSLaSolver;
+import ru.teslaprj.arithm.LogicalVariable;
+import ru.teslaprj.arithm.SemanticException;
+import ru.teslaprj.arithm.TeSLaArithmeticSolver;
+import ru.teslaprj.arithm.TeSLaParser;
 
 import com.parctechnologies.eclipse.EclipseException;
 import com.parctechnologies.eclipse.Fail;
@@ -25,9 +25,9 @@ public class Main
     	
     	try
     	{
-    		List<LogicalVariable> parameters = TeSLaSolver.compile( args[0], path );
+    		List<LogicalVariable> parameters = TeSLaArithmeticSolver.compile( args[0], path );
 
-    		parameters = TeSLaSolver.solve( path, parameters );
+    		parameters = TeSLaArithmeticSolver.solve( path, parameters );
     		
     		for( LogicalVariable var: parameters )
     		{
