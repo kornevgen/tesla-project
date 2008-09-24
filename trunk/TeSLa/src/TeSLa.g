@@ -6,11 +6,10 @@ options
 }
 
 @header {
-package ru.kornevgen;
-import ru.kornevgen.BitLen;
+package ru.teslaprj.arithm;
 }
 @lexer::header {
-package ru.kornevgen; 
+package ru.teslaprj.arithm;
 }
 
 @members
@@ -77,7 +76,6 @@ program[String path, boolean onlyParameters] returns [java.util.List<LogicalVari
 					return parameters;
 			}
 		(operator)*
-		situationOperator '.'
 			{
 				ecl	.append( varsc.printMedians( parameters ) ).append( "true." + eoln)
 					.append( predsc.printPredicates() );
@@ -114,12 +112,6 @@ operator
 	: ( assertOperator
 	| assignOperator
 	) ';'
-	;
-	
-situationOperator
-	: // 'SITUATION' ID 'WHEN' predicate = boolexpr 
-	'SITUATION' predicate = boolexpr 'IS' ID
-		{ ecl.append( predicate .append( varsc.getAllVarsAsParameters() ).append(",").append( eoln ));}
 	;
 	
 assertOperator
