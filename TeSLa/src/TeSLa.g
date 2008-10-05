@@ -6,10 +6,10 @@ options
 }
 
 @header {
-package ru.teslaprj.arithm;
+package ru.teslaprj.syntax;
 }
 @lexer::header {
-package ru.teslaprj.arithm;
+package ru.teslaprj.syntax;
 }
 
 @members
@@ -38,6 +38,8 @@ package ru.teslaprj.arithm;
 	VarsController varsc;
 	PredicatesController predsc;
 	
+	String commandPrefix;
+	
 	@Override
 	public void reportError( RecognitionException e )
 	{
@@ -53,49 +55,69 @@ package ru.teslaprj.arithm;
 	}
 }
 
-program[String path, boolean onlyParameters] returns [java.util.List<LogicalVariable> parameters]
-	: { 
-		varsc = new VarsController();
-		predsc = new PredicatesController();
-		
-		ecl = new StringBuffer();
-		
-		ecl.append(":- module( main )." ).append(eoln);
-		ecl.append(":- lib( ic ).").append(eoln);
-		ecl.append(":- use_module( numbers ).").append(eoln);
-		ecl.append(":- use_module( predicates ).").append(eoln);
-		ecl.append(eoln);
-	  }
-		signature
+program[
+      List<String> args
+	, List<String> additionalArgs
+	, ru.teslaprj.scheme.Scheme scheme
+	, String prefix
+] returns [StringBuffer eclipseProgram, List<LogicalVariable> signature]
+@init {
+List<LogicalVariable> parameters = new ArrayList<LogicalVariable>();
+StringBuffer preArgs;
+ecl = new StringBuffer();
+varsc = new VarsController();
+predsc = new PredicatesController();
+preArgs = null;
+}
+	: signature
 			{
-				ecl.append( varsc.createSignature() );
-				
 				parameters = varsc.getVarsCopy();
+				preArgs = 
+					varsc.getAllVarsAsParametersWithStatus( LogicalVariable.Status.SIGNATURE_RESULT, LogicalVariable.Status.SIGNATURE_READONLY );
+
+				if ( args.size() > parameters.size() )
+				{
+					throw new SemanticException( null, "using more arguments (" + args.size() + ") than test sutiation has (" + parameters.size() + ")");
+				}
+
+				if ( args.size() + additionalArgs.size() > parameters.size() )
+				{
+					throw new SemanticException( null, "using more arguments (" + (args.size() + additionalArgs.size()) + ") than test sutiation has (" + parameters.size() + ")");
+				}
+
+				// check args bitlens
+				for( int i = 0; i < args.size(); i++ )
+				{
+					int argLen = scheme.getBitlen( args.get(i) );
+					int varLen = parameters.get(i).getBitlen();
+					if ( argLen != varLen )
+					{
+						throw new SemanticException( null, "bitlens of variable and argument are not equal: " + argLen + " and " + varLen );
+					}
+				}
+				// TODO check actual names of results var (must different)
 				
-				if ( onlyParameters )
-					return parameters;
+				commandPrefix = prefix;
 			}
 		(operator)*
 			{
-				ecl	.append( varsc.printMedians( parameters ) ).append( "true." + eoln)
-					.append( predsc.printPredicates() );
+//				ecl	.append( varsc.printMedians( parameters ) ).append( "true." + eoln)
+//					.append( predsc.printPredicates() );
 				
-				try
-				{
-					java.io.FileWriter writer = new java.io.FileWriter( new java.io.File( path ) );
-					try
-					{
-						writer.write( ecl.toString() );
-					}
-					finally
-					{
-						writer.close();
-					}
-				}
-				catch( java.io.IOException e )
-				{
-					System.err.println( e );
-				}
+				StringBuffer postArgs = varsc.getAllVarsAsParametersWithStatus( LogicalVariable.Status.SIGNATURE_RESULT, LogicalVariable.Status.SIGNATURE_READONLY );
+				StringBuffer optional = varsc.getAllVarsAsParametersWithStatus( LogicalVariable.Status.OPTIONAL );
+				if ( optional.length() > 0 )
+					postArgs.append( ", " );
+					
+				retval.eclipseProgram = new StringBuffer(
+					"'" + prefix + "::main'( _, " )
+					.append( preArgs ).append(", ")
+					.append( postArgs ).append( optional )
+					.append( ") :- ").append( eoln )
+					.append( ecl )
+					.append( "true." ).append( eoln )
+					.append( predsc.printPredicates() ).append(eoln);
+				retval.signature = varsc.getSignature();
 			}
 	;
 
@@ -104,8 +126,17 @@ signature
 	;
 
 var_rule
-	: 'VAR' ID ':' INTEGER 
-		{ varsc.addVar( $ID.text, Integer.parseInt( $INTEGER.text ) ); } ';'
+@init{ LogicalVariable.Status status = null;}
+	: 'VAR'
+		( 'RESULT' { status = LogicalVariable.Status.SIGNATURE_RESULT; }
+		| 'READONLY' { status = LogicalVariable.Status.SIGNATURE_READONLY; }
+		| 'OPTIONAL' { status = LogicalVariable.Status.OPTIONAL; } )
+		ID ':' INTEGER 
+		{
+			varsc.addVar( $ID.text, Integer.parseInt( $INTEGER.text ), status, true );
+			ecl.append( varsc.getSizePredicate( varsc.getVar( $ID, $ID.text ) ) );
+		}
+		';'
 	;
 	
 operator
@@ -116,11 +147,11 @@ operator
 	
 assertOperator
 	: 'ASSERT' predicate = boolexpr 
-		{ ecl.append( predicate .append( varsc.getAllVarsAsParameters() ).append(",").append( eoln ));}
+		{ ecl.append( predicate .append( "(" ).append( varsc.getAllVarsAsParameters() ).append("),").append( eoln ));}
 	;
 
 assignOperator
-	: ID ':=' name = expr 
+	: ID '<-' name = expr 
 		{
 			String id;
 			// each variable can't change its size!!!
@@ -131,11 +162,16 @@ assignOperator
 					throw new SemanticException( $ID, "Incompatible sizes: size of " + $ID.text + " is " +  varsc.getVar( $ID, $ID.text ).size + " bit(s) and size of expression is " + name.size + "; these sizes must be the same" );
 				}
 				
+				if ( varsc.getVar( $ID, $ID.text ).getStatus() == LogicalVariable.Status.SIGNATURE_READONLY )
+				{
+					throw new SemanticException( $ID, "Cannot change readonly variable: " + $ID.text );
+				}
+				
 				id = varsc.nextVersion( $ID, $ID.text );
 			}
 			else
 			{
-				varsc.addVar( $ID.text, name.size );
+				varsc.addVar( $ID.text, name.size, LogicalVariable.Status.LOCAL, false );
 				id = varsc.getCurrent( $ID, $ID.text );			
 			}
 
@@ -156,12 +192,13 @@ orexpr returns [StringBuffer predicateName]
 	( { predicateName = name1; }
 	| 'OR' name2 = orexpr 
 		{
-			predicateName = predsc.newPredicate( 
-						name1.append( varsc.getAllVarsAsParameters() )
-						.append( "; " )
-						.append( name2 )
-						.append( varsc.getAllVarsAsParameters() ),
-						varsc.getAllVarsAsParameters() 
+			predicateName = predsc.newPredicate(
+						commandPrefix, 
+						name1.append("(").append( varsc.getAllVarsAsParameters() )
+						.append( "); " )
+						.append( name2 ).append( "(" )
+						.append( varsc.getAllVarsAsParameters() ).append(")"),
+						varsc.getAllVarsAsParameters().insert(0, "(").append(")")
 					); 
 		}
 	)
@@ -172,12 +209,13 @@ andexpr returns [StringBuffer predicateName]
 	( { predicateName = name1; }
 	| 'AND' name2 = andexpr 
 		{
-			predicateName = predsc.newPredicate( 
-						name1.append( varsc.getAllVarsAsParameters() )
-						.append( ", " )
-						.append( name2 )
-						.append( varsc.getAllVarsAsParameters() ),
-						varsc.getAllVarsAsParameters() 
+			predicateName = predsc.newPredicate(
+						commandPrefix, 
+						name1.append("(").append( varsc.getAllVarsAsParameters() )
+						.append( "), " )
+						.append( name2 ).append("(")
+						.append( varsc.getAllVarsAsParameters() ).append(")"),
+						varsc.getAllVarsAsParameters().insert(0, "(").append(")") 
 					); 
 		}
 	)
@@ -188,10 +226,11 @@ options { backtrack=true; }
 @init{ Token first = input.LT(1); }
 	: ID '(' pars = parameters ')'
 		{
-			predicateName = predsc.newPredicate( 
+			predicateName = predsc.newPredicate(
+				commandPrefix, 
 				new StringBuffer( "predicates:'" ).append( $ID.getText() )
 				.append( "'( " ).append( pars ).append( " )" ),
-				varsc.getAllVarsAsParameters()
+				varsc.getAllVarsAsParameters().insert(0, "(").append(")")
 			);
 		}
 	| '(' be = boolexpr ')' { predicateName = be; }
@@ -210,9 +249,10 @@ options { backtrack=true; }
 				else //both arguments are constants
 				{
 					// do calculations and return
-					return predsc.newPredicate( 
+					return predsc.newPredicate(
+						commandPrefix, 
 						pred.bitlenMethod.c( name1.resultVarName, name2.resultVarName ),
-						varsc.getAllVarsAsParameters() );
+						varsc.getAllVarsAsParameters().insert(0,"(").append(")") );
 				}
 			}
 			else // name1.size >= 0
@@ -239,7 +279,7 @@ options { backtrack=true; }
 			.append( name1.size )
 		.append( " )");
 
-		predicateName = predsc.newPredicate( body, varsc.getAllVarsAsParameters() );
+		predicateName = predsc.newPredicate( commandPrefix, body, varsc.getAllVarsAsParameters().insert(0,"(").append(")") );
 	}
 	;
 
@@ -400,7 +440,7 @@ bit_concat_term returns [ExpressionResult name]
 @init{ Token N1 = input.LT(1); Token N2 = null; }
 	: name1 = bit_bound_term  
 		(  { name = name1; }
-		| '.' { N2 = input.LT(1); } name2 = bit_concat_term
+		| '||' { N2 = input.LT(1); } name2 = bit_concat_term
 			{
 				if ( name1.size < 0 )
 				{
