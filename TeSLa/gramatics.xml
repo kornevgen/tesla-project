@@ -4,7 +4,6 @@
 	<property name="bin" location="bin" />
 	<property name="clp" location="clp" />
 	<property name="tools" location="tools" />
-	<property name="examples.dir" location="input" />
 	<property name="src.sample" location="src.sample" />
 	<property name="version.file" location="${tools}/version.properties" />
 
@@ -115,7 +114,6 @@
 		<property name="examples.zip" value="examples-${examples.version2}.zip" />
 		
 		<zip destfile="${bin}/${examples.zip}">
-			<fileset dir="${examples.dir}" />
 			<fileset dir="${src.sample}" />
 		</zip>
 		<gcupload 
