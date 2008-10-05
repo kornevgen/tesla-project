@@ -1,9 +1,0 @@
-VAR READONLY RS : 64;
-VAR RADONLY immediate : 32;
-
-// immediate is 16bit
-ASSERT immediate >=+ 0 AND immediate <+ 65536; 
-
-temp <- RS[63].RS + (65)immediate;
-
-ASSERT temp[64] # temp[63] ;
