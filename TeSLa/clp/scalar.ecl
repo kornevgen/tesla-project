@@ -40,8 +40,7 @@ rnd_result( X ) :-
 	get_domain(X, L),
 	( compound(L), 
 	random_element(L, Fs1),
-	X #>= Fs1,
-	get_min(X, X)
+	( X #>= Fs1, get_min(X, X) ; rnd_result( X ) )
 	; integer(L) )
 .
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -49,14 +48,16 @@ rnd_result( X ) :-
 % Result := X div A,  A == 2^N
 div2exp2( Result, X, A ) :-
 	integers([Result, X, A]), 
-	Result $< X/A + 1, 
-	Result $> X/A - 1, 
+%	Result $< X/A + 1, 
+%	Result $> X/A - 1, 
+%	Result #< X/A + 2, 
+%	Result #> X/A - 2, 	
 	D #= X - Result * A, 0 #=< D, D #< A .
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 getbitFromNumber( Result, Number, Index ) :-
-	Result :: [0..1],
+	Result #:: [0..1],
 	Number #>= 0,
 	Index #>= 0, 
 	% Index #< SizeOfNumber,
@@ -64,7 +65,8 @@ getbitFromNumber( Result, Number, Index ) :-
 	exp2( A, Index ),
 
 	div2exp2( C, Number, A ),
-	( C #= 2*_, Result #= 0 ; C#= 2*_ + 1, Result #= 1).
+	X #>= 0,
+	C #= X + X + Result.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

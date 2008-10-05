@@ -23,16 +23,16 @@
 :- export sum/4.
 :- export sub/4.
 :- export mulUnsigned/5.
-%:- export mulSigned/5.
+:- export mulSigned/5.
 
 :- export signExtend/4.
 
-:- export nstring2nlist/3.
-:- export nlist2nstring/3.
+%:- export nstring2nlist/3.
+%:- export nlist2nstring/3.
 
 :- export random_result/1.
 
-chunksize( 51 ).  %parameter MUST BE EQUAL WITH THE SAME IN Solver class !!!
+chunksize( 32 ).  %parameter MUST BE EQUAL WITH THE SAME IN BitLen class !!!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -172,6 +172,7 @@ notequal( X, Y, Size ) :-
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+equal( [], [], 0 ).
 equal( X, Y, Size ) :-
 	sizeof( X, Size ), sizeof( Y, Size ),
 
@@ -182,7 +183,6 @@ equal( X, Y, Size ) :-
 	( M = 0 -> S is Size - C ; S is Size - M ),
 	 
 	Xh #= Yh, equal( Xt, Yt, S ) .
-equal( [], [], 0 ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -222,13 +222,15 @@ getbits( Bits, X, SizeOfX, EndIndex, StartIndex ) :-
 		getbitsFromNumber( BitsEnd, XhEnd, IEnd, 0 ),
 		
 		N is NEnd - NStart - 1,
-		BitsLen is N + 2,
 		length( X2, N ),
 		append( X2, _ ,  X2End ),
 		append( [ BitsEnd | X2 ], [ BitsStart ], X1 ),
 		( IStart = 0 ->
 			Bits = X1
 		;
+			%BitsLen0 is N + ( IEnd + C - IStart ) div C,
+			%( CCC is ( IEnd - IStart ) mod C, CCC = 0 -> BitsLen is BitsLen0 ; BitsLen is BitsLen0 + 1 ),
+			BitsLen #= EndIndex - StartIndex + 1,
 			CMIS is C - IStart, defragment( Bits, X1, CMIS, BitsLen )
 		)
 	).
@@ -246,13 +248,13 @@ defragment( Normalized, Unnormalized, StartSize, SizeOfNumber ) :-
 	B #< DS,
 	exp2( DES, ExtraSize ),
 	Bits #>= 0, Bits #< DES,
-	A #= Bs * DES + Bits,
+	A #= Bs * DES + Bits,  % A = Bs||Bits
 	append( Untail, [ Bs ], U1 ),
 	% and defragment U1 to N1
 	SizeMC is SizeOfNumber - C,
-	( SizeMC =< 0 -> N1 = U1 ; defragment( N1, U1, StartSize, SizeMC ) ),
+	( SizeMC =< 0 -> N1 = [] ; defragment( N1, U1, StartSize, SizeMC ) ),
 
-	NEnd is Bits * DS + B,
+	NEnd #= Bits * DS + B,
 	append( N1, [ NEnd ], Normalized ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -611,7 +613,8 @@ signExtend( Y, X, OldSize, NewSize ) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 random_result( X ) :-
-	checklist( rnd_result, X ).
+%	checklist( rnd_result, X ).
+	labeling( X ).
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
