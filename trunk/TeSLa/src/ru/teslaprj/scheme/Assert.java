@@ -3,7 +3,7 @@ package ru.teslaprj.scheme;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Assert
+public class Assert implements Commandlike
 {
 	public Assert(
 			List<String> args,
@@ -30,4 +30,15 @@ public class Assert
 
 	private List<String> args;
 	private String testSituation;
+	
+	@Override
+	public List<String> getAdditionalArgs() {
+		return new ArrayList<String>();
+	}
+	
+	@Override
+	public String getCop()
+	{
+		return "";
+	}
 }
