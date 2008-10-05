@@ -1,4 +1,4 @@
-#summary Грамматика языка
+#summary Грамматика языка описания тестовых ситуаций
 #labels Featured
 {{{
 program :
