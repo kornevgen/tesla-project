@@ -3,7 +3,7 @@ package ru.kornevgen;
 import static org.junit.Assert.*;
 import org.junit.Test;
 
-import ru.teslaprj.arithm.BitLen;
+import ru.teslaprj.syntax.BitLen;
 
 public class BitLenTests
 {

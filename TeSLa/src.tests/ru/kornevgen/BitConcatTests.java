@@ -5,7 +5,7 @@ import static org.junit.Assert.assertEquals;
 import org.antlr.runtime.Token;
 import org.junit.Test;
 
-import ru.teslaprj.arithm.BitLen;
+import ru.teslaprj.syntax.BitLen;
 
 public class BitConcatTests
 {
