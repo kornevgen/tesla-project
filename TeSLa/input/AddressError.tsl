@@ -1,6 +1,6 @@
-VAR BASE : 32;
-VAR offset : 32;
+VAR READONLY BASE : 32;
+VAR READONLY offset : 32;
 
-vAddr := (64)offset + (64)BASE;
+vAddr <- (64)offset + (64)BASE;
 
 ASSERT vAddr[2..0] = 0 ;
