@@ -16,7 +16,7 @@
 	<property file="${tools}/user.properties" />
 
   	<target name="distr.antlr">
-  		<property name="outputdir" location="${target}/ru/teslaprj/arithm" />
+  		<property name="outputdir" location="${target}/ru/teslaprj/syntax" />
   		<mkdir dir="${outputdir}" />
   		<antlr:antlr3
   			xmlns:antlr="antlib:org/apache/tools/ant/antlr"
