@@ -80,6 +80,7 @@ preArgs = null;
 					throw new SemanticException( null, "using more arguments (" + args.size() + ") than test sutiation has (" + parameters.size() + ")");
 				}
 
+				// TODO rewrite! according with additional args are marked with status OPTIONAL and this is more useful for checking
 				if ( args.size() + additionalArgs.size() > parameters.size() )
 				{
 					throw new SemanticException( null, "using more arguments (" + (args.size() + additionalArgs.size()) + ") than test sutiation has (" + parameters.size() + ")");
