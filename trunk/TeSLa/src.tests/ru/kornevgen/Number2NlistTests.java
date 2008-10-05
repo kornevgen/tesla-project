@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import ru.teslaprj.arithm.BitLen;
+import ru.teslaprj.syntax.BitLen;
 
 public class Number2NlistTests
 {

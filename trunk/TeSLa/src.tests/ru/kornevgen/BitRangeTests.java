@@ -7,8 +7,8 @@ import static org.junit.Assert.assertTrue;
 import org.antlr.runtime.Token;
 import org.junit.Test;
 
-import ru.teslaprj.arithm.BitLen;
-import ru.teslaprj.arithm.SemanticException;
+import ru.teslaprj.syntax.BitLen;
+import ru.teslaprj.syntax.SemanticException;
 
 public class BitRangeTests {
 	
