@@ -1,6 +1,6 @@
-VAR fs : 64;
-VAR ft : 64;
-VAR cond : 64;
+VAR READONLY fs : 64;
+VAR READONLY ft : 64;
+VAR READONLY cond : 64;
 
 ASSERT cond >=+ 0 AND cond <+ 16;
 
