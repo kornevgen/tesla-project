@@ -1,0 +1,42 @@
+\documentclass{article}
+\usepackage[cp1251]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{pscyr}
+\usepackage{amsmath}
+
+\title{название должно быть соответствующим генерации тестовых данных для тестирования микропроцессора}
+\author{автор}
+\date{}
+
+\textwidth=17cm \oddsidemargin=0cm
+
+\begin{document}
+\maketitle
+
+\abstract{ аннотация } % написать аннотацию
+
+\large
+
+\input{intro} % дописать тут постановку задачи и обзор!!!
+
+\input{testtemplates}
+
+\input{common}
+
+\input{sets}
+
+\input{eqneqsystem}
+
+\input{generationlp} % как моделировать данные, хранящиеся в кэше данных ???
+
+\section{Апробация}
+непонятно, что тут писать, пока нет работающего кода
+
+\section{Заключение}
+...
+
+\appendix
+
+\input{app1}
+
+\end{document}
