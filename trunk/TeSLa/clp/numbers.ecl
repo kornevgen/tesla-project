@@ -614,8 +614,10 @@ signExtend( Y, X, OldSize, NewSize ) :-
 
 random_result( X ) :-
 %	checklist( rnd_result, X ).
-	labeling( X ).
-	
+%	labeling( X ).
+	checklist( rr, X ).
+
+rr( X )	:- indomain( X, random ) .
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % связь строкового представления (для очень длинного числа)

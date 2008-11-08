@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ru.teslaprj.scheme.ts.ProcedureTestSituation;
+
 public class Command implements Commandlike
 {
 	public Command(
@@ -13,7 +15,7 @@ public class Command implements Commandlike
 			List<String> args,
 			List<String> additionalArgs, 
 			String testSituation,
-			Map<String, Set<String>> testSituationParameters )
+			Map<String, Set<ProcedureTestSituation>> testSituationParameters )
 		throws CommandDefinitionError
 	{
 		if ( additionalArgs == null )
@@ -37,7 +39,7 @@ public class Command implements Commandlike
 		this.testSituation = testSituation;
 		
 		if ( testSituationParameters == null )
-			this.testSituationParameters = new HashMap<String, Set<String>>();
+			this.testSituationParameters = new HashMap<String, Set<ProcedureTestSituation>>();
 		else
 		{
 			for( String paramName : testSituationParameters.keySet() )
@@ -60,7 +62,7 @@ public class Command implements Commandlike
 	public String getTestSituation() {
 		return testSituation;
 	}
-	public Map<String, Set<String>> getTestSituationParameters() {
+	public Map<String, Set<ProcedureTestSituation>> getTestSituationParameters() {
 		return testSituationParameters;
 	}
 
@@ -68,5 +70,5 @@ public class Command implements Commandlike
 	private List<String> args;
 	private List<String> additionalArgs;
 	private String testSituation;
-	private Map<String, Set<String> > testSituationParameters;
+	private Map<String, Set<ProcedureTestSituation> > testSituationParameters;
 }
