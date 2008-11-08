@@ -69,7 +69,7 @@ public class VarsController
 	}
 	
 	private int newVarNumber = 0;
-	public StringBuffer newVar()
+	public synchronized StringBuffer newVar()
 	{
 		return new StringBuffer( "_" ).append( newVarNumber++ );
 	}

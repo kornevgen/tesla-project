@@ -7,6 +7,7 @@ options
 
 @header {
 package ru.teslaprj.syntax;
+import ru.teslaprj.Cache;
 }
 @lexer::header {
 package ru.teslaprj.syntax;
@@ -40,6 +41,11 @@ package ru.teslaprj.syntax;
 	
 	String commandPrefix;
 	
+	boolean hasMemOperation;
+	
+	List<StringBuffer> tagVars;
+	List<Cache> cacheLevels;
+	
 	@Override
 	public void reportError( RecognitionException e )
 	{
@@ -60,7 +66,11 @@ program[
 	, List<String> additionalArgs
 	, ru.teslaprj.scheme.Scheme scheme
 	, String prefix
-] returns [StringBuffer eclipseProgram, List<LogicalVariable> signature]
+	, List<Cache> cacheLevels
+] returns
+	 [ StringBuffer eclipseProgram
+	 , List<LogicalVariable> signature
+	 , boolean hasMemoryOperation ]
 @init {
 List<LogicalVariable> parameters = new ArrayList<LogicalVariable>();
 StringBuffer preArgs;
@@ -68,6 +78,9 @@ ecl = new StringBuffer();
 varsc = new VarsController();
 predsc = new PredicatesController();
 preArgs = null;
+hasMemOperation = false;
+tagVars = new ArrayList<StringBuffer>();
+this.cacheLevels = cacheLevels;
 }
 	: signature
 			{
@@ -113,12 +126,23 @@ preArgs = null;
 				retval.eclipseProgram = new StringBuffer(
 					"'" + prefix + "::main'( _, " )
 					.append( preArgs ).append(", ")
-					.append( postArgs ).append( optional )
-					.append( ") :- ").append( eoln )
+					.append( postArgs ).append( optional );
+					
+				if ( hasMemOperation )
+				{
+					for( StringBuffer tag : tagVars )
+					{
+						retval.eclipseProgram
+							.append( ", " ).append( tag );
+					}
+				}
+					
+				retval.eclipseProgram.append( ") :- ").append( eoln )
 					.append( ecl )
 					.append( "true." ).append( eoln )
 					.append( predsc.printPredicates() ).append(eoln);
 				retval.signature = varsc.getSignature();
+				retval.hasMemoryOperation = hasMemOperation;
 			}
 	;
 
@@ -143,6 +167,7 @@ var_rule
 operator
 	: ( assertOperator
 	| assignOperator
+	| procedure
 	) ';'
 	;
 	
@@ -182,6 +207,38 @@ assignOperator
 		}
 	;
 
+procedure
+	: t = ( 'LoadMemory' | 'StoreMemory' ) '(' ID ',' addr = ID ')'
+		{
+			if ( hasMemOperation )
+			{
+				throw new SemanticException( t, "memory operation is already used" );
+			}
+			
+			hasMemOperation = true; 
+			// for each cache level generate their own tagVar!!!
+			tagVars.clear();
+			for( Cache cache : cacheLevels )
+			{
+				tagVars.add( varsc.newVar() );
+			}
+			String currentAddrVar = varsc.getCurrent( addr, addr.getText() );
+			for( int i = 0; i < cacheLevels.size(); i++ )
+			{
+				Cache cacheLevel = cacheLevels.get(i);
+				StringBuffer tag = tagVars.get(i);
+				
+				ecl.append( "numbers:getbits( [ " )
+					.append( tag ).append( " ], " )
+					.append( currentAddrVar ).append( ", " )
+					.append( cacheLevel.getAddressBitLength() ).append( ", " )
+					.append( cacheLevel.getAddressBitLength() - 1 ).append( ", " )
+					.append( cacheLevel.getAddressBitLength() - cacheLevel.getTagBitLength() )
+				.append( " )," ).append( eoln );
+			}
+		}
+	| 'AddressTranslation' '(' ID ',' ID ')'
+	; 
 	
 ///////////// EXPRESSIONS ///////////////////////////
 boolexpr returns [StringBuffer predicateName]
