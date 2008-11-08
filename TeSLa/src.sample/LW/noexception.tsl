@@ -1,9 +1,0 @@
-VAR RESULT rt : 64;
-VAR READONLY base : 64;
-VAR READONLY offset : 16;
-
-ASSERT WordValue( base );
-
-addr <- (32)offset + base[31..0];
-ASSERT addr[1..0] = 0;
-LoadMemory( rt, addr );
