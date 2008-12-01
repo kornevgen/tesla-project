@@ -31,16 +31,21 @@ public class LRUCollector
 		}
 		return result;
 	}
-
-	public String getSetVarBefore(String tag)
+	
+	public List<String> getAllHits()
 	{
-		int tagIndex = getHitTagIndex( tag );
-		int closest_index = tags.size();
+		return tags;
+	}
+
+	public String getSetVarBefore( int tagIndex )
+	{
+//		int tagIndex = getHitTagIndex( tag );
+		int closest_index = 0;
 		for( int index : setVars.keySet() )
 		{
-			if ( index >= tagIndex )
+			if ( index < tagIndex )
 			{
-				if ( index < closest_index )
+				if ( index > closest_index )
 					closest_index = index;
 			}
 		}
@@ -90,5 +95,10 @@ public class LRUCollector
 			}
 		}
 		return -1;
+	}
+
+	public boolean tagIsMiss(String tag)
+	{
+		return setVars.containsKey( tags.indexOf( tag ) );
 	}
 }

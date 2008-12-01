@@ -29,7 +29,7 @@ exp2XlessThan33( Result, X ) :-
 	( X #= 2 * N,
 		Result $< sqr(exp( 1e-10 + N * ln(2.0) ) + 1e-6) ,
 		Result $> sqr(exp( -1e-10 + N * ln(2.0) ) - 1e-6)
-	; X #= 2 * N + 1,
+	; N #< X,X #= 2 * N + 1,
 		X1 #= X - 1,
 		exp2XlessThan33( R, X1 ),
 		Result #= 2 * R	

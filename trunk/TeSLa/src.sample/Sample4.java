@@ -19,7 +19,7 @@ import ru.teslaprj.scheme.ts.CacheHit;
 import ru.teslaprj.scheme.ts.CacheMiss;
 import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 
-public class Sample3
+public class Sample4
 {
 	public static void main( String[] args )
 	{
@@ -116,7 +116,7 @@ public class Sample3
 					return null;
 				}
 			});
-			m2ts.add( new CacheMiss()
+			m2ts.add( new CacheHit()
 			{
 				@Override
 				public int getLevel() {
@@ -130,11 +130,6 @@ public class Sample3
 
 				@Override
 				public String getTagVar() {
-					return null;
-				}
-
-				@Override
-				public String getVTagVar() {
 					return null;
 				}
 			});

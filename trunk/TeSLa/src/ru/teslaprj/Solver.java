@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -86,18 +85,18 @@ public class Solver
 
 		try
 		{
-			writeFile( tmp, translate( scheme, moduleName, cacheState ) );
+	    	writeFile( tmp, translate( scheme, moduleName, cacheState ) );
 			
 			// 2. run ECLiPSe and get results
-//			CompoundTerm result = callECLiPSe( tmp, moduleName, scheme.getDefinedNames() );
+			CompoundTerm result = callECLiPSe( tmp, moduleName, scheme.getDefinedNames(), cacheState );
 			
 			// 3. analyze results
-//			return generateValues( result, scheme );
-			return new Verdict(new HashMap<Definition, BigInteger>(), null );
+			return generateValues( result, scheme, cacheState );
+//			return new Verdict(new HashMap<Definition, BigInteger>(), null );
 		}
 		finally
 		{
-//			tmp.delete();
+			tmp.delete();
 		}
 	}
 	
@@ -142,7 +141,12 @@ public class Solver
 		return sbuf.toString();
 	}
 	
-    private CompoundTerm callECLiPSe( final File eclipseProgram, final String moduleName, final List<String> names ) 
+    private CompoundTerm callECLiPSe( 
+    		  final File eclipseProgram
+    		, final String moduleName
+    		, final List<String> names
+    		, final List<Cache> cacheLevels
+    	) 
     	throws EclipseException, IOException
 	{
 	    // Object representing the Eclipse process
@@ -163,7 +167,7 @@ public class Solver
 	        eclipse.compile( eclipseProgram );
 	
 	        StringBuffer goal = new StringBuffer();
-	        goal.append( moduleName ).append( ":go(_" );
+	        goal.append( moduleName ).append( ":go(_, Caches" );
 	        for( String name : names )
 	        {
         		goal.append( ",_" + name ) ;
@@ -195,38 +199,74 @@ public class Solver
     	}
     }
 
-    private Verdict generateValues( CompoundTerm result, Scheme scheme )
+    private Verdict generateValues( 
+    		  final CompoundTerm result
+    		, final Scheme scheme
+    		, final List<Cache> cacheLevels
+    	)
     {
     	Map<Definition, BigInteger> values = new HashMap<Definition, BigInteger>();
+    	List< Map<Long,List<Long>> > caches = new ArrayList<Map<Long,List<Long>>>();
 
-    	List<Definition> defs = scheme.getDefinitions();
-		for( int i = 0; i < defs.size(); i++ )
+    	int defNumber = 2;
+    	@SuppressWarnings("unchecked")
+    	List<List<CompoundTerm>> cacheResults = (List<List<CompoundTerm>>)result.arg( defNumber++ );
+    	int cacheLevel = 0;
+    	for( List<CompoundTerm> setsForCacheLevel : cacheResults )
+    	{
+    		Map< Long, List<Long> > sets = new HashMap<Long, List<Long>>();
+    		int setSize = cacheLevels.get( cacheLevel ++ ).getSectionNumber();
+    		for( CompoundTerm set : setsForCacheLevel )
+    		{
+    			Object setNumber = set.arg(1);
+    			Long longSetNumber;
+				if ( setNumber instanceof Integer )
+					longSetNumber = (long)((Integer)setNumber).intValue();
+				else if ( setNumber instanceof Long )
+					longSetNumber = (Long)setNumber;
+				else
+					throw new Error( "unexpected eclipse behaviour: unknown type " + setNumber.getClass() );
+
+				@SuppressWarnings( "unchecked" )
+				List<CompoundTerm> hits = (List<CompoundTerm>)set.arg(3);
+    			List<Long> tags = new ArrayList<Long>();
+    			for( int i = 0; i < setSize; i++ )
+    			{
+    				Object tag = hits.get( i ).arg(1);
+    				if ( tag instanceof Integer )
+    					tags.add( (long)((Integer)tag).intValue() );
+    				else if ( tag instanceof Long )
+    					tags.add( (Long)tag );
+    				else
+    					throw new Error( "unexpected eclipse behaviour: unknown type " + tag.getClass() );
+    			}
+    			sets.put( longSetNumber, tags );
+    		}
+    		caches.add( sets );
+    	}
+        
+		for( Definition def : scheme.getDefinitions() )
 		{
-			List<?> arg = (List<?>)result.arg( i + 2 );
-			values.put( defs.get(i), BitLen.intlist2bigint( arg ) );
+			List<?> arg = (List<?>)result.arg( defNumber++ );
+			values.put( def, BitLen.intlist2bigint( arg ) );
 		}
 		
-		return new Verdict( values, null );
+		return new Verdict( values, caches );
     }
 
+    List<String> vytesnTags;
+    List<String> hitTags;
+    List<String> missTags;
+    
     private StringBuffer translate( 
-    		  Scheme scheme
-    		, String moduleName
-    		, List<Cache> cacheLevels )
+    		  final Scheme scheme
+    		, final String moduleName
+    		, final List<Cache> cacheLevels
+    	)
     	throws SchemeDefinitionError, IOException, RecognitionException
     {
-		//TODO реализовать решение задачи на сеты
-    	Map<Command, Map<Cache, Integer> > commandsSetNumbers = new HashMap<Command, Map<Cache,Integer>>();
-    	for( Command command : scheme.getCommands() )
-    	{
-    		Map<Cache, Integer> sets = new HashMap<Cache, Integer>();
-    		for( Cache cache : cacheLevels )
-    		{
-    			sets.put( cache, 0 );
-    		}
-    		commandsSetNumbers.put( command, sets );
-    	}
-    	Map<Cache, List<Integer>> allSets = calculateSets( commandsSetNumbers );
+    	/** command +> ( cacheLevelNumber +> setVar ) */
+		Map<Command, Map<Integer, String> > commandsSetNumbers = new HashMap<Command, Map<Integer,String>>() ;
 
 
 
@@ -244,273 +284,57 @@ public class Solver
     	
     	// сгенерировать предикат go: последовательность вызовов унифицированных "предикатов go"
 		List<String> names = scheme.getDefinedNames();
-		ecl.append( ":- export go/" ).append( names.size() + allSets.values().size() + 1 ).append( "." ).append(eoln).append(eoln);
-    	ecl.append( "go( ")
-//    	.append( "SetsFinal, " )
-    	.append( "SetsInitial" );
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( ", " ).append( getIniTagsOfSet( cacheLevels.indexOf( cache ) + 1, set ) );
-    		}
-    	}    	
-		for( String name : names )
-		{
-			ecl.append( ", _" + name );
-		}
-		int Mmax = 1 * cacheLevels.get(0).getSectionNumber();  //sum by levels of: length( SetNumbers ) * length( tags for one set ) /associativity/;
-    	ecl
-    	.append(" ) :- ").append( eoln )
-    	.append( "\tbinarySearchForOperators( SetsInitial, 0, ").append(Mmax).append( ", " ).append( Mmax * 2 ).append(", _, _, _, InitialProgramsLengths, SetsFinal, [ _");
-		for( String name : names )
-		{
-			ecl.append( ", _" + name );
-		}
-		ecl
-    	.append( " ] ),").append(eoln)
-    	.append( eoln )
-    	.append( "\tSetsInitial = [ _");
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( ", " ).append( getIniSetVar( cacheLevels.indexOf( cache ) + 1, set ) );
-    		}
-    	}
-    	ecl.append( " ]," ).append( eoln );    	
-
-    	ecl.append( "\tSetsFinal = [ _");
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( ", " ).append( getSetVar( cacheLevels.indexOf( cache ) + 1, set ) );
-    		}
-    	}
-    	ecl.append( " ]," ).append( eoln );    	
-
-    	ecl
-    	.append( "\tInitialProgramsLengths = [ 0" );
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( ", " ).append( getIniProgLenVar( cacheLevels.indexOf( cache ) + 1, set ) );
-    		}
-    	}
-    	ecl
-    	.append( " ]," ).append( eoln );
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    	    	ecl.append( "\tlength( " )
-    	    	.append( getIniTagsOfSet( cacheLevels.indexOf( cache ) + 1, set ) )
-    	    	.append( ", " )
-    	    	.append( getIniProgLenVar( cacheLevels.indexOf( cache ) + 1, set ) )
-    	    	.append( ")," )
-    	    	.append( eoln )
-    	    	.append( "\tsubtract( " )
-    	    	.append( getSetVar( cacheLevels.indexOf( cache ) + 1, set ) )
-    	    	.append( ", " )
-    	    	.append( getIniTagsOfSet( cacheLevels.indexOf( cache ) + 1, set ) )
-    	    	.append( ", _ )," ).append( eoln );
-    		}
-    	}
- 
-    	ecl
-    	.append( "true." ).append( eoln )
-    	.append( eoln );
-
-		
-		
-    	ecl
-    	.append( "binarySearchForOperators(")
-    		.append( "  SetsInitial" )
-    		.append( ", MinM, CurrentM, _" )
-    		.append( ", LastSuccessLi, LastSuccessSetsFinal, LastSuccessP" )
-    		.append( ", SuccessLi, SuccessSetsFinal, SuccessP" )
-    	.append( " ) :-" ).append( eoln )
-    	.append( "\tInitialProgramsLengths = [ 0" );
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( ", " ).append( getIniProgLenVar( cacheLevels.indexOf( cache ) + 1, set ) );
-    		}
-    	}
-    	ecl
-    	.append( " ]," ).append( eoln );
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( "\t" ).append( getIniProgLenVar( cacheLevels.indexOf( cache ) + 1, set ) ).append( " #>= 0,").append( eoln );
-    		}
-    	}
-    	ecl
-    	.append( "\tCurrentM #= 0" );
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( " + " ).append( getIniProgLenVar( cacheLevels.indexOf( cache ) + 1, set ) );
-    		}
-    	}
-    	ecl.append( "," ).append( eoln )
-    	.append( "\tlabeling( InitialProgramsLengths )," ).append( eoln );
-
-    	ecl.append( "\tSetsInitial = [ _");
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( ", " ).append( getIniSetVar( cacheLevels.indexOf( cache ) + 1, set ) );
-    		}
-    	}
-    	ecl.append( " ]," ).append( eoln );    	
-
-    	ecl.append( "\tSetsFinal = [ _");
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( ", " ).append( getSetVar( cacheLevels.indexOf( cache ) + 1, set ) );
-    		}
-    	}
-    	ecl.append( " ]," ).append( eoln );    	
-
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl
-    			.append( "\tlru:setConditions( " )
-    			.append( getIniProgLenVar( cacheLevels.indexOf( cache ) + 1, set ) )
-    			.append( ", " )
-    			.append( getIniSetVar( cacheLevels.indexOf( cache ) + 1, set ) )
-    			.append( ", ")
-    			.append( getSetVar( cacheLevels.indexOf( cache ) + 1, set ) )
-    			.append( " )," ).append( eoln );
-    		}
-    	}
-
-    	ecl
-    	.append( eoln )
-    	.append( "\toperators( SetsFinal, P )," ).append( eoln )
-    	.append( eoln );
-    	for( Cache cache : cacheLevels )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( "\tlabeling( " )
-    			.append( getSetVar( cacheLevels.indexOf( cache ) + 1, set ) )
-    			.append( " )," ).append( eoln );
-    		}
-    	}
-    	
-    	ecl
-    	.append( "\t!," ).append( eoln )
-    	.append( "\t( MinM = CurrentM ->" ).append( eoln )
-    	.append( "\t\tSuccessSetsFinal = SetsFinal," ).append( eoln )
-    	.append( "\t\tSuccessLi = InitialProgramsLengths," ).append( eoln )
-    	.append( "\t\tSuccessP = P," ).append( eoln )
-    	.append( "\t\tLastSuccessLi = InitialProgramsLengths," ).append( eoln )
-    	.append( "\t\tLastSuccessSetsFinal = SetsFinal," ).append( eoln )
-    	.append( "\t\tLastSuccessP = P" ).append( eoln )
-    	.append( "\t;" ).append( eoln )
-    	.append( "\t\tNewCurrent is ( MinM + CurrentM ) div 2," ).append( eoln )
-    	.append( "\t\tbinarySearchForOperators( SetsInitial, MinM, NewCurrent, CurrentM, InitialProgramsLengths, SetsFinal, P, SuccessLi, SuccessSetsFinal, SuccessP )").append( eoln )
-    	.append( "\t) ." ).append( eoln )
-    	.append( eoln )
-    	
-    	.append( "binarySearchForOperators(" )
-    		.append( "  SetsInitial" )
-    		.append( ", MinM, CurrentM, PreviousM" )
-    		.append( ", LastSuccessLi, LastSuccessSetsFinal, LastSuccessP" )
-    		.append( ", SuccessLi, SuccessSetsFinal, SuccessP" )
-    	.append( " ) :-").append( eoln )
-    	.append( "\tMinP1 is MinM + 1," ).append( eoln )
-    	.append( "\t( PreviousM = MinP1 ->" ).append( eoln )
-    	.append( "\t\tSuccessLi = LastSuccessLi," ).append( eoln )
-    	.append( "\t\tSuccessSetsFinal = LastSuccessSetsFinal," ).append( eoln )
-    	.append( "\t\tSuccessP = LastSuccessP" ).append( eoln )
-    	.append( "\t;" ).append( eoln )
-    	.append( "\t\tCurrentM < " ).append( Mmax ).append( "," ).append( eoln )
-    	.append( "\t\tCurrentM < PreviousM," ).append( eoln )
-    	.append( "\t\tNewCurrent is ( CurrentM + PreviousM ) div 2," ).append( eoln )
-    	.append( "\t\tbinarySearchForOperators( SetsInitial, CurrentM, NewCurrent, PreviousM, LastSuccessLi, LastSuccessSetsFinal, LastSuccessP, SuccessLi, SuccessSetsFinal, SuccessP )").append( eoln )
-    	.append( "\t) ." ).append( eoln )
-    	.append( eoln );
-    	
-    	ecl.append( "operators( [ _" );
+		ecl.append( ":- export go/" ).append( names.size() + 2 ).append( "." ).append(eoln).append(eoln);
+    	ecl.append( "go( _, Caches" );
     	// initial states of sets
-    	for( Cache cache : allSets.keySet() )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		for( int set : sets )
-    		{
-    			ecl.append( ", " ).append( getSetVar( cacheLevels.indexOf( cache ) + 1, set ) );
-    		}
-    	}
-    	ecl.append( " ], [ _" );
 		for( String name : names )
 		{
 			ecl.append( ", _0" + name );
 		}
-    	ecl.append( " ] ) :-" ).append( eoln )
+    	ecl.append( " ) :-" ).append( eoln )
     	.append( eoln );
 
-    	for( Cache cache : allSets.keySet() )
-    	{
-    		List<Integer> sets = allSets.get( cache );
-    		int tagsCount = cache.getSectionNumber();
-    		for( int setNumber : sets )
-    		{
-    			ecl
-    			.append( getSetVar( cacheLevels.indexOf( cache ) + 1, setNumber) )
-    			.append( " = [  ").append( getIniTagVar( cacheLevels.indexOf( cache ) + 1, setNumber, 1 ) );
-    			for( int k = 2; k <= tagsCount; k++ )
-    			{
-    				ecl.append( ", " ).append( getIniTagVar( cacheLevels.indexOf( cache ) + 1, setNumber, k ) );
-    			}
-    			ecl.append( "]," ).append( eoln );
-
-    			for( int k = 1; k <= tagsCount; k++ )
-    			{
-    				String tag = getIniTagVar( cacheLevels.indexOf( cache ) + 1, setNumber, k );
-					ecl.append( "intset( " ).append( tag ).append( "set, 0, " ).append( (int)Math.pow(2, cache.getTagBitLength() ) - 1 ).append( " ), " )
-					.append( "#( " ).append( tag ).append( "set, 1 ), " )
-					.append( tag ).append( " in " ).append( tag ).append( "set," ).append( eoln );
-    			}
-    			
-    			ecl.append( eoln )
-    			.append( getSetVar( cacheLevels.indexOf( cache ) + 1, setNumber) )
-    			.append( "_0 = []");
-    			
-    			for( int k = 1; k <= tagsCount; k++ )
-    			{
-    				String tag = getIniTagVar( cacheLevels.indexOf( cache ) + 1, setNumber, k );
-					ecl.append( " \\/ " ).append( tag ).append( "set" );
-    			}
-    			
-    			ecl.append( "," ).append( eoln )
-    			.append( eoln );
-    		}
-    	}
+//    	for( Cache cache : allSets.keySet() )
+//    	{
+//    		int maxTagValue = (int)Math.pow(2, cache.getTagBitLength() ) - 1;
+//    		List<Integer> sets = allSets.get( cache );
+//    		int tagsCount = cache.getSectionNumber();
+//    		for( int setNumber : sets )
+//    		{
+//    			ecl
+//    			.append( getSetVar( cacheLevels.indexOf( cache ) + 1, setNumber) )
+//    			.append( " = [ ").append( getIniTagVar( cacheLevels.indexOf( cache ) + 1, setNumber, 1 ) );
+//    			for( int k = 2; k <= tagsCount; k++ )
+//    			{
+//    				ecl.append( ", " ).append( getIniTagVar( cacheLevels.indexOf( cache ) + 1, setNumber, k ) );
+//    			}
+//    			ecl.append( " ]," ).append( eoln )
+//    			.append( getSetVar( cacheLevels.indexOf( cache ) + 1, setNumber) )
+//    			.append( " #:: [ 0 .. ").append( maxTagValue ).append( " ],").append( eoln )
+//    			.append( "ic_global:alldifferent( " ).append( getSetVar( cacheLevels.indexOf( cache ) + 1, setNumber) ).append( " )," ).append( eoln );
+//
+//    			for( int k = 1; k <= tagsCount; k++ )
+//    			{
+//    				String tag = getIniTagVar( cacheLevels.indexOf( cache ) + 1, setNumber, k );
+//					ecl.append( "intset( " ).append( tag ).append( "set, 0, " ).append( (int)Math.pow(2, cache.getTagBitLength() ) - 1 ).append( " ), " )
+//					.append( "#( " ).append( tag ).append( "set, 1 ), " )
+//					.append( tag ).append( " in " ).append( tag ).append( "set," ).append( eoln );
+//    			}
+//    			
+//    			ecl.append( eoln )
+//    			.append( getSetVar( cacheLevels.indexOf( cache ) + 1, setNumber) )
+//    			.append( "_0 = []");
+//    			
+//    			for( int k = 1; k <= tagsCount; k++ )
+//    			{
+//    				String tag = getIniTagVar( cacheLevels.indexOf( cache ) + 1, setNumber, k );
+//					ecl.append( " \\/ " ).append( tag ).append( "set" );
+//    			}
+//    			
+//    			ecl.append( "," ).append( eoln )
+//    			.append( eoln );
+//    		}
+//    	}
     	
     	Map<String, Integer> varVersions = new HashMap<String, Integer>();
     	for( String name : names )
@@ -518,40 +342,149 @@ public class Solver
     		varVersions.put( name, 0 );
     	}
     	
-    	for( Assert asert : scheme.getAsserts() )
-    		commandPredicates.append( commandlikeTranslate( asert, scheme, varVersions, ecl, null, cacheLevels, null, null ) );
-
-    	VarsController tagNames = new VarsController();
+    	VarsController tagNames = new VarsController();    	
     	
+    	//////// TODO SETs PROBLEM
+    	// 1. assign set variables to commands if command is memory operation
+    	Set<String> allSetVars = new HashSet<String>();
+    	for( Command cmd : scheme.getCommands() )
+    	{
+    		if ( commandIsMemoryOperation( cmd, scheme, cacheLevels ) )
+    		{
+    			Map<Integer, String> sets = new HashMap<Integer, String>();
+    			for( int level = 1; level <= cacheLevels.size(); level++ )
+    			{
+    				String set = tagNames.newVar().toString();
+    				sets.put( level, set );
+    				allSetVars.add( set );
+    				ecl.append( set ).append( " #:: [ 0 .. ")
+    					.append( (int)Math.pow(2.0, cacheLevels.get(level - 1).getSetNumberBitLength() ) - 1 )
+    					.append( " ]," ).append( eoln );
+    			}
+				commandsSetNumbers.put( cmd, sets );
+    		}
+    	}
+    	// 2. derive set constrains (=,#)
+    	// 3. generate prolog code for constraints ( =, #, labeling)
+    	for( String set : allSetVars )
+    	{
+    		ecl.append( "indomain( " ).append( set ).append( " ),").append( eoln );
+    	}
+    	ecl.append( eoln );
+    	
+    	/////// инициализация
+    	StringBuffer cacheslist = new StringBuffer( "Caches" );
+    	for( int level = 1; level <= cacheLevels.size(); level++ )
+    	{
+    		ecl.append( "CurrentSetsOfLevel" ).append( level ).append( " = _ ,").append( eoln );
+        	ecl.append( cacheslist )
+        		.append( " = [ CurrentSetsOfLevel" ).append( level ).append( " | ");
+        	cacheslist = tagNames.newVar();
+        	ecl.append( cacheslist ).append( " ]," ).append( eoln );
+    	}
+    	ecl.append( cacheslist ).append( " = []," ).append( eoln );
+    	
+    	List<StringBuffer> initialTagLists = new ArrayList<StringBuffer>();
+		for( Command cmd : scheme.getCommands() )
+		{
+			Map<Integer, String> sets = commandsSetNumbers.get( cmd );
+			if ( sets != null ) 
+			{
+				// this is a 'memory instruction'
+				for( Integer level : sets.keySet() )
+				{
+					String setNumberVar = sets.get( level );
+					int Max = (int)Math.pow(2, cacheLevels.get( level - 1 ).getTagBitLength() ) - 1;
+
+					List<StringBuffer> tags = new ArrayList<StringBuffer>();
+					StringBuffer list = tagNames.newVar();
+					StringBuffer setlist = list;
+					StringBuffer list2 = tagNames.newVar();
+					StringBuffer tagsetlist = list2;
+					for( int setPosition = 0; setPosition < cacheLevels.get( level - 1 ).getSectionNumber(); setPosition++ )
+					{
+						StringBuffer tag = tagNames.newVar();
+						tags.add( tag );
+						ecl
+						.append( tag ).append( " #:: [ 0 .. " ).append( Max ).append( " ], " )
+						.append( "intset( " )
+							.append( tag ).append( "set, " )
+							.append( "0, " )
+							.append( Max )
+						.append( " ), " )
+						.append( "#( " ).append( tag ).append( "set, 1 ), " )
+						.append( tag ).append( " in " ).append( tag ).append( "set," ).append( eoln )
+						.append( list ).append( " = [ " ).append( tag ).append( " | " );
+						list = tagNames.newVar();
+						ecl.append( list ).append( " ]," ).append( eoln )
+						.append( list2 ).append( " = [ " ).append( tag ).append( "set | " );
+						list2 = tagNames.newVar();
+						ecl.append( list2 ).append( " ]," ).append( eoln );
+					}
+					ecl.append( list ).append( " = []," ).append( eoln );
+					ecl.append( list2 ).append( " = []," ).append( eoln );
+					ecl.append( "ic_global:alldifferent( ").append( setlist ).append( " )," ).append( eoln );
+					initialTagLists.add( setlist );
+					
+					// 'setVar' is var for intset with initial values of set
+					StringBuffer setVar = tagNames.newVar();
+					ecl
+					.append( "intset( " )
+						.append( setVar )
+						.append( ", 0, " )
+						.append( Max )
+					.append( " ), " )
+					
+					.append( "#( " )
+						.append( setVar ).append( ", " )
+						.append( tags.size() )
+					.append( " )," ).append( eoln );
+					
+					for( StringBuffer tag : tags )
+					{
+						ecl.append( tag ).append(" in " ).append( setVar ).append( ", " ).append( eoln );
+					}
+					
+					ecl
+					.append( "lru:initialize( " ) // set initial state of 'set' if it is not set yet
+						.append( setNumberVar ).append( ", " ) // in runtime 'setVar' is int constant!
+						.append( setVar ).append( ", " )
+						.append( "CurrentSetsOfLevel" ).append( level ).append( ", " )
+						.append( setlist ).append( ", " )
+						.append( tagsetlist )
+					.append( " )," ).append( eoln );
+				}
+			}
+		}
+    	ecl.append( eoln );
+    	
+    	////////// assert's
+    	for( Assert asert : scheme.getAsserts() )
+    		commandPredicates.append( 
+    				commandlikeTranslate( 
+    						  asert
+    						, scheme
+    						, varVersions
+    						, ecl
+    						, null
+    						, cacheLevels
+    						, null
+    					)
+    			);
+
     	currentSetVersions = new HashMap<Cache, Map<Integer,Integer>>();
     	
-    	Map<Cache, Map<Integer, LRUCollector>> collectors = new HashMap<Cache, Map<Integer,LRUCollector>>();
     	for( int i = 0; i < cacheLevels.size(); i++ )
     	{
     		Cache cache = cacheLevels.get(i);
     		currentSetVersions.put( cache, new HashMap<Integer, Integer>() );
-    		List<Integer> setsOfThisCache = allSets.get( cache );
-    		
-    		Map<Integer, LRUCollector> cacheCollectors = new HashMap<Integer, LRUCollector>();
-    		int tagsCount = cache.getSectionNumber();
-
-    		// add initial content of set to the 'collector'
-    		for( Integer setNumber : setsOfThisCache )
-    		{
-    			LRUCollector collector = new LRUCollector();
-    			
-    			for( int k = tagsCount; k > 0; k-- )
-    			{
-	    			collector.addHit( getIniTagVar( i + 1, setNumber, k ) );
-    			}
-    			collector.upgradeSet( getSetVar( i + 1, setNumber ) + "_0" );
-    			
-    			cacheCollectors.put( setNumber, collector );
-    		}
-    		collectors.put( cache, cacheCollectors );
     	}
    
-    	
+        vytesnTags = new ArrayList<String>();
+        hitTags = new ArrayList<String>();
+        missTags = new ArrayList<String>();
+
+        ///////////// команды
     	for( Command command : scheme.getCommands() )
     	{
     		commandPredicates.append( commandlikeTranslate( 
@@ -562,112 +495,101 @@ public class Solver
     				, tagNames
     				, cacheLevels
     				, commandsSetNumbers.get( command )
-    				, collectors
     			) );
     	}
     	
     	ecl.append( eoln );
-    	ecl.append( "% LRU predicates" ).append( eoln ).append( eoln );
-    	// LRU predicates
+    	
+    	//////////// LRU
+    	ecl.append( "% LRU predicates" ).append( eoln );
+    	int level = 1;
     	for( Cache cache : cacheLevels )
     	{
-    		ecl.append( "% next cache level" ).append( eoln );
-    		
-    		Map<Integer, LRUCollector> collectorsForThisCache = collectors.get( cache );
-    		for( LRUCollector collector : collectorsForThisCache.values() )
-    		{
-    			ecl.append( "% next set for this cache level" ).append( eoln );
-	    		String tagCase = null; // CaseX5
-		    	for( String tag : collector.getReversedVytTags() )
-		    	{
-		    		ecl.append( "% lru( " ).append( tag ).append( " )" ).append( eoln );
-		    		if ( tagCase != null )
-		    		{
-		    			ecl.append( tagCase ).append( " #> " );
-		    			tagCase = "Case" + tag;
-		    			ecl.append( tagCase ).append( eoln )
-		    			.append( eoln );
-		    		}
-		    		else
-		    		{
-		    			tagCase = "Case" + tag;
-		    		}
-		    		
-		    		int index_before_vytesn = collector.getIndexBeforeVytesn( tag );
-		    		int lastHitIndex = index_before_vytesn - cache.getSectionNumber();
-		    		boolean hitsAreNotEmpty = lastHitIndex >= 0;
-		    		if ( hitsAreNotEmpty )
-		    		{
-		    			ecl.append( "( false ").append( eoln );
-		    		}
-		    		for( String hitTag : collector.getReversedHitsFrom( lastHitIndex ) )
-		    		{
-		    			// ; CaseX5 = 5, X6 = C5, S2 \ TX6 sameset TX1 \/ TX3 \/ TX4 \/ TX5
-		    			ecl.append( "; " ).append( tagCase ).append( " = " ).append( lastHitIndex )
-		    			.append( ", " ).append( tag ).append( " = " ).append( hitTag )
-		    			.append( ", " ).append( collector.getSetVarBefore( tag ) ).append( " \\ " ).append( tag ).append( "set sameset [] ");
-		    			for( String immediateTag : collector.getTagsRange( lastHitIndex + 1, index_before_vytesn ) )
-		    			{
-		    				ecl.append( " \\/ " ).append( immediateTag ).append( "set" );
-		    			}
-		    			ecl.append( eoln );
-		    			
-		    			lastHitIndex -- ;
-		    		}
-		    		if ( hitsAreNotEmpty )
-		    		{
-		    			ecl.append( ")," ).append( eoln );
-		    		}
-	    			ecl.append( eoln );
-		    	}
-    		}
+    		ecl.append( "lru:vytesnTagsLRU( " )
+    			.append( "CurrentSetsOfLevel" ).append( level++ ).append( ", " )
+    			.append( cache.getSectionNumber() )
+    		.append( ")," ).append( eoln );
     	}
+    	ecl.append( eoln );
+
+		/////////////// labeling
+    	// 1. выбор вытесняемых тегов
+    	ecl.append( "%вытесненные" ).append( eoln );
+    	for( String vt : vytesnTags )
+    	{
+		    ecl.append( "indomain( " ).append( vt ).append( " )," ).append( eoln );
+    	}
+    	vytesnTags = null;
     	
-		// предикаты выбора случайных значений для переменных
+    	// 2. выбор hit-тегов
+    	ecl.append( "%hit" ).append( eoln );
+    	for( String ht : hitTags )
+    	{
+		    ecl.append( "indomain( " ).append( ht ).append( " )," ).append( eoln );
+    	}
+    	hitTags = null;
+    	
+    	// 3. выбор miss тегов
+    	ecl.append( "%miss" ).append( eoln );
+    	for( String mt : missTags )
+    	{
+		    ecl.append( "indomain( " ).append( mt ).append( " )," ).append( eoln );
+    	}
+    	missTags = null;
+    	
+    	// 4. labeling( Seti_0 ) initial sets
+    	for( StringBuffer ist : initialTagLists )
+    	{
+    		ecl.append( "labeling( " ).append( ist ).append( " )," ).append( eoln );
+    	}
+    	initialTagLists = null;
+    	
+    	// 5. random_result( var )
 		for( String name : names )
 		{
 			ecl	.append( "numbers:random_result( _0" ).append( name ).append( " )," )
 				.append( eoln );
 		}
 	
-		ecl.append( "true.").append(eoln).append(eoln)
+		ecl.append( "true." ).append( eoln )
+		.append( eoln )
 		.append( commandPredicates );
 
     	return ecl;
     }
     
-    private static Map<Cache, List<Integer>> calculateSets(
-			Map<Command, Map<Cache, Integer>> commandsSetNumbers)
-	{
-    	Map<Cache, List<Integer>> result = new HashMap<Cache, List<Integer>>();   	
-    	
-    	for( Command command : commandsSetNumbers.keySet() )
-    	{
-    		Map<Cache, Integer> setsForCommand = commandsSetNumbers.get( command );
-    		for( Cache cache : setsForCommand.keySet() )
-    		{
-    			if ( result.containsKey( cache ) )
-    			{
-    				// add setsForCommand.get( cache ) to the 'cache tagset'
-    				List<Integer> sets = result.get( cache );
-    				if ( ! sets.contains( setsForCommand.get( cache ) ) )
-    				{
-	    				sets.add( setsForCommand.get( cache ) );
-	    				result.put( cache, sets );
-    				}
-    			}
-    			else
-    			{
-    				// create new 'cache tagset'
-    				List<Integer> sets = new ArrayList<Integer>();
-    				sets.add( setsForCommand.get( cache ) );
-    				result.put( cache, sets );
-    			}
-    		}
-    	}
-    	
-		return result;
-	}
+//    private static Map<Cache, List<Integer>> calculateSets(
+//			Map<Command, Map<Cache, Integer>> commandsSetNumbers)
+//	{
+//    	Map<Cache, List<Integer>> result = new HashMap<Cache, List<Integer>>();   	
+//    	
+//    	for( Command command : commandsSetNumbers.keySet() )
+//    	{
+//    		Map<Cache, Integer> setsForCommand = commandsSetNumbers.get( command );
+//    		for( Cache cache : setsForCommand.keySet() )
+//    		{
+//    			if ( result.containsKey( cache ) )
+//    			{
+//    				// add setsForCommand.get( cache ) to the 'cache tagset'
+//    				List<Integer> sets = result.get( cache );
+//    				if ( ! sets.contains( setsForCommand.get( cache ) ) )
+//    				{
+//	    				sets.add( setsForCommand.get( cache ) );
+//	    				result.put( cache, sets );
+//    				}
+//    			}
+//    			else
+//    			{
+//    				// create new 'cache tagset'
+//    				List<Integer> sets = new ArrayList<Integer>();
+//    				sets.add( setsForCommand.get( cache ) );
+//    				result.put( cache, sets );
+//    			}
+//    		}
+//    	}
+//    	
+//		return result;
+//	}
 
 	private void writeFile( File file, StringBuffer text )
     	throws IOException
@@ -688,9 +610,27 @@ public class Solver
     {
     	return nextInt++;
     }
+
+    private boolean commandIsMemoryOperation (
+    		  final Commandlike command
+    	    , final Scheme scheme
+    	    , List<Cache> cacheLevels
+    	 )
+    throws IOException, RecognitionException
+    {
+    	String pathToTSL = sourcePath + "\\" + command.getCop() + "\\" + command.getTestSituation() + ".tsl";
+    	CharStream inputStream = new ANTLRFileStream( pathToTSL );
+    	TeSLaLexer lexer = new TeSLaLexer( inputStream );
+    	CommonTokenStream tokens = new CommonTokenStream(lexer);
+    	TeSLaParser parser = new TeSLaParser(tokens);
+    	TeSLaParser.program_return prog = parser.program( command.getArgs(), command.getAdditionalArgs(), scheme, "", cacheLevels );
+    	return prog.hasMemoryOperation;
+    }
     
     /**
-     * генерирует логический код для данной команды (предикаты)
+     * возвращает дополнительные предикаты, необходимые команде
+     * обладает побочным эффектом: меняет ecl
+     * 
      * @param command		команда
      * @param scheme		схема
      * @param varVersions	номера версий глобальных переменных
@@ -710,8 +650,7 @@ public class Solver
     		, StringBuffer ecl
     		, VarsController tagsVersions
     		, List<Cache> cacheLevels
-    		, Map<Cache, Integer> setsNumbers
-    		, Map<Cache, Map<Integer, LRUCollector>> collectors
+    		, Map<Integer,String> setNumVars
     	)
     	throws IOException, RecognitionException
     {
@@ -751,7 +690,7 @@ public class Solver
 				ecl.append( ", " + tag );
 			}
 		}
-		ecl.append("),").append(eoln);
+		ecl.append( ")," ).append( eoln );
 		
 		if ( command instanceof Command )
 		{
@@ -773,31 +712,39 @@ public class Solver
 							Cache cache = cacheLevels.get( hit.getLevel() - 1 );
 							String tag = tags.get( hit.getLevel() - 1);
 							String tagset = tag + "set";
-							int setNumber = setsNumbers.get( cache );
-							LRUCollector collector = collectors.get( cache ).get( setNumber );
 							
 							// HIT for 'tag' in 'cache'
-							int currentSetVersion;
-							Map<Integer, Integer> setsForThisCacheLevel = currentSetVersions.get( cache );
-							if ( setsForThisCacheLevel.get( setNumber ) == null )
-							{
-								currentSetVersion = 0;
-							}
-							else
-							{
-								currentSetVersion = setsForThisCacheLevel.get( setNumber );
-							}
-							String currentSetVar = 
-								getSetVar( hit.getLevel(), setNumber )
-							+ "_" + currentSetVersion;
 							
-							ecl.append( tag ).append( " in " ).append( currentSetVar ).append( "," ).append( eoln );
-							ecl.append( "intset( " ).append( tagset ).append( ", 0, " ).append( (int)Math.pow(2, cache.getTagBitLength() ) - 1 ).append( " ), " )
+							StringBuffer setVar = tagsVersions.newVar();
+							String setVarsStructure = "CurrentSetsOfLevel" + hit.getLevel();
+//							String hitsStructure = "HitsOfLevel" + hit.getLevel();
+							StringBuffer hitSetsStructure = tagsVersions.newVar();
+//							String setVersionsStructure = "SetVersionsOfLevel" + hit.getLevel();
+							String setNumber = setNumVars.get( hit.getLevel() );
+							
+							ecl.append( "lru:latestSetVar( " )
+								.append( setVar ).append( ", " )
+								.append( hitSetsStructure ).append( ", " )
+								.append( "_, " )
+								.append( setVarsStructure ).append( ", " )
+								.append( setNumber )
+							.append( " )," ).append( eoln )
+							.append( tag ).append( " in " ).append( setVar ).append( "," ).append( eoln )
+							.append( "intset( " ).append( tagset ).append( ", 0, " ).append( (int)Math.pow(2, cache.getTagBitLength() ) - 1 ).append( " ), " )
 							.append( "#( " ).append( tagset ).append( ", 1 ), " )
 							.append( tag ).append( " in " ).append( tagset ).append( "," ).append( eoln )
-							.append( eoln );
 							
-							collector.addHit( tag );
+							.append( "lru:addHit( ")
+								.append( tag ).append( ", " )
+								.append( tag ).append( "set, " )
+								.append( setVar ).append( ", " )
+								.append( hitSetsStructure )
+							.append( " )," ).append( eoln )
+							
+//							.append( "lru:addSet( ").append( setVar ).append( ", " ).append( setVersionsStructure ).append( ", " ).append( setNumber ).append( " )," ).append( eoln )
+							.append( eoln );
+
+						    hitTags.add( tag );
 						}
 						else if ( ts instanceof CacheMiss )
 						{
@@ -805,8 +752,6 @@ public class Solver
 							Cache cache = cacheLevels.get( miss.getLevel() - 1 );
 							String tag = tags.get( miss.getLevel() - 1);
 							String tagset = tag + "set";
-							int setNumber = setsNumbers.get( cache );
-							LRUCollector collector = collectors.get( cache ).get( setNumber );
 
 							// MISS for 'tag' in 'cache
 							String vytesnTag = miss.getVTagVar();
@@ -815,25 +760,6 @@ public class Solver
 								vytesnTag = tagsVersions.newVar().toString();
 							}
 							String vytesnTagSet = vytesnTag + "set";
-
-							int currentSetVersion;
-							Map<Integer, Integer> setsForThisCacheLevel = currentSetVersions.get( cache );
-							if ( setsForThisCacheLevel.get( setNumber ) == null )
-							{
-								currentSetVersion = 0;
-							}
-							else
-							{
-								currentSetVersion = setsForThisCacheLevel.get( setNumber );
-							}
-
-							String currentSetVar = 
-								getSetVar( miss.getLevel(), setNumber )
-							+ "_" + currentSetVersion;
-
-							String nextSetVar = 
-								getSetVar( miss.getLevel(), setNumber )
-							+ "_" + ( currentSetVersion + 1 );
 
 							/*	X2 = vytesnTag, X3 = tag
 							 *  X2 in S1,
@@ -844,31 +770,113 @@ public class Solver
 								
 								S2 = (( S1 \ TX2 ) \/ TX3),
 							 */
+							
+							StringBuffer latestSetVar = tagsVersions.newVar();
+							String setNumber = setNumVars.get( miss.getLevel() );
+							String setVarsStructure = "CurrentSetsOfLevel" + miss.getLevel();
+							StringBuffer hitSetsStructure = tagsVersions.newVar();
+							StringBuffer vytesnStructure = tagsVersions.newVar();
+							
 							int maxTag = (int)Math.pow(2, cache.getTagBitLength() ) - 1;
 							ecl
+							.append( "lru:latestSetVar( " )
+								.append( latestSetVar ).append( ", " )
+								.append( hitSetsStructure ).append( ", " )
+								.append( vytesnStructure ).append( ", " )
+								.append( setVarsStructure ).append ( ", " )
+								.append( setNumber )
+							.append( " )," ).append( eoln )
+							
 							.append( "% вытесняемый тег").append( eoln )
-							.append( vytesnTag ).append( " in " ).append( currentSetVar ).append( "," ).append( eoln )
-							.append( "intset( " ).append( vytesnTagSet ).append( ", 0, ").append( maxTag ).append( " ), " )
-							.append( "#( " ).append( vytesnTagSet ).append( ", 1 ), ")
-							.append( vytesnTag ).append( " in " ).append( vytesnTagSet ).append( "," ).append( eoln )
+							.append( vytesnTag ).append( " in " ).append( latestSetVar ).append( "," ).append( eoln );
+							
+							StringBuffer latestNHits = tagsVersions.newVar();
+							
+							ecl.append( "lru:latestNHits( ")
+								.append( latestNHits ).append( ", " )
+								.append( cache.getSectionNumber() - 1 ).append( ", " )
+								.append( hitSetsStructure )
+							.append( ")," ).append( eoln )
+							.append( "( foreach( NH, " ).append( latestNHits ).append( " ),").append( eoln )
+								.append( "  param( " ).append( vytesnTag ).append( " )").append( eoln )
+								.append( "do" ).append( eoln )
+								.append( vytesnTag ).append( " #\\= NH" ).append( eoln )
+							.append( ")," ).append( eoln );
+							
+//							ecl
+//							.append( "intset( " )
+//								.append( vytesnTagSet )
+//								.append( ", 0, ")
+//								.append( maxTag )
+//								.append( " ), " )
+//							.append( "#( " ).append( vytesnTagSet ).append( ", 1 ), ")
+//							.append( vytesnTag ).append( " in " ).append( vytesnTagSet ).append( "," ).append( eoln );
+							
+//							String vytesnTagsStructure = "VytesnTagsOfLevel" + miss.getLevel();
+//							String vytesnTagSetsStructure = "VytesnTagSetsOfLevel" + miss.getLevel();
+//							String vytesnTagIdxsStructure = "VytesnTagIdxsOfLevel" + miss.getLevel();
+
+							ecl
+							.append( "lru:addVytesnTag( ")
+								.append( vytesnTag ).append( ", " )
+								.append( latestSetVar ).append( ", " )
+								.append( hitSetsStructure ).append( ", " )
+								.append( vytesnStructure )
+							.append( ")," ).append( eoln )
+							
+							.append( "intset( " ).append( vytesnTag ).append( "set, 0, " ).append( maxTag ).append( " )," )
+							.append( "#( " ).append( vytesnTag ).append( "set, 1 )," )
+							.append( vytesnTag ).append( " in " ).append( vytesnTag ).append( "set," ).append( eoln )
+							
+//							.append( "lru:addVytesnTagSet( ")
+//								.append( vytesnTagSet ).append( ", " )
+//								.append( vytesnTagSetsStructure ).append( ", " )
+//								.append( setNumber )
+//							.append( ")," ).append( eoln );
+//							
+//							StringBuffer hitsCount = tagsVersions.newVar();
+//							ecl.append( "lru:hitsCount( " )
+//								.append( hitsCount ).append( ", " )
+//								.append( hitsStructure ).append( ", " )
+//								.append( setNumber )
+//							.append( ")," ).append( eoln )
+//
+//							.append( "lru:addVytesnTagIdx( ")
+//								.append( hitsCount ).append( ", " )
+//								.append( vytesnTagIdxsStructure ).append( ", " )
+//								.append( setNumber )
+//							.append( ")," ).append( eoln )
+
 							.append( eoln )
 							
 							.append( "% тег - причина промаха").append( eoln )
 							.append( tag ).append( " #:: [ 0 .. ").append( maxTag ).append(" ], " )
-							.append( tag ).append( " notin " ).append( currentSetVar ).append( "," ).append( eoln )
+							.append( tag ).append( " notin " ).append( latestSetVar ).append( "," ).append( eoln )
 							.append( "intset( " ).append( tagset ).append( ", 0, ").append( maxTag ).append( " ), " )
 							.append( "#( " ).append( tagset ).append( ", 1 ), ")
 							.append( tag ).append( " in " ).append( tagset ).append( "," ).append( eoln )
 							.append( eoln );
-							
-							ecl.append( nextSetVar ).append( " = (( " ).append( currentSetVar ).append( " \\ " ).append( vytesnTagSet ).append(" ) \\/ ").append( tagset ).append( ")," ).append( eoln )
+	
+							StringBuffer nextSetVar = tagsVersions.newVar();
+							ecl.append( nextSetVar ).append( " = (( " )
+								.append( latestSetVar ).append( " \\ " ).append( vytesnTagSet )
+								.append(" ) \\/ ").append( tagset )
+							.append( ")," ).append( eoln )
+							.append( "lru:addSetVar( " )
+								.append( nextSetVar ).append( ", " )
+								.append( setVarsStructure ).append( ", " )
+								.append( setNumber )
+							.append( ")," ).append( eoln )
+							.append( "lru:addHit( " )
+								.append( tag ).append( ", " )
+								.append( tag ).append( "set, " )
+								.append( nextSetVar ).append( ", " )
+								.append( hitSetsStructure )
+							.append( ")," ).append( eoln )
 							.append( eoln );
 
-							// increment version of set
-							setsForThisCacheLevel.put( setNumber, currentSetVersion + 1 );
-							
-							collector.upgradeSet( nextSetVar, vytesnTag );
-							collector.addHit( tag );
+							vytesnTags.add( vytesnTag );
+						    missTags.add( tag );
 						}
 						else
 							continue;
@@ -876,6 +884,8 @@ public class Solver
 				}
 			}
 		}
+		
+		ecl.append( eoln );
 		
 		for( String var : changedVars )
 		{
@@ -950,28 +960,28 @@ public class Solver
     	return result;
     }
     
-    private static String getSetVar( int cacheLevel, int setNumber )
-    {
-    	return "Level" + cacheLevel + "Set" + setNumber;
-    }
-    
-    private static String getIniTagVar( int cacheLevel, int setNumber, int tagNumber )
-    {
-    	return getSetVar( cacheLevel, setNumber ) + "IniTag" + tagNumber;
-    }
-    
-    private static String getIniProgLenVar( int cacheLevel, int setNumber )
-    {
-    	return getSetVar( cacheLevel, setNumber ) + "InitLen";
-    }
-    
-    private static String getIniSetVar( int cacheLevel, int setNumber )
-    {
-    	return getSetVar( cacheLevel, setNumber ) + "Initial";
-    }
-    
-    private static String getIniTagsOfSet( int cacheLevel, int setNumber )
-    {
-    	return getSetVar( cacheLevel, setNumber ) + "IniTags";
-    }
+//    private static String getSetVar( int cacheLevel, int setNumber )
+//    {
+//    	return "Level" + cacheLevel + "Set" + setNumber;
+//    }
+//    
+//    private static String getIniTagVar( int cacheLevel, int setNumber, int tagNumber )
+//    {
+//    	return getSetVar( cacheLevel, setNumber ) + "IniTag" + tagNumber;
+//    }
+//    
+//    private static String getIniProgLenVar( int cacheLevel, int setNumber )
+//    {
+//    	return getSetVar( cacheLevel, setNumber ) + "InitLen";
+//    }
+//    
+//    private static String getIniSetVar( int cacheLevel, int setNumber )
+//    {
+//    	return getSetVar( cacheLevel, setNumber ) + "Initial";
+//    }
+//    
+//    private static String getIniTagsOfSet( int cacheLevel, int setNumber )
+//    {
+//    	return getSetVar( cacheLevel, setNumber ) + "IniTags";
+//    }
 }
