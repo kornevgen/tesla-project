@@ -6,4 +6,4 @@ ASSERT WordValue( base );
 
 addr <- (32)offset + base[31..0];
 ASSERT addr[1..0] = 0;
-LoadMemory( rt, addr );
+LoadMemory( rt, addr, DATA );

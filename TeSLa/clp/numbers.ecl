@@ -467,7 +467,7 @@ mul2chunk( Z, X, Ychunk, CurryChunk, SizeOfX ) :-
 		
 		Z61 = [ Z7, Z8 ],
 		
-		( Xt = [] -> S = Size ; S is Size - C ),
+		( Xt = [] -> S = SizeOfX ; S is SizeOfX - C ),
 		mul2chunk( Z9, Xt, Ychunk, Z7, S ),
 		
 		append( Z9, [ Z8 ], Z )

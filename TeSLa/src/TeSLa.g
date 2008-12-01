@@ -208,7 +208,12 @@ assignOperator
 	;
 
 procedure
-	: t = ( 'LoadMemory' | 'StoreMemory' ) '(' ID ',' addr = ID ')'
+	: t = ( 'LoadMemory' | 'StoreMemory' ) 
+			'(' 
+				    ID 
+				',' addr = ID
+				',' ( 'DATA' | 'INSTRUCTION' )
+			')'
 		{
 			if ( hasMemOperation )
 			{
@@ -234,7 +239,7 @@ procedure
 					.append( cacheLevel.getAddressBitLength() ).append( ", " )
 					.append( cacheLevel.getAddressBitLength() - 1 ).append( ", " )
 					.append( cacheLevel.getAddressBitLength() - cacheLevel.getTagBitLength() )
-				.append( " )," ).append( eoln );
+				.append( " ), \% for cache level no." ).append(i+1).append( eoln );
 			}
 		}
 	| 'AddressTranslation' '(' ID ',' ID ')'
