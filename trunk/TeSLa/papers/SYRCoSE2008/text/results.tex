@@ -1,94 +1,140 @@
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{mips64ts.eps}
+\caption{Testing system structure}\label{mips64testsystem}
+\end{figure}
+
+Fig.~\ref{mips64testsystem} shows a structure of test system. The central component is the test generator. It generates testing programs for executing on a chip. But the goal of this research is another component -- the test data generator (its the rest is given here only for illustration). The test data generator takes a test situation identifier (name) from the test generator and gives generates values for arguments of operation which corresponds to taken test situation.
+%Для каждой тестовой ситуации должна быть определена модель тестовой ситуации. %На основании этой модели тестовой ситуации The test data generator строит %тестовые данные. Модель представляет из себя текст на предлагаемом языке (see %~\ref{testlang}), который очень похож на псевдокод, используемый для описания %функциональности операции в стандарте мипс64. Вся последовательность действий, %включающая построение модели и ее использование, будет предлагаемым методом %построения тестовых данных.
+The model of test situation must be constructed for each test situation manually. The test data generator is based on this model when creates a test data. The model of test data is the text on a proposed language (see~\ref{testlang}). This language is very similar to pseudocode used in \textsc{MIPS64} standard~\cite{IEEEhowto:MIPS64} for definition of operations functionality. The sequence of actions including a model creation and its using is the proposed method of test data generation.
+
+%\subsection{Метод построения тестовых данных}\label{usecase}
+\subsection{Method of test data generation}\label{usecase}
+
+%С помощью предлагаемого метода по формальному или полуформальному
+%описанию поведения операции можно построить код, использующий
+%тестовые данные. При этом будет задействована логическое
+%программирование с ограничениями (constraint logical programming).
+
+Using proposed method it is possible to construct code with test
+data by formal or semi-formal operation description. The method is
+based on constraint logical programming~\cite{IEEEhowto:CLP}.
+
 \begin{enumerate}
-\item предложен новый метод для построения тестовых данных процессора
-\item разработан язык для описания тестовых ситуаций
-\item построен прототип генератора тестовых данных\label{generator}
+    \item %найти формальное или полуформальное описание поведения операции
+    find a formal or semi-formal description of given operation behavior
+    \item %выделить аргументы операции
+    find arguments of given operation
+    \item %определить тестовые ситуации, возникающие при выполнении данной %операции
+    find test situations corresponding to given operation
+    \item %для каждой тестовой ситуации определить способы ее достижения
+    determine ways of test situation obtaining
+    \item %для каждой тестовой ситуации составить описание на предлагаемом %автором данного исследования языке (см. п.~\ref{testlang})
+    make up a test situation model by proposed language (see~\ref{testlang})
+    \item %запустить генератор тестовых ситуаций (см. п.~\ref{generator}); %он создаст файл с промежуточным представлением
+    run proposed test data generator (for example, by API); it creates a file with intermediate representation if it doesn't exist
 \end{enumerate}
 
-\subsection{Метод построения тестовых данных}\label{usecase}
+%Язык описания тестовых ситуаций очень похож на псевдокод, поэтому в %большинстве случаев написание модели тестовой ситуации сводится к %переписыванию стандарта.
+The language of test situation description is very similar to pseudocode. So in the most cases the manual creating of a test situation model is come to standard rewriting.
 
-С помощью предлагаемого метода по формальному или полуформальному
-описанию поведения операции можно построить код, использующий
-тестовые данные. При этом будет задействована логическое
-программирование с ограничениями (constraint logical programming).
+%\subsection{Язык описания тестовых ситуаций}\label{testlang}
+\subsection{Language of test situation description}\label{testlang}
+%Язык описания тестовых ситуаций включает все операции псевдокода, на
+%котором описаны операции центрального процессора в
+%стандарте~\cite{MIPS64}:
+A language of test situation description contains all operations of
+pseudocode from standard~\cite{IEEEhowto:MIPS64}:
 
-\begin{enumerate}
-    \item найти формальное или полуформальное описание поведения операции
-    \item выделить аргументы операции
-    \item определить тестовые ситуации, возникающие при выполнении данной операции
-    \item для каждой тестовой ситуации определить способы ее достижения
-    \item для каждой тестовой ситуации составить описание на предлагаемом автором данного исследования языке (см. п.~\ref{testlang})
-    \item запустить генератор тестовых ситуаций (см. п.~\ref{generator}); он создаст файл с промежуточным представлением
-    \item написать программный код на одном из поддерживаемых языков
-    программирования (\textsf{С}, \textsf{C++}, \textsf{Java}), который обрабатывает файл с промежуточным представлением; в результате получится программа (на \textsf{С}, \textsf{C++} или
-    \textsf{Java}), в которой сначала отыскиваются тестовые данные,
-    а затем используются в других вычислениях
-\end{enumerate}
-
-Заметьте, что файл с описанием ситуации достаточно создать один раз
-(и переписывать его только при смене спецификации тестовой
-ситуации), запускать генератор тестовых ситуаций для одной тестовой
-ситуации тоже один раз. Однако для каждого получения новых тестовых
-данных необходимо запускать логический интерпретатор.
-
-\subsection{Язык описания тестовых ситуаций}\label{testlang}
-Язык описания тестовых ситуаций представляет из себя простой
-императивный язык с единственным типом данных - целым числом,
-состоящим из заданного числа бит (никаких явных ограничений на число
-бит не делается), операторами присваивания и утверждения (см. ниже).
-А также язык включает все операции псевдокода, на котором описаны
-операции центрального процессора в стандарте~\cite{MIPS64}:
 \begin{itemize}
-\item получение бита числа с заданным номером (например, \texttt{x[7]} -- 7й бит числа \texttt{x})
-\item получение диапазона бит числа с заданными номерами границ этого диапазона (например, \texttt{x[8..5]} -- диапазон бит с 8го по 5й, включая оба граничных бита)
-\item конкатенация чисел (например, \texttt{x.y} -- число, двоичная запись которого сначала состоит из двоичной записи числа \texttt{x}, а за ним - из двоичной записи числа \texttt{y})
-\item битовая степень числа -- конкатенация числа с самим собой нужное количество раз (например, \texttt{x\^{}5} -- битовая степень числа \texttt{x})
-\item привычные арифметические операции (сложение, вычитание, умножение)
-\item операции сравнения чисел (на больше, меньше)
-\item операция знакового увеличения размера числа (например,
-\texttt{x[16->64]} -- это 64-х битное число, равное и по модулю, и
-по знаку 16-ти битному числу, равному \texttt{x})
-\item логические операции \texttt{AND} и \texttt{OR}
-\item оператор присваивания (например, \texttt{x := 5;})
-\item оператор утверждения (например, \texttt{ASSERT x = 5;} - утверждение, что при исполнении данного оператора значение переменной \texttt{x} должно равняться 5)
+\item %получение бита числа с заданным номером (например, \texttt{x[7]} -- %7й бит числа \texttt{x})
+    get bit by its index (for example, \texttt{x[7]} is 7th bit of \texttt{x})
+\item %получение диапазона бит числа с заданными номерами границ этого %диапазона (например, \texttt{x[8..5]} -- диапазон бит с 8го по 5й, %включая оба граничных бита)
+    get range of bits by indexes of bounds (for example, \texttt{x[8..5]} is range of bits started at 8th and finished at 5th including both bound bits)
+\item %конкатенация чисел (например, \texttt{x.y} -- число, двоичная запись %которого сначала состоит из двоичной записи числа \texttt{x}, а за ним %- из двоичной записи числа \texttt{y})
+    concatenation (for example, \texttt{x.y} is number which binary notation started with binary notation of \texttt{x} and continued with binary notation of \texttt{y})
+\item %битовая степень числа -- конкатенация числа с самим собой нужное %количество раз (например, \texttt{x\^{}5} -- битовая степень числа %\texttt{x})
+    bit power (itself concatenation by required times) (for example, \texttt{x\^{}5} is bit power of \texttt{x})
+\item %привычные арифметические операции (сложение, вычитание, умножение)
+    regular arithmetic operations (addition, subtraction, multiplication)
+\item %операции сравнения чисел (на больше, меньше)
+    regular comparison operations (greater, less than)
+\item %логические операции \texttt{AND} и \texttt{OR}
+    regular logical operations \texttt{AND} and \texttt{OR}
+\item %оператор присваивания (например, \texttt{x := 5;})
+    assignment operator (for example, \texttt{x := 4;})
+\item %оператор утверждения (например, \texttt{ASSERT x = 5;} - %утверждение, что при исполнении данного оператора значение переменной %\texttt{x} должно равняться 5)
+    assertion operator (for example, \texttt{ASSERT x = 5;} is assertion about value of \texttt{x}: it must be equal to 5)
 \end{itemize}
 
-Язык не включает условный оператор и операторы цикла, потому что для
-\texttt{MIPS64} все тестовые ситуации удалось описать без них.
-Описание ситуации на таком языке представляет собой
-последовательность операторов, при выполнении которых должна
-произойти тестовая ситуация.
+%Язык не включает условный оператор и операторы цикла, потому что для
+%\texttt{MIPS64} все тестовые ситуации удалось описать без них.
+%Описание ситуации на таком языке представляет собой
+%последовательность операторов, при выполнении которых должна
+%произойти тестовая ситуация.
+The language doesn't contain a conditional operation and loop
+operation because all \textsc{MIPS64} test situations may be
+described without them.
 
-Язык не включает логическую операцию \texttt{NOT}. Это связано с
-ограничением применяемого логического интерпретатора, работа
-которого основана на методе резолюций. Тем более, что для
-\texttt{MIPS64} все тестовые ситуации удалось описать без применения
-\texttt{NOT}. Для этого нужно использовать версии вспомогательных
-функций, используемых в псевдокоде, операторов сравнения, логических
-операторов, в которые уже внесён оператор \texttt{NOT} (например,
-вместо \texttt{NOT(NotWordValue(x))} использовать
-\texttt{WordValue(x)}).
+%Язык не включает логическую операцию \texttt{NOT}. Это связано с
+%ограничением применяемого логического интерпретатора, работа
+%которого основана на методе резолюций. Тем более, что для
+%\texttt{MIPS64} все тестовые ситуации удалось описать без применения
+%\texttt{NOT}. Для этого нужно использовать версии вспомогательных
+%функций, используемых в псевдокоде, операторов сравнения, логических
+%операторов, в которые уже внесён оператор \texttt{NOT} (например,
+%вместо \texttt{NOT(NotWordValue(x))} использовать
+%\texttt{WordValue(x)}).
+The language doesn't contain a logical operator \texttt{NOT}. This
+operator conflicts with the resolution method which is base of CLP.
+Moreover all \textsc{MIPS64} test situations may be described
+without \texttt{NOT}. Therefore the language contains all comparison
+operations, extra versions of functions (with invected
+\texttt{NOT}). For example, the language contains
+\texttt{WordValue(x)} because \texttt{NOT(NotWordValue(x))} is used
+in test situations.
 
-\subsection{Генератор тестовых данных}
+%\subsection{Генератор тестовых данных}
+\subsection{Test data generator}
 
-Генератор на входе получает файл с описанием тестовой ситуации,
-транслирует его в промежуточное представление, исполняет
-промежуточное представление и, наконец, анализируя результат этого
-исполнения, формирует значения аргументов операции центрального
-процессора. В качестве промежуточного представления используется
-логическая программа, а ее исполнение проводится с помощью
-логического интерпретатора с открытым кодом
-\textsc{ECLiPSe}~\cite{ECLiPSe}. Выбор именно этого логического
-интерпретатора обусловлен тем, что он поддерживает технологию
-\textsc{CLP}~\cite{CLP} -- логического программирования с
-ограничениями. Инструменты, поддерживающие эту технологию, позволяют
-составлять и находить значения переменных для набора логических
-выражений (\emph{ограничений}), на которых каждое логическое
-выражение было бы истинно. Каждый оператор описания тестовой
-ситуации может быть сведен к набору ограничений. Поиск значений
-переменных для этого набора ограничений дает как раз нужные значения
-аргументов операции центрального процессора. Отсутствие в языке
-описания тестовых ситуаций операторов цикла гарантирует завершение
-работы инструмента на любом описании тестовой ситуации.
+%Генератор на входе получает файл с описанием тестовой ситуации,
+%транслирует его в промежуточное представление, исполняет
+%промежуточное представление и, наконец, анализируя результат этого
+%исполнения, формирует значения аргументов операции центрального
+%процессора. В качестве промежуточного представления используется
+%логическая программа, а ее исполнение проводится с помощью
+%логического интерпретатора с открытым кодом
+%\textsc{ECLiPSe}~\cite{ECLiPSe}. Выбор именно этого логического
+%интерпретатора обусловлен тем, что он поддерживает технологию
+%\textsc{CLP}~\cite{CLP} -- логического программирования с
+%ограничениями. Инструменты, поддерживающие эту технологию, позволяют
+%составлять и находить значения переменных для набора логических
+%выражений (\emph{ограничений}), на которых каждое логическое
+%выражение было бы истинно. Каждый оператор описания тестовой
+%ситуации может быть сведен к набору ограничений. Поиск значений
+%переменных для этого набора ограничений дает как раз нужные значения
+%аргументов операции центрального процессора. Отсутствие в языке
+%описания тестовых ситуаций операторов цикла гарантирует завершение
+%работы инструмента на любом описании тестовой ситуации.
 
-\subsection{Пример}
+The test data generator requires a file with test data model.
+The generator translates it to the intermediate representation if this representation doesn't exists. Then the generator executes the intermediate representation. And finally it analyzes results of execution and builds values of operations parameters as the output.
+
+The intermediate representation is a logical program. It is executed
+by open-source constraint logical interpreter
+\textsc{ECLiPSe}~\cite{IEEEhowto:ECLiPSe}. Constraints is key
+technique of proposed method. Each operator may be translated to a
+set of constraints (predicates) and logical interpreter tries to
+find true values of variables (all constraints are true with these
+values of variables). Variables are represented by SSA-form~\cite{IEEEhowto:cytron91efficiently}.
+
+The generator always finishes because the language doesn't contains
+a loop operator and call-mechanism (to define recursive
+calculations).
+
+%Для одной тестовой ситуации генератор пытается строить как можно больше %различных тестовых данных. Это дает возможность получить как можно больше %разных исполнений тестирующей программы на чипе.
+The generator tries to create as many as possible different sets of test data. This feature allows to get as many as possible executions of testing program on chip (and possibly to reveal hiding errors).
+
+%\subsection{Пример}
+\subsection{Example}
 \input{usecase}
