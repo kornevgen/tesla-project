@@ -1,0 +1,67 @@
+%\documentclass[twocolumn]{article}
+%\documentclass{article}
+\documentclass[10pt,conference]{IEEEtran}
+%\usepackage[cp1251]{inputenc}
+%\usepackage[russian]{babel}
+
+\begin{document}
+\title{Test data generation for arithmetic subsystem of CPUs \textsc{MIPS64}}
+\author{Evgeni Kornikhin, CMC MSU}
+\date{Moscow, 2008}
+
+\maketitle
+
+\begin{abstract}
+%–ассматриваетс€ задача генерации тестовых данных дл€ тестировани€
+%арифметической подсистемы центральных процессоров \textsc{MIPS64}.
+%ƒл€ решени€ этой задачи предлагаетс€ метод, использующий формальное
+%описание поведени€ процессора. Ёто описание предлагаетс€ делать на
+%специализированном €зыке, допускающем автомаческое решение задачи.
+The main problem is test data generation for arithmetic subsystem
+testing of CPUs \textsc{MIPS64}. A method are proposed to solve this
+problem. The method uses a formal description of processor
+functionality. A language for this description are proposed also.
+This language permits automatic test data generation.
+\end{abstract}
+
+%\section{ѕостановка задачи}
+\section{Problem}
+\input{problem}
+
+%\section{—уществующие методы}
+\section{Existence methods}
+\input{exists}
+
+%\section{“екущие результаты}
+\section{Current results}
+\input{results}
+
+%\section{ѕродолжение работы}
+\section{Future works}
+\input{future}
+
+\begin{thebibliography}{XXX}
+% ссылатьс€ - \cite{AAA}
+\bibitem{IEEEhowto:MIPS64} MIPS64 Architecture For Programmers VolumeII: The MIPS64 Instruction Set. Document Number: MD00087. Revision 2.00. June 9, 2003.
+\bibitem{IEEEhowto:ECLiPSe} K.Apt, M.Wallace. Constraint Logic Programming using
+Eclipse. Cambridge University Press, 2007.
+\bibitem{IEEEhowto:CLP} K.Marriott, Peter.J.Stuckey. Programming with
+Constraints. MIT Press, 1998.
+%\bibitem{ALPS} K. Hatayamal, K. Hikonel, T. Miyazaki, H. Yamada.A Practical Approach to Instruction-Based Test Generation for Functional
+%    Modules of VLSI Processors. VLSI Test Symposium, 1997., 15th
+%    IEEE. Volume , Issue , 27 Apr-1 May 1997 pp. 17 - 22
+%\bibitem{InKa} Gotlieb A., Botella B., Rueher M. A CLP Framework for Computing Structural Test Data // Proceedings of the First International Conference on Computational Logic, Springer-Verlag, 2000, pp. 399-413
+\bibitem{IEEEhowto:ATPG} Richard D. Eldred: Test Routines Based on Symbolic Logical Statements. J. ACM 6(1): 33-37 (1959)
+\bibitem{IEEEhowto:RTL} Davidson and Fraser; The Design and Application of a Retargetable Peephole Optimizer; ToPLaS v2(2) 191-202 (April 1980)
+\bibitem{IEEEhowto:PathOriented} C.Paoli, M.-L. Nivet, J.-F.Santucci,
+A.Campana. Electronic Design, Test and Applications, 2002.
+Proceedings. The First IEEE International Workshop on Volume ,
+Issue, 2002 Page(s):382 - 386
+\bibitem{IEEEhowto:SAT-HDL} F.Fallah, S.Devadas, K.Keutzer. Functional Vector Generation For HDL Models Using Linear Programming and 3-Satisfiability // in Proceedings
+ of the Design Automation Conference, pp. 528-533, June 1998.
+\bibitem{IEEEhowto:GA-HDL} F.Corno, A.Manzone, A.Pincetti, M.Sonza Reorda, G.Squillero. Automatic Test Bench Generation for Validation of RT-level Descriptions: an Industrial Experience // DATE2000: Design, Automation and Test in Europe, Paris (F), March 2000, pp.
+385-389.
+\bibitem{IEEEhowto:LinearProg} R.Brinkmann, R.Drechsler. RTL-datapath verification using integer linear programming // In IEEE VLSI Design'01 \& Asia and South Pacific Design Automation Conference, Bangalore, pages 741--746, 2002.
+\end{thebibliography}
+
+\end{document}
