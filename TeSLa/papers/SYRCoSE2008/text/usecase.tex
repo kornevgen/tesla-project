@@ -1,17 +1,10 @@
 
-%Рассмотрим метод на примере операции \textsf{ADD}. В
-%стандарте~\cite{MIPS64} описание этой операции расположено на
-%странице 36. Сначала выделяем аргументы этой операции. Для этого
-%читаем: <<Description: $rd \leftarrow rs + rt$>>. Значит, аргументы
-%этой операции -- $rt$ и $rs$. Определяемся с тестовыми ситуациями.
-%Читаем псевдокод операции из описания операции в стандарте:
-
-Consider the method at the operation \textsf{ADD}. There is
-description of this operation in standard~\cite{IEEEhowto:MIPS64} on
-page 36. For the beginning let's looking for its arguments. Read:
-"Description : $rd \leftarrow rs + rd$". So, $rt$ and $rs$ are
-arguments of this operation. Then let's looking for test situations.
-Read an operation pseudocode from standard:
+Рассмотрим метод на примере операции \textsf{ADD}. В
+стандарте~\cite{MIPS64} описание этой операции расположено на
+странице 36. Сначала выделяем аргументы этой операции. Для этого
+читаем: <<Description: $rd \leftarrow rs + rt$>>. Значит, аргументы
+этой операции -- $rt$ и $rs$. Определяемся с тестовыми ситуациями.
+Читаем псевдокод операции из описания операции в стандарте:
 
 { \tt
 
@@ -49,6 +42,7 @@ endif}
 таком исполнении псевдокода вызовется
 \texttt{SignalException(IntegerOverflow)}. Записываем это исполнение
 на языке, описанном в п.~\ref{testlang}:
+
 \begin{verbatim}
 VAR INT rs;
 VAR INT rt;
@@ -70,11 +64,10 @@ WordValue(rt)}.
 
 Запускаем генератор (см. п.~\ref{generator}).
 
-Наконец, последний шаг -- написание программного кода
-
- Осталось
-встроить поиск значений переменных $rs$ и $rt$ в другой программный
+Наконец, последний шаг -- написание программного кода.
+Осталось встроить поиск значений переменных $rs$ и $rt$ в другой программный
 код. Например, на \textsf{Java} это можно сделать так:
+
 \begin{verbatim}
 import java.io.IOException;
 import java.util.List;
@@ -84,20 +77,23 @@ import ru.NoSolution;
 import ru.EclipseException;
 
 public class Main {
-  /** compile situation file to intermediate */
+  /** compile situation file to
+        intermediate */
   public List<LogicalVariable> compile(
      String situation, String interm ) {
       return LesdenSolver.compile(
          situation, logicprog );
   }
 
-  /** run generator to get test data and use it */
+  /** run generator to get test data
+        and use it */
   public void run( String interm,
-      List<LogicalVariable> params ) {
+    List<LogicalVariable> params ) {
       try {
        List<LogicalVariable> parameters =
-            LesdenSolver.solve( path, params );
-       for( LogicalVariable var: parameters ) {
+          LesdenSolver.solve(path, params);
+       for(LogicalVariable var: parameters)
+       {
           ...
           // name = var.getCanonicalName()
           // value = var.getValue()
@@ -107,11 +103,11 @@ public class Main {
         ... //no solutions
       }
       catch( IOException e ) {
-        System.out.println("I/O error: "+e);
+        System.out.println("I/O: "+e);
         e.printStackTrace();
       }
       catch( EclipseException e ) {
-        System.out.println("ECLiPSe error: "+e);
+        System.out.println("ECLiPSe: "+e);
         e.printStackTrace();
       }
   }
