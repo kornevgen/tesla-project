@@ -1,170 +1,246 @@
-This is e-TeX, Version 3.141592-2.2 (MiKTeX 2.4) (preloaded format=latex 2006.5.11)  16 APR 2008 16:03
+This is e-TeX, Version 3.141592-2.2 (MiKTeX 2.4) (preloaded format=latex 2006.5.11)  23 MAY 2008 16:20
 entering extended mode
 **syrcose.tex
 (syrcose.tex
 LaTeX2e <2003/12/01>
 Babel <v3.8a> and hyphenation patterns for english, french, german, ngerman, ru
 ssian, dumylang, nohyphenation, loaded.
-(C:\texmf\tex\latex\base\article.cls
-Document Class: article 2004/02/16 v1.4f Standard LaTeX document class
-(C:\texmf\tex\latex\base\size10.clo
-File: size10.clo 2004/02/16 v1.4f Standard LaTeX file (size option)
-)
-\c@part=\count79
-\c@section=\count80
-\c@subsection=\count81
-\c@subsubsection=\count82
-\c@paragraph=\count83
-\c@subparagraph=\count84
-\c@figure=\count85
-\c@table=\count86
-\abovecaptionskip=\skip41
-\belowcaptionskip=\skip42
-\bibindent=\dimen102
-) (C:\texmf\tex\latex\base\inputenc.sty
-Package: inputenc 2004/02/05 v1.0d Input encoding file
+(IEEEtran.cls
+Document Class: IEEEtran 2007/03/05 V1.7a by Michael Shell
+-- See the "IEEEtran_HOWTO" manual for usage information.
+-- http://www.michaelshell.org/tex/ieeetran/
+\@IEEEtrantmpdimenA=\dimen102
+\@IEEEtrantmpdimenB=\dimen103
+\@IEEEtrantmpcountA=\count79
+\@IEEEtrantmpcountB=\count80
+\@IEEEtrantmptoksA=\toks14
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 366.
 
-(C:\texmf\tex\latex\cyrillic\cp1251.def
-File: cp1251.def 1999/11/16 v1.0d Input encoding file
-)) (C:\texmf\tex\generic\babel\babel.sty
-Package: babel 2004/02/19 v3.8a The Babel package
-(C:\texmf\tex\generic\babel\russianb.ldf
-Language: russianb 2004/02/19 v1.1o Russian support from the babel system
- (C:\texmf\tex\generic\babel\babel.def
-File: babel.def 2004/02/19 v3.8a Babel common definitions
-\babel@savecnt=\count87
-\U@D=\dimen103
-) (C:\texmf\tex\latex\cyrillic\t2aenc.def
-File: t2aenc.def 2004/01/26 v1.0g Cyrillic encoding definition file
+(C:\texmf\tex\latex\psnfss\ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 )
-Package babel Info: Making " an active character on input line 199.
-)) (syrcose.aux
-LaTeX Font Info:    Try loading font information for T2A+cmr on input line 4.
+-- Using 8.5in x 11in (letter) paper.
+-- Using DVI output.
+\@IEEEnormalsizeunitybaselineskip=\dimen104
+-- This is an 11 point document.
+\CLASSINFOnormalsizebaselineskip=\dimen105
+\CLASSINFOnormalsizeunitybaselineskip=\dimen106
+\IEEEnormaljot=\dimen107
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <6> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <8> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <11> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <11> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <17> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <17> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <20> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <20> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <24> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <24> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+\IEEEilabelindentA=\dimen108
+\IEEEilabelindentB=\dimen109
+\IEEEilabelindent=\dimen110
+\IEEEelabelindent=\dimen111
+\IEEEdlabelindent=\dimen112
+\IEEElabelindent=\dimen113
+\IEEEiednormlabelsep=\dimen114
+\IEEEiedmathlabelsep=\dimen115
+\IEEEiedtopsep=\skip41
+\c@section=\count81
+\c@subsection=\count82
+\c@subsubsection=\count83
+\c@paragraph=\count84
+\c@IEEEsubequation=\count85
+\abovecaptionskip=\skip42
+\belowcaptionskip=\skip43
+\c@figure=\count86
+\c@table=\count87
+\@IEEEeqnnumcols=\count88
+\@IEEEeqncolcnt=\count89
+\@IEEEtmpitemindent=\dimen116
+\c@IEEEbiography=\count90
+\@IEEEtranrubishbin=\box26
+) (C:\texmf\tex\latex\graphics\graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
 
-(C:\texmf\tex\latex\cyrillic\t2acmr.fd
-File: t2acmr.fd 2001/08/11 v1.0a Computer Modern Cyrillic font definitions
+(C:\texmf\tex\latex\graphics\keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks15
+)
+(C:\texmf\tex\latex\graphics\graphics.sty
+Package: graphics 2001/07/07 v1.0n Standard LaTeX Graphics (DPC,SPQR)
+ (C:\texmf\tex\latex\graphics\trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+) (C:\texmf\tex\latex\00miktex\graphics.cfg
+File: graphics.cfg 2003/03/12 v1.1 MiKTeX 'graphics' configuration
+)
+Package graphics Info: Driver file: dvips.def on input line 80.
+
+(C:\texmf\tex\latex\graphics\dvips.def
+File: dvips.def 1999/02/16 v3.0i Driver-dependant file (DPC,SPQR)
 ))
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 7.
-LaTeX Font Info:    ... okay on input line 7.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 7.
-LaTeX Font Info:    ... okay on input line 7.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 7.
-LaTeX Font Info:    ... okay on input line 7.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 7.
-LaTeX Font Info:    ... okay on input line 7.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 7.
-LaTeX Font Info:    ... okay on input line 7.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 7.
-LaTeX Font Info:    ... okay on input line 7.
-LaTeX Font Info:    Checking defaults for T2A/cmr/m/n on input line 7.
-LaTeX Font Info:    ... okay on input line 7.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <12> on input line 12.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 12.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 12.
-
-Overfull \hbox (4.58647pt too wide) in paragraph at lines 15--21
-\T2A/cmr/m/n/9 ва-ния ариф-ме-ти-че-ской под-си-сте-мы цен-траль-ных про-цес-со
--ров \T2A/cmr/m/sc/9 MIPS64\T2A/cmr/m/n/9 .
+\Gin@req@height=\dimen117
+\Gin@req@width=\dimen118
+) (syrcose.aux)
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/sc' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/sc' tried instead on input line 22.
+ (problem.tex)
+(exists.tex) (results.tex
+File: mips64ts.eps Graphic file (type eps)
+ <mips64ts.eps>
+Overfull \hbox (6.0pt too wide) in paragraph at lines 3--4
+ [][][] 
  []
 
-(problem.tex) (exists.tex [1
+[1
+
 
 ]
-Overfull \hbox (26.0936pt too wide) in paragraph at lines 41--59
-[][]\T2A/cmr/m/n/10 Другое пред-став-ле-ние мик-ро-схе-мы -- \T2A/cmr/m/sc/10 R
-TL\T2A/cmr/m/n/10 -модель (Register Transfer Language).
- []
-
-[2]) (results.tex [3]
-LaTeX Font Info:    Try loading font information for T2A+cmss on input line 22.
-
- (C:\texmf\tex\latex\cyrillic\t2acmss.fd
-File: t2acmss.fd 2001/08/11 v1.0a Computer Modern Cyrillic font definitions
-)
-LaTeX Font Info:    Try loading font information for OMS+cmr on input line 41.
-
-(C:\texmf\tex\latex\base\omscmr.fd
-File: omscmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
-)
-LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 41.
-LaTeX Font Info:    Try loading font information for T2A+cmtt on input line 41.
-
- (C:\texmf\tex\latex\cyrillic\t2acmtt.fd
-File: t2acmtt.fd 2001/08/11 v1.0a Computer Modern Cyrillic font definitions
-)
-[4] (usecase.tex
+LaTeX Font Info:    Calculating math sizes for size <11> on input line 50.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 5.
+(Font)              <11> on input line 50.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 5.
- [5]
-Overfull \hbox (41.66946pt too wide) in paragraph at lines 30--45
-\T2A/cmr/m/n/10 ко при та-ком ис-пол-не-нии псев-до-ко-да вы-зо-вет-ся \T2A/cmt
-t/m/n/10 SignalException(IntegerOverflow)\T2A/cmr/m/n/10 .
+(Font)              <7.69997> on input line 50.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5.5> on input line 50.
+LaTeX Font Info:    Try loading font information for OT1+pcr on input line 51.
+ (C:\texmf\tex\latex\psnfss\ot1pcr.fd
+File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
+) [2] (usecase.tex
+LaTeX Font Info:    Try loading font information for OT1+phv on input line 9.
+
+(C:\texmf\tex\latex\psnfss\ot1phv.fd
+File: ot1phv.fd 2001/06/04 scalable font definitions for OT1/phv.
+)
+Underfull \hbox (badness 10000) in paragraph at lines 18--19
+[][]\OT1/pcr/m/n/11 if NotWordValue(GPR[rs]) or
  []
 
 
-Overfull \hbox (5.57996pt too wide) in paragraph at lines 59--64
-\T2A/cmr/m/n/10 для со-кра-ще-ния убра-ны об-ра-ще-ния к \T2A/cmtt/m/n/10 GPR\T
-2A/cmr/m/n/10 . В ито-ге по-лу-чи-лось \T2A/cmtt/m/n/10 WordValue(rs)
+Underfull \hbox (badness 10000) in paragraph at lines 24--26
+[][]\OT1/pcr/m/n/11 temp $\OMS/cmsy/m/n/10.95  $ \OT1/pcr/m/n/11 (GPR[rs]$[]$||
+GPR[rs]$[]$) +
  []
 
 
-Overfull \hbox (3.52966pt too wide) in paragraph at lines 67--70
-[][]\T2A/cmr/m/n/10 Наконец, по-след-ний шаг -- на-пи-са-ние про-грамм-но-го ко
--да. Оста-лось встро-
- []
-
-[6])) (future.tex [7])
-Underfull \hbox (badness 3838) in paragraph at lines 37--38
-[][]\T2A/cmr/m/n/10 MIPS64 Architecture For Programmers VolumeII: The MIPS64
+Overfull \hbox (5.39964pt too wide) in paragraph at lines 66--66
+[]\OT1/pcr/m/n/11 ASSERT WordValue(rs) AND WordValue(rt);[] 
  []
 
 
-Underfull \hbox (badness 2005) in paragraph at lines 38--40
-[][]\T2A/cmr/m/n/10 K.Apt, M.Wallace. Constraint Logic Programming using Eclips
-e.
+Overfull \hbox (5.39964pt too wide) in paragraph at lines 66--66
+[]   \OT1/pcr/m/n/11 rs[31].rs[31..0] + rt[31].rt[31..0];[] 
  []
 
 
-Underfull \hbox (badness 1946) in paragraph at lines 40--46
-[][]\T2A/cmr/m/n/10 K.Marriott, Peter.J.Stuckey. Programming with Constraints. 
-MIT
+Underfull \hbox (badness 10000) in paragraph at lines 73--77
+[][]\OT1/pcr/m/n/11 NOT( NotWordValue(GPR[rs]) OR
  []
 
 
-Underfull \hbox (badness 3590) in paragraph at lines 46--47
-[][]\T2A/cmr/m/n/10 Richard D. Eldred: Test Routines Based on Symbolic Logical
+Underfull \hbox (badness 10000) in paragraph at lines 73--77
+\OT1/pcr/m/n/11 NotWordValue(GPR[rt]) ) \OT1/ptm/m/n/11 was re-
  []
 
 
-Underfull \hbox (badness 6592) in paragraph at lines 54--56
-[][]\T2A/cmr/m/n/10 F.Corno, A.Manzone, A.Pincetti, M.Sonza Reorda, G.Squillero
-.
+Underfull \hbox (badness 10000) in paragraph at lines 73--77
+\OT1/ptm/m/n/11 placed by \OT1/pcr/m/n/11 WordValue(GPR[rs]) AND
  []
 
 
-Underfull \hbox (badness 6461) in paragraph at lines 54--56
-\T2A/cmr/m/n/10 Automatic Test Bench Generation for Validation of RT-level
+Underfull \hbox (badness 4024) in paragraph at lines 73--77
+\OT1/pcr/m/n/11 WordValue(GPR[rt]) \OT1/ptm/m/n/11 and us-ing of \OT1/pcr/m/n/1
+1 GPR \OT1/ptm/m/n/11 was
+ []
+
+)) (future.tex)
+Underfull \hbox (badness 2253) in paragraph at lines 46--47
+[][]\OT1/ptm/m/n/9 MIPS64 Ar-chi-tec-ture For Pro-gram-mers Vol-umeII: The
+ []
+
+[3]
+Underfull \hbox (badness 10000) in paragraph at lines 63--65
+[][]\OT1/ptm/m/n/9 F.Corno, A.Manzone, A.Pincetti, M.Sonza Re-orda,
  []
 
 
-Underfull \hbox (badness 7030) in paragraph at lines 54--56
-\T2A/cmr/m/n/10 Descriptions: an Industrial Experience // DATE2000: Design,
+Underfull \hbox (badness 10000) in paragraph at lines 63--65
+\OT1/ptm/m/n/9 G.Squillero. Au-to-matic Test Bench Gen-er-a-tion for
  []
 
-[8] (syrcose.aux) ) 
+
+Underfull \hbox (badness 10000) in paragraph at lines 66--67
+[][]\OT1/ptm/m/n/9 R.Cytron, J.Ferrante, B.K.Rosen, M. N.Wegman,
+ []
+
+
+Underfull \hbox (badness 5504) in paragraph at lines 66--67
+\OT1/ptm/m/n/9 Form and the Con-trol De-pen-dence Graph // ACM
+ []
+
+
+Underfull \hbox (badness 1552) in paragraph at lines 66--67
+\OT1/ptm/m/n/9 Trans-ac-tions on Pro-gram-ming Lan-guages and Sys-tems,
+ []
+
+
+** Conference Paper **
+Before submitting the final camera ready copy, remember to:
+
+ 1. Manually equalize the lengths of two columns on the last page
+ of your paper;
+
+ 2. Ensure that any PostScript and/or PDF output post-processing
+ uses only Type 1 fonts and that every step in the generation
+ process uses the appropriate paper size.
+
+[4
+
+] (syrcose.aux) ) 
 Here is how much of TeX's memory you used:
- 1146 strings out of 95681
- 12485 string characters out of 1193216
- 62754 words of memory out of 1059852
- 4155 multiletter control sequences out of 35000
- 17190 words of font info for 37 fonts, out of 500000 for 1000
+ 1380 strings out of 95681
+ 20919 string characters out of 1193216
+ 71160 words of memory out of 1067234
+ 4422 multiletter control sequences out of 35000
+ 27204 words of font info for 61 fonts, out of 500000 for 1000
  198 hyphenation exceptions out of 607
- 24i,6n,24p,487b,235s stack positions out of 1500i,500n,5000p,200000b,32768s
+ 26i,8n,21p,856b,287s stack positions out of 1500i,500n,5000p,200000b,32768s
 
-Output written on syrcose.dvi (8 pages, 35852 bytes).
+Output written on syrcose.dvi (4 pages, 19872 bytes).
