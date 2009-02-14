@@ -7,8 +7,10 @@ import java.util.Map;
 import java.util.Set;
 
 import ru.teslaprj.scheme.ts.ProcedureTestSituation;
+import ru.teslaprj.scheme.ts.TLBHit;
+import ru.teslaprj.scheme.ts.TLBMiss;
 
-public class Command implements Commandlike
+public class Command //implements Commandlike
 {
 	public Command(
 			String cop,
@@ -44,7 +46,9 @@ public class Command implements Commandlike
 		{
 			for( String paramName : testSituationParameters.keySet() )
 			{
-				if ( paramName != "LoadMemory" )
+				if ( paramName != "LoadMemory" &&
+						paramName != "StoreMemory" &&
+						paramName != "AddressTranslation" )
 					throw new CommandDefinitionError( "unknown test situation parameter: " + paramName );
 			}
 			this.testSituationParameters = testSituationParameters;
@@ -64,6 +68,32 @@ public class Command implements Commandlike
 	}
 	public Map<String, Set<ProcedureTestSituation>> getTestSituationParameters() {
 		return testSituationParameters;
+	}
+	
+	public String getPhysicalAddress()
+	{
+		if ( ! testSituationParameters.containsKey("AddressTranslation") )
+			throw new Error( "uncompleted templates are not supported yet" );
+
+		for( ProcedureTestSituation ts : testSituationParameters.get("AddressTranslation") )
+		{
+			if ( ts instanceof TLBHit )
+				return ((TLBHit) ts).getPhysicalAddressVar();
+			else if ( ts instanceof TLBMiss )
+				return ((TLBMiss) ts).getPhysicalAddressVar();
+		}
+		
+		throw new Error( "uncompleted templates are not supported yet" );
+	}
+	
+	public boolean isLOAD()
+	{
+		return testSituationParameters.containsKey( "LoadMemory" );
+	}
+
+	public boolean isSTORE()
+	{
+		return testSituationParameters.containsKey( "StoreMemory" );
 	}
 
 	private String cop;
