@@ -8,6 +8,7 @@ options
 @header {
 package ru.teslaprj.syntax;
 import ru.teslaprj.Cache;
+import ru.teslaprj.TLB;
 }
 @lexer::header {
 package ru.teslaprj.syntax;
@@ -43,9 +44,15 @@ package ru.teslaprj.syntax;
 	
 	boolean hasMemOperation;
 	
-	List<StringBuffer> tagVars;
 	List<Cache> cacheLevels;
 	
+	TLB tlb;
+	
+	String virtualAddress = null;
+	String physicalAddressAfterTranslation = null;
+	String physicalAddressForMemOperation = null;
+	String memValue = null;
+							
 	@Override
 	public void reportError( RecognitionException e )
 	{
@@ -67,10 +74,13 @@ program[
 	, ru.teslaprj.scheme.Scheme scheme
 	, String prefix
 	, List<Cache> cacheLevels
+	, TLB tlb
 ] returns
 	 [ StringBuffer eclipseProgram
 	 , List<LogicalVariable> signature
-	 , boolean hasMemoryOperation ]
+	 , boolean hasMemoryOperation
+	 , boolean hasAddressTranslation
+	 ]
 @init {
 List<LogicalVariable> parameters = new ArrayList<LogicalVariable>();
 StringBuffer preArgs;
@@ -79,8 +89,8 @@ varsc = new VarsController();
 predsc = new PredicatesController();
 preArgs = null;
 hasMemOperation = false;
-tagVars = new ArrayList<StringBuffer>();
 this.cacheLevels = cacheLevels;
+this.tlb = tlb;
 }
 	: signature
 			{
@@ -127,15 +137,22 @@ this.cacheLevels = cacheLevels;
 					"'" + prefix + "::main'( _, " )
 					.append( preArgs ).append(", ")
 					.append( postArgs ).append( optional );
-					
+									
+				if ( virtualAddress != null )
+				{
+					retval.eclipseProgram
+						.append( ", " ).append( virtualAddress )
+						.append( ", " ).append( physicalAddressAfterTranslation );
+				}
+				
 				if ( hasMemOperation )
 				{
-					for( StringBuffer tag : tagVars )
-					{
-						retval.eclipseProgram
-							.append( ", " ).append( tag );
-					}
+					retval.eclipseProgram
+						.append( ", " ).append( physicalAddressForMemOperation )
+						.append( ", " ).append( memValue );
 				}
+				
+				// TODO generate warning if variable is RESULT but its postversion == its preversion
 					
 				retval.eclipseProgram.append( ") :- ").append( eoln )
 					.append( ecl )
@@ -143,6 +160,7 @@ this.cacheLevels = cacheLevels;
 					.append( predsc.printPredicates() ).append(eoln);
 				retval.signature = varsc.getSignature();
 				retval.hasMemoryOperation = hasMemOperation;
+				retval.hasAddressTranslation = (virtualAddress != null);
 			}
 	;
 
@@ -155,7 +173,9 @@ var_rule
 	: 'VAR'
 		( 'RESULT' { status = LogicalVariable.Status.SIGNATURE_RESULT; }
 		| 'READONLY' { status = LogicalVariable.Status.SIGNATURE_READONLY; }
-		| 'OPTIONAL' { status = LogicalVariable.Status.OPTIONAL; } )
+		| 'OPTIONAL' { status = LogicalVariable.Status.OPTIONAL; }
+		| { status = LogicalVariable.Status.SIGNATURE_RESULT; }
+		 )
 		ID ':' INTEGER 
 		{
 			varsc.addVar( $ID.text, Integer.parseInt( $INTEGER.text ), status, true );
@@ -210,8 +230,10 @@ assignOperator
 procedure
 	: t = ( 'LoadMemory' | 'StoreMemory' ) 
 			'(' 
-				    ID 
+				    value = ID
+				',' size =  INTEGER
 				',' addr = ID
+				',' vAddr = ID
 				',' ( 'DATA' | 'INSTRUCTION' )
 			')'
 		{
@@ -221,28 +243,84 @@ procedure
 			}
 			
 			hasMemOperation = true; 
-			// for each cache level generate their own tagVar!!!
-			tagVars.clear();
-			for( Cache cache : cacheLevels )
+			
+			physicalAddressForMemOperation = varsc.getCurrent( addr, addr.getText() );
+			
+			// TODO check physVar size
+			
+			// TODO add new var for value and add to the signature
+			if ( ! varsc.isKnown( value.getText() ) )
 			{
-				tagVars.add( varsc.newVar() );
+				varsc.addVar( 
+					  value.getText()
+					, Integer.parseInt(size.getText())
+					, LogicalVariable.Status.LOCAL
+					, false );
 			}
-			String currentAddrVar = varsc.getCurrent( addr, addr.getText() );
-			for( int i = 0; i < cacheLevels.size(); i++ )
+			else
 			{
-				Cache cacheLevel = cacheLevels.get(i);
-				StringBuffer tag = tagVars.get(i);
-				
-				ecl.append( "numbers:getbits( [ " )
-					.append( tag ).append( " ], " )
-					.append( currentAddrVar ).append( ", " )
-					.append( cacheLevel.getAddressBitLength() ).append( ", " )
-					.append( cacheLevel.getAddressBitLength() - 1 ).append( ", " )
-					.append( cacheLevel.getAddressBitLength() - cacheLevel.getTagBitLength() )
-				.append( " ), \% for cache level no." ).append(i+1).append( eoln );
+			 // TODO check: sizeof( value ) == size ?
 			}
+			memValue = varsc.getCurrent( value, value.getText() );
+			
+			// TODO add other arguments support
+			
+			
 		}
-	| 'AddressTranslation' '(' ID ',' ID ')'
+	| t1 = 'AddressTranslation'
+		'('
+			    phys = ID 
+			',' virtual = ID
+			',' ('DATA'|'INSTRUCTION')
+			',' ('LOAD'|'STORE')
+		')'
+		{
+			if ( virtualAddress != null )
+			{
+				throw new SemanticException( t1, "address translation is already used" );
+			}
+			
+			virtualAddress = varsc.getCurrent( virtual, virtual.getText() );
+			
+			// add new variable if needed
+			if ( ! varsc.isKnown( phys.getText() ) )
+			{
+				varsc.addVar( 
+					  phys.getText()
+					, tlb.getPhysicalAddressBitLen()
+					, LogicalVariable.Status.LOCAL
+					, false );
+			}
+			else
+			{
+			 // TODO check: sizeof( physical ) == tlb.getPhysicalAddressBitLen()
+			}
+			
+			physicalAddressAfterTranslation = varsc.nextVersion( phys, phys.getText() );
+			
+			// pAddr[first] = vAddr[first]
+			StringBuffer tmp = varsc.newVar(); 
+			ecl.append( "numbers:getbits( " )
+				.append( tmp ).append( ", " )
+				.append( virtualAddress ).append( ", " )
+				.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+				.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 ).append( ", " )
+				.append( "0 )," ).append( eoln );
+				
+			StringBuffer tmp2 = varsc.newVar(); 
+			ecl.append( "numbers:getbits( " )
+				.append( tmp2 ).append( ", " )
+				.append( physicalAddressAfterTranslation ).append( ", " )
+				.append( tlb.getPhysicalAddressBitLen() ).append( ", " )
+				.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 ).append( ", " )
+				.append( "0 )," ).append( eoln );
+			
+			ecl.append( "numbers:equal( " )
+				.append( tmp ).append( ", " )
+				.append( tmp2 ).append( ", " )
+				.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 )
+			.append( ")," ).append( eoln );
+		}
 	; 
 	
 ///////////// EXPRESSIONS ///////////////////////////

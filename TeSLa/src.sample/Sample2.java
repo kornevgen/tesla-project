@@ -63,7 +63,7 @@ public class Sample2
 					new File("C:\\Documents and Settings\\kornevgen\\My Documents\\diss\\ConstGen\\src\\TeSLa\\src.sample" )
 					, new File("C:\\Documents and Settings\\kornevgen\\My Documents\\diss\\ConstGen\\src\\TeSLa\\clp")
 				);
-			Solver.Verdict verdict = solver.solve(scheme, new ArrayList<Cache>() );
+			Solver.Verdict verdict = solver.solve(scheme, new ArrayList<Cache>(), null );
 			
 			// 3. распечатать ответ
 			Map<Definition, BigInteger> values = verdict.getDefinitionValues();

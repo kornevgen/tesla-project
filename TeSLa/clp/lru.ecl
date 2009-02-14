@@ -11,6 +11,11 @@
 :- export addVytesnTag/4.
 :- export addSetVar/3.
 :- export vytesnTagsLRU/2.
+%:- export set/5.
+:- export makeSet/3.
+:- export closeList/1.
+:- export addCell/3.
+
 
 setConditions( FreeCount, Universum, Result ) :-
 	length( Universum, U ),
@@ -105,9 +110,12 @@ setConds( [ F | Ftail ], I, [ U1 | Utail ], [ U1 | Rtail ] ) :-
 %	) .
 
 % TODO нужны ли setvars ??  всё равно setvar есть у каждого в hit и vytesns
-:- local struct( set( number, setvars, hits, vytesns ) ) .
+:- export struct( set( number, setvars, hits, vytesns ) ) .
 :- local struct( hit( tag, tagset, hitset ) ) .
 :- local struct( vytesn( tag, setvarbefore, index ) ) .
+
+makeSet( set{ hits:H, vytesns:V }, H, V ).
+
 
 % если данный сет не проинициализирован, проинициализировать данным множеством, иначе отождествить его со значением сета
 % SetNumber :: 0
@@ -234,7 +242,7 @@ closeSets( SetsStructure ) :-
 		closeList( VTs )
 	) .
 closeList( L ) :-
-	free( L ) -> L = [] ; L = [ _ | L1 ], closeList( L1 ).		
+	free( L ) -> L = [] ; ( L = [] -> true ; L = [ _ | L1 ], closeList( L1 ) ).		
 		
 
 
@@ -302,3 +310,14 @@ vytesnTagsLRU( SetsStructure, SetSize ) :-
 			lru( Caseafter, VT, Hits, CandidatesRangeEnd, CandidatesRangeStart )
 		)
 	) .
+
+%set( Set, VirtualAddress, SizeOfVA, SetEndBit, SetStartBit ) :-
+%	numbers:getbits( Sets, VirtualAddress, SizeOfVA, SetEndBit, SetStartBit ).
+
+:- local struct( cell( address, value ) ).
+
+addCell( Memory, Address, Value ) :-
+	( free(Memory) -> Memory = [ cell{address:Address, value:Value} | _ ]
+	; Memory = [ cell{address:A, value:V} | M ],
+		(A = Address, V = Value ; A \= Address, addCell( M, Address, Value ) )
+	). 

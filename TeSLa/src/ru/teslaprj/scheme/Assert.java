@@ -2,43 +2,20 @@ package ru.teslaprj.scheme;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-public class Assert implements Commandlike
+import ru.teslaprj.scheme.ts.ProcedureTestSituation;
+
+public class Assert extends Command
 {
 	public Assert(
 			List<String> args,
-			String testSituation )
+			String testSituation,
+			Map<String, Set<ProcedureTestSituation>> testSituationParameters
+		)
 		throws CommandDefinitionError
 	{
-		
-		if ( args == null )
-			this.args = new ArrayList<String>();
-		else
-			this.args = args;
-		
-		if ( testSituation == null )
-			throw new CommandDefinitionError("`testSituation` is null");
-		
-		this.testSituation = testSituation;
-	}
-	public List<String> getArgs() {
-		return args;
-	}
-	public String getTestSituation() {
-		return testSituation;
-	}
-
-	private List<String> args;
-	private String testSituation;
-	
-	@Override
-	public List<String> getAdditionalArgs() {
-		return new ArrayList<String>();
-	}
-	
-	@Override
-	public String getCop()
-	{
-		return "";
+		super("", args, new ArrayList<String>(), testSituation, testSituationParameters );
 	}
 }
