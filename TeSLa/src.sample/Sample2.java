@@ -20,7 +20,7 @@ public class Sample2
 			// 1. сформировать схему
 			Scheme scheme = new Scheme() ;
 			scheme.addDefinition( new RegisterDefinition( "x", 64 ) );
-			for( int i = 0; i < 13; i++ )
+			for( int i = 0; i < 4; i++ )
 			{
 				//WORD_VALUE = 10 => max = 2
 				//WORD_VALUE = 12 => max = 2
@@ -60,8 +60,8 @@ public class Sample2
 					
 			// 2. вызвать решатель
 			Solver solver = new Solver( 
-					new File("C:\\Documents and Settings\\kornevgen\\My Documents\\diss\\ConstGen\\src\\TeSLa\\src.sample" )
-					, new File("C:\\Documents and Settings\\kornevgen\\My Documents\\diss\\ConstGen\\src\\TeSLa\\clp")
+					new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\src.sample" )
+					, new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\clp")
 				);
 			Solver.Verdict verdict = solver.solve(scheme, new ArrayList<Cache>(), null );
 			

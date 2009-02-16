@@ -1,10 +1,8 @@
 import java.io.File;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
-import ru.teslaprj.Cache;
 import ru.teslaprj.Solver;
 import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.Definition;
@@ -74,10 +72,10 @@ public class Sample1
 					
 			// 2. вызвать решатель
 			Solver solver = new Solver( 
-					new File("C:\\Documents and Settings\\kornevgen\\My Documents\\diss\\ConstGen\\src\\TeSLa\\src.sample" )
-					, new File("C:\\Documents and Settings\\kornevgen\\My Documents\\diss\\ConstGen\\src\\TeSLa\\clp")
+					new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\src.sample" )
+					, new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\clp")
 				);
-			Solver.Verdict verdict = solver.solve(scheme, new ArrayList<Cache>(), null );
+			Solver.Verdict verdict = solver.solve(scheme, null, null );
 			
 			// 3. распечатать ответ
 			Map<Definition, BigInteger> values = verdict.getDefinitionValues();
