@@ -90,8 +90,8 @@ public class Sample6
 
 			// 2. вызвать решатель
 			Solver solver = new Solver( 
-					new File("C:\\Documents and Settings\\kornevgen\\My Documents\\diss\\ConstGen\\src\\TeSLa\\src.sample" )
-					, new File("C:\\Documents and Settings\\kornevgen\\My Documents\\diss\\ConstGen\\src\\TeSLa\\clp")
+					new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\src.sample" )
+					, new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\clp")
 				);
 			List<Cache> cacheLevels = new ArrayList<Cache>();
 			cacheLevels.add( new Cache()

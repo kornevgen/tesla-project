@@ -69,24 +69,27 @@ public class Solver
 	{
 		this.sourcePath = sourcePath;
 		this.libPath = libPath;
+		
+		if ( ! System.getProperties().containsKey( "eclipse.directory" ) )
+		{
+			throw new Error("variable 'eclipse.directory' is not set");
+		}
 	}
 	
 	public Verdict solve( Scheme scheme, List<Cache> cacheState, TLB tlb )
 		throws SchemeDefinitionError, IOException, EclipseException, RecognitionException
 	{
-		if ( cacheState == null || cacheState.isEmpty() )
-		{
-			throw new SchemeDefinitionError("cache is empty");
-		}
-		
 		// 0. check correctness of the `scheme`
 		checkVarsKnowness( scheme );
 		
-		for( Cache cache : cacheState )
-		{			
-			if ( cache.getTagBitLength() > BitLen.WORD_VALUE )
-			{
-				throw new SemanticException( null, "operations with addresses more than " + BitLen.WORD_VALUE + " bits are not implemented yet");
+		if ( cacheState != null )
+		{
+			for( Cache cache : cacheState )
+			{			
+				if ( cache.getTagBitLength() > BitLen.WORD_VALUE )
+				{
+					throw new SemanticException( null, "operations with addresses more than " + BitLen.WORD_VALUE + " bits are not implemented yet");
+				}
 			}
 		}
 		
@@ -95,6 +98,11 @@ public class Solver
 		File tmp = File.createTempFile( moduleName, ".ecl", libPath );
 		moduleName = tmp.getName();
 		moduleName = moduleName.substring(0, moduleName.length() - 4 );
+		
+		if ( cacheState == null )
+		{
+			cacheState = new ArrayList<Cache>();
+		}
 
 		try
 		{
@@ -404,80 +412,84 @@ public class Solver
     	// 2. virtual addresses differences vars + labeling
     	Map<String, List<Command>> diffVars = new HashMap<String, List<Command>>();
     	Collection<Command> viewed_cmds = new HashSet<Command>();
-    	for( Command cmd_i : falseVirtualAddresses.keySet() )
+    	if ( tlb != null )
     	{
-    		viewed_cmds.add(cmd_i);
-    		String vAddr_i = falseVirtualAddresses.get( cmd_i );
-    		for( Command cmd_j : falseVirtualAddresses.keySet() )
-    		{
-    			if ( viewed_cmds.contains(cmd_i) )
-    				continue;
-    			
-    			String vAddr_j = falseVirtualAddresses.get( cmd_j );
-
-    			// generate var for vAddr_i == vAddr_j
-    			String diffVar = tagNames.newVar().toString();
-    			ecl.append( diffVar + " #::[0..1]," ).append( eoln );
-    			ecl.append( diffVar + " #= ( " 
-    					+ vAddr_i + " #= " + vAddr_j + " )," + eoln );
-    			diffVars.put( diffVar, Arrays.asList(cmd_i, cmd_j) );
-    		}
+	    	for( Command cmd_i : falseVirtualAddresses.keySet() )
+	    	{
+	    		viewed_cmds.add(cmd_i);
+	    		String vAddr_i = falseVirtualAddresses.get( cmd_i );
+	    		for( Command cmd_j : falseVirtualAddresses.keySet() )
+	    		{
+	    			if ( viewed_cmds.contains(cmd_i) )
+	    				continue;
+	    			
+	    			String vAddr_j = falseVirtualAddresses.get( cmd_j );
+	
+	    			// generate var for vAddr_i == vAddr_j
+	    			String diffVar = tagNames.newVar().toString();
+	    			ecl.append( diffVar + " #::[0..1]," ).append( eoln );
+	    			ecl.append( diffVar + " #= ( " 
+	    					+ vAddr_i + " #= " + vAddr_j + " )," + eoln );
+	    			diffVars.put( diffVar, Arrays.asList(cmd_i, cmd_j) );
+	    		}
+	    	}
+	    	for( String diffVar : diffVars.keySet() )
+	    	{
+	    		ecl.append( "indomain( " + diffVar + " )," + eoln );
+	    	}
+	    	ecl.append( eoln );
     	}
-    	for( String diffVar : diffVars.keySet() )
-    	{
-    		ecl.append( "indomain( " + diffVar + " )," + eoln );
-    	}
-    	ecl.append( eoln );
     	
     	// 3. to TLB buffer lines
     	Map<Command, String> tlbBufferIndexes = new HashMap<Command, String>();
     	Map<Command, String> tlbBufferVytesnIndexes = new HashMap<Command, String>();
-    	ecl.append( "[ 1" );
-    	for( Command cmd : falseVirtualAddresses.keySet() )
+    	if ( tlb != null )
     	{
-			String index = tagNames.newVar().toString();
-			tlbBufferIndexes.put( cmd, index );
-			ecl.append( ", " ).append( index );
-			// fill tlbBufferVytesnIndexes
-			Set<ProcedureTestSituation> pts = cmd.getTestSituationParameters().get("AddressTranslation");
-			for( ProcedureTestSituation ts : pts ) 
-			{
-				if ( ts instanceof TLBMiss )
+	    	ecl.append( "[ 1" );
+	    	for( Command cmd : falseVirtualAddresses.keySet() )
+	    	{
+				String index = tagNames.newVar().toString();
+				tlbBufferIndexes.put( cmd, index );
+				ecl.append( ", " ).append( index );
+				// fill tlbBufferVytesnIndexes
+				Set<ProcedureTestSituation> pts = cmd.getTestSituationParameters().get("AddressTranslation");
+				for( ProcedureTestSituation ts : pts ) 
 				{
-					String vindex = tagNames.newVar().toString();
-					tlbBufferVytesnIndexes.put( cmd, vindex );
-	    			ecl.append( ", " ).append( vindex );
+					if ( ts instanceof TLBMiss )
+					{
+						String vindex = tagNames.newVar().toString();
+						tlbBufferVytesnIndexes.put( cmd, vindex );
+		    			ecl.append( ", " ).append( vindex );
+					}
 				}
-			}
+	    	}
+	    	ecl.append( "] #:: [ 1 .. " ).append( tlb.getSize() ).append(" ],").append( eoln );
+	    	for( String diffVar : diffVars.keySet() )
+	    	{
+	    		ecl.append( "( " + diffVar + " = 1 -> " );
+	    		List<Command> diffCmds = diffVars.get( diffVar );
+	    		String tlb_i = tlbBufferIndexes.get( diffCmds.get(0));
+	    		String tlb_j = tlbBufferIndexes.get( diffCmds.get(1));
+	    		ecl.append( tlb_i + " #= " + tlb_j + " ; true )," + eoln );
+	    	}
+	    	ecl.append( eoln );
     	}
-    	ecl.append( "] #:: [ 1 .. " ).append( tlb.getSize() ).append(" ],").append( eoln );
-    	for( String diffVar : diffVars.keySet() )
-    	{
-    		ecl.append( "( " + diffVar + " = 1 -> " );
-    		List<Command> diffCmds = diffVars.get( diffVar );
-    		String tlb_i = tlbBufferIndexes.get( diffCmds.get(0));
-    		String tlb_j = tlbBufferIndexes.get( diffCmds.get(1));
-    		ecl.append( tlb_i + " #= " + tlb_j + " ; true )," + eoln );
-    	}
-    	ecl.append( eoln );
-
     	
     	// 4. TLB test situations (tlbHit, tlbMiss)
         vytesnTags = new ArrayList<String>();
         hitTags = new ArrayList<String>();
         missTags = new ArrayList<String>();
         
-        tlb_latestSetVar = tagNames.newVar().toString();
-        ecl.append( tlb_latestSetVar ).append( " = [] ");
-        for( int i = 1; i <= tlb.getBufferSize(); i++ )
+        if ( tlb != null )
         {
-        	ecl.append( " \\/ [" + i + "] " );
+	        tlb_latestSetVar = tagNames.newVar().toString();
+	        ecl.append( tlb_latestSetVar ).append( " = [] ");
+	        for( int i = 1; i <= tlb.getBufferSize(); i++ )
+	        {
+	        	ecl.append( " \\/ [" + i + "] " );
+	        }
+	        ecl.append( "," ).append( eoln );
         }
-        ecl.append( "," ).append( eoln );
-        String hitsStructure = tagNames.newVar().toString();
-        ecl.append( hitsStructure ).append( " = _," ).append( eoln );
-        String vytesnStructure = tagNames.newVar().toString();
-        ecl.append( vytesnStructure ).append( " = _," ).append( eoln );
         
     	// asserts on indexes from template
         // if virtual addresses are equal then tlb indexes are equal too !
@@ -492,68 +504,75 @@ public class Solver
     	constraintManager.closeConstraints();
     	Map<List<Command>, Relation> virtualAddressesConstraints =
     		constraintManager.getVirtualAddressesConstraints();
-    	for( List<Command> c : virtualAddressesConstraints.keySet() )
+    	if ( tlb != null )
     	{
-    		if ( virtualAddressesConstraints.get(c) == Relation.EQ )
-    		{
-    			String tlb1 = tlbBufferIndexes.get(c.get(0));
-    			String tlb2 = tlbBufferIndexes.get(c.get(1));
-    			ecl.append( tlb1 + " #= " + tlb2 + eoln );
-    		}
-    	}
-
-    	// TODO add DATA cache and INSTRUCTION cache
-    	for( Command cmd : tlbBufferIndexes.keySet() )
-    	{
-    		tlbOperationTranslate(
-    				  cmd
-    				, tlb
-    				, tagNames
-    				, ecl
-    				, tlbBufferIndexes.get(cmd)
-    				, tlbBufferVytesnIndexes.get(cmd)
-    				, hitsStructure
-    				, vytesnStructure
-    			);
-    	}
-    	//////////// 4a. tlbLRU
-    	ecl.append( "% LRU predicates" ).append( eoln );
-    	
-    	StringBuffer tmpset = tagNames.newVar();
-    	ecl.append( "lru:makeSet( ")
-    		.append( tmpset ).append( ", " )
-    		.append( hitsStructure ).append( ", " )
-    		.append( vytesnStructure ).append( " )," ).append( eoln );
-		ecl.append( "lru:vytesnTagsLRU( [ " )
-			.append( tmpset ).append( " ], ")
-			.append( tlb.getBufferSize() )
-		.append( ")," ).append( eoln );
-    	ecl.append( eoln );
-
-		/////////////// 4b. tlb-labeling
-    	// выбор вытесняемых тегов
-    	ecl.append( "%вытесненные" ).append( eoln );
-    	for( String vt : vytesnTags )
-    	{
-		    ecl.append( "indomain( " ).append( vt ).append( " )," ).append( eoln );
-    	}
-    	vytesnTags = null;
-    	
-    	// выбор hit-тегов
-    	ecl.append( "%hit" ).append( eoln );
-    	for( String ht : hitTags )
-    	{
-		    ecl.append( "indomain( " ).append( ht ).append( " )," ).append( eoln );
-    	}
-    	hitTags = null;
-    	
-    	// выбор miss тегов
-    	ecl.append( "%miss" ).append( eoln );
-    	for( String mt : missTags )
-    	{
-		    ecl.append( "indomain( " ).append( mt ).append( " )," ).append( eoln );
-    	}
-    	missTags = null;    	
+	    	for( List<Command> c : virtualAddressesConstraints.keySet() )
+	    	{
+	    		if ( virtualAddressesConstraints.get(c) == Relation.EQ )
+	    		{
+	    			String tlb1 = tlbBufferIndexes.get(c.get(0));
+	    			String tlb2 = tlbBufferIndexes.get(c.get(1));
+	    			ecl.append( tlb1 + " #= " + tlb2 + eoln );
+	    		}
+	    	}
+	
+	        String hitsStructure = tagNames.newVar().toString();
+	        ecl.append( hitsStructure ).append( " = _," ).append( eoln );
+	        String vytesnStructure = tagNames.newVar().toString();
+	        ecl.append( vytesnStructure ).append( " = _," ).append( eoln );
+	    	// TODO add DATA cache and INSTRUCTION cache
+	    	for( Command cmd : tlbBufferIndexes.keySet() )
+	    	{
+	    		tlbOperationTranslate(
+	    				  cmd
+	    				, tlb
+	    				, tagNames
+	    				, ecl
+	    				, tlbBufferIndexes.get(cmd)
+	    				, tlbBufferVytesnIndexes.get(cmd)
+	    				, hitsStructure
+	    				, vytesnStructure
+	    			);
+	    	}
+	    	//////////// 4a. tlbLRU
+	    	ecl.append( "% LRU predicates" ).append( eoln );
+	    	
+	    	StringBuffer tmpset = tagNames.newVar();
+	    	ecl.append( "lru:makeSet( ")
+	    		.append( tmpset ).append( ", " )
+	    		.append( hitsStructure ).append( ", " )
+	    		.append( vytesnStructure ).append( " )," ).append( eoln );
+			ecl.append( "lru:vytesnTagsLRU( [ " )
+				.append( tmpset ).append( " ], ")
+				.append( tlb.getBufferSize() )
+			.append( ")," ).append( eoln );
+	    	ecl.append( eoln );
+	
+			/////////////// 4b. tlb-labeling
+	    	// выбор вытесняемых тегов
+	    	ecl.append( "%вытесненные" ).append( eoln );
+	    	for( String vt : vytesnTags )
+	    	{
+			    ecl.append( "indomain( " ).append( vt ).append( " )," ).append( eoln );
+	    	}
+	    	vytesnTags = null;
+	    	
+	    	// выбор hit-тегов
+	    	ecl.append( "%hit" ).append( eoln );
+	    	for( String ht : hitTags )
+	    	{
+			    ecl.append( "indomain( " ).append( ht ).append( " )," ).append( eoln );
+	    	}
+	    	hitTags = null;
+	    	
+	    	// выбор miss тегов
+	    	ecl.append( "%miss" ).append( eoln );
+	    	for( String mt : missTags )
+	    	{
+			    ecl.append( "indomain( " ).append( mt ).append( " )," ).append( eoln );
+	    	}
+	    	missTags = null;    	
+    	} 
     	
     	// 5. create vars for virtual addresses
     	Map<Command, String> virtualAddresses = new HashMap<Command, String>();
@@ -986,19 +1005,22 @@ public class Solver
 				virtualAddresses, physicalAddressesAfterTrans, rows);
     	
 		// 80. LOAD-STORE constraints => diff on indexes
-		load_store( 
-				  ecl
-				, scheme
-				, constraintManager
-				, argManager
-				, virtualAddresses
-				, tagNames
-				, tagVars
-				, setVars
-				, indexVars
-				, values
-				, tlb.getPhysicalAddressBitLen()
-			);
+    	if ( tlb != null )
+    	{
+			load_store( 
+					  ecl
+					, scheme
+					, constraintManager
+					, argManager
+					, virtualAddresses
+					, tagNames
+					, tagVars
+					, setVars
+					, indexVars
+					, values
+					, tlb.getPhysicalAddressBitLen()
+				);
+    	}
 		
 		// phys в LoadMemory = tag||set||idx
 		for( Command command : virtualAddresses.keySet() )
@@ -1073,10 +1095,12 @@ public class Solver
     		.append( " )," ).append( eoln );
     	}
     	ecl.append( "lru:closeList( TLB )," ).append( eoln );
-    	ecl.append( "tlb:labelTLB( TLB, " ) 
-    		.append( tlb.getPFNBitLen() )   	
-    	.append( " )," ).append( eoln );
-    	
+    	if ( tlb != null )
+    	{
+	    	ecl.append( "tlb:labelTLB( TLB, " ) 
+	    		.append( tlb.getPFNBitLen() )   	
+	    	.append( " )," ).append( eoln );
+    	}
     	
     	// build 'Memory' variable: [ address +> value ]
     	ecl.append( "Memory = _," ).append( eoln );
@@ -1579,6 +1603,11 @@ public class Solver
 				{
 					if ( ts instanceof CacheHit )
 					{
+						if ( cacheLevels.isEmpty() )
+						{
+							throw new Error("Define caches for using cache test situations");
+						}
+						
 						CacheHit hit = (CacheHit)ts;
 						Cache cache = cacheLevels.get( hit.getLevel() - 1 );
 						String tag = tagVars.get( cache );
@@ -1619,6 +1648,11 @@ public class Solver
 					}
 					else if ( ts instanceof CacheMiss )
 					{
+						if ( cacheLevels.isEmpty() )
+						{
+							throw new Error("Define caches for using cache test situations");
+						}
+						
 						CacheMiss miss = (CacheMiss)ts;
 						Cache cache = cacheLevels.get( miss.getLevel() - 1 );
 						String tag = tagVars.get( cache );
@@ -1942,6 +1976,11 @@ public class Solver
 			if ( ! command.getTestSituationParameters().containsKey("AddressTranslation") )
 			{
 				throw new Error("Test situation for 'AddressTranslation' is not find in " + command.getCop());
+			}
+			
+			if ( tlb == null )
+			{
+				throw new Error( "Define TLB for using AddressTranslation" );
 			}
 			
 			String vAddr = tagsVersions.newVar().toString();		
