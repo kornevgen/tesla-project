@@ -1,0 +1,11 @@
+#summary Установка TeSLa
+
+  # Скачать jar и zip-архивы с главной страницы проекта
+  # Скачать и установить логический интерпретатор ECLiPSe (http://eclipse-clp.org/)
+  # Скачать ANTLR-Runtime (http://antlr.org/download.html)
+  # В среде программирования eclipse подключить к проекту в BuildPath
+        * TeSLa-jar
+        * eclipse.jar (<куда установлен ECLiPSe>/lib/eclipse.jar)
+        * antlr-runtime.jar (имя файла может еще содержать версию ANTLR-Runtime)
+  # В диалоге запуска проекта добавить переменную окружения eclipse.directory (-Declipse.directory="<куда установлен ECLiPSe>")
+  # При вызове конструктора класса Solver надо написать путь в файловой системе, куда был распакован zip-архив с именем clp-***.zip
