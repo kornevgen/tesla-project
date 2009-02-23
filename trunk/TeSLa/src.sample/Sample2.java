@@ -6,6 +6,7 @@ import java.util.Map;
 
 import ru.teslaprj.Cache;
 import ru.teslaprj.Solver;
+import ru.teslaprj.Verdict;
 import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.Definition;
 import ru.teslaprj.scheme.RegisterDefinition;
@@ -44,7 +45,6 @@ public class Sample2
 						new Command(
 								  "ADD"
 								, Arrays.asList( "x", "x", "x" )
-								, null
 								, "nover"
 								, null
 							) );
@@ -53,7 +53,6 @@ public class Sample2
 					new Command(
 							  "ADD"
 							, Arrays.asList( "x", "x", "x" )
-							, null
 							, "over"
 							, null
 						) );
@@ -63,7 +62,7 @@ public class Sample2
 					new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\src.sample" )
 					, new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\clp")
 				);
-			Solver.Verdict verdict = solver.solve(scheme, new ArrayList<Cache>(), null );
+			Verdict verdict = solver.solve(scheme, new ArrayList<Cache>(), null );
 			
 			// 3. распечатать ответ
 			Map<Definition, BigInteger> values = verdict.getDefinitionValues();
