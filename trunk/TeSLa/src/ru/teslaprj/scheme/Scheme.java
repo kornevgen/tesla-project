@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import ru.teslaprj.Solver;
+
 
 public class Scheme
 {
@@ -31,11 +33,22 @@ public class Scheme
 	{
 		asserts.add( assert1 );
 	}
-	
+
+	/**
+	 * pretty print of scheme
+	 */
 	public String toString()
 	{
-		//TODO pretty print of scheme
-		return "sorry, not implemented yet";
+		StringBuffer output = new StringBuffer();
+		for( Definition def : defs )
+		{
+			output.append( def.toString() ).append( Solver.eoln );
+		}
+		for( Command cmd : commands )
+		{
+			output.append( cmd.toString() ).append( Solver.eoln );
+		}
+		return output.toString();
 	}
 	
 	private boolean alreadyDefined( String name )
@@ -92,5 +105,18 @@ public class Scheme
 			}
 		}
 		return -1;
+	}
+	
+	public NameBitlenDefinition getNameDefinition( String name )
+	{
+		for( Definition def : defs )
+		{
+			if ( def instanceof NameBitlenDefinition )
+			{
+				if( ((NameBitlenDefinition) def).getName().equals(name) )
+					return (NameBitlenDefinition) def;
+			}
+		}
+		return null;
 	}
 }

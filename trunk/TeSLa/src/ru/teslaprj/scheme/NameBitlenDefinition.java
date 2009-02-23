@@ -2,8 +2,8 @@ package ru.teslaprj.scheme;
 
 public abstract class NameBitlenDefinition implements Definition
 {
-	private String name;
-	private int bitlen;
+	protected String name;
+	protected int bitlen;
 
 	public NameBitlenDefinition( String name, int bitlen )
 	{

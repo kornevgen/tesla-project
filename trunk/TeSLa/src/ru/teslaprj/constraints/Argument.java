@@ -1,6 +1,6 @@
 package ru.teslaprj.constraints;
 
-public abstract class Argument
+public interface Argument
 {	
-	public abstract String getName();
+	String getName();
 }

@@ -9,6 +9,13 @@ options
 package ru.teslaprj.syntax;
 import ru.teslaprj.Cache;
 import ru.teslaprj.TLB;
+import ru.teslaprj.scheme.ts.TLBSituation;
+import ru.teslaprj.scheme.ts.TLBRefill;
+import ru.teslaprj.scheme.ts.TLBExists;
+import ru.teslaprj.scheme.Scheme;
+import ru.teslaprj.scheme.ConstDefinition;
+import java.util.Set;
+import java.util.HashSet;
 }
 @lexer::header {
 package ru.teslaprj.syntax;
@@ -35,24 +42,35 @@ package ru.teslaprj.syntax;
 		}		
 	}
 	
+	boolean stopTranslation = false;
+	
 	StringBuffer ecl;
 	
 	VarsController varsc;
 	PredicatesController predsc;
 	
-	String commandPrefix;
+	Set<LogicalVariable> readlist;
+	Set<LogicalVariable> writelist;
+	Set<LogicalVariable> loadlogicallist;
+	boolean loadReflect;
 	
-	boolean hasMemOperation;
+	String commandPrefix;
 	
 	List<Cache> cacheLevels;
 	
 	TLB tlb;
+	TLBSituation tlbSituation;
+	int physAddressBitLen;
 	
 	String virtualAddress = null;
 	String physicalAddressAfterTranslation = null;
 	String physicalAddressForMemOperation = null;
 	String memValue = null;
-							
+	MemoryCommand memOperation;
+	
+	boolean refill;
+	boolean store;
+	
 	@Override
 	public void reportError( RecognitionException e )
 	{
@@ -61,25 +79,36 @@ package ru.teslaprj.syntax;
 	
 	public class ParserException extends RuntimeException
 	{
+		private static final long serialVersionUID = 7672627512415645603L;
+
 		public ParserException( String s )
 		{
 			super( s );
 		}
 	}
+	
+	public enum MemoryCommand
+	{
+		LOAD, STORE
+	}
 }
 
 program[
       List<String> args
-	, List<String> additionalArgs
-	, ru.teslaprj.scheme.Scheme scheme
+	, Scheme scheme
 	, String prefix
 	, List<Cache> cacheLevels
 	, TLB tlb
+	, TLBSituation tlbSituation
+	, int physAddressBitLen
 ] returns
 	 [ StringBuffer eclipseProgram
 	 , List<LogicalVariable> signature
-	 , boolean hasMemoryOperation
+	 , MemoryCommand memoryOperation
 	 , boolean hasAddressTranslation
+	 , boolean isStoreAddressTranslation
+	 , Set<String> readlist
+	 , Set<String> loadlist
 	 ]
 @init {
 List<LogicalVariable> parameters = new ArrayList<LogicalVariable>();
@@ -88,25 +117,30 @@ ecl = new StringBuffer();
 varsc = new VarsController();
 predsc = new PredicatesController();
 preArgs = null;
-hasMemOperation = false;
+memOperation = null;
 this.cacheLevels = cacheLevels;
 this.tlb = tlb;
+this.tlbSituation = tlbSituation;
+this.refill = (tlbSituation instanceof TLBRefill);
+this.physAddressBitLen = physAddressBitLen;
+this.readlist = new HashSet<LogicalVariable>();
+this.writelist = new HashSet<LogicalVariable>();
+this.loadlogicallist = new HashSet<LogicalVariable>();
 }
 	: signature
 			{
 				parameters = varsc.getVarsCopy();
 				preArgs = 
-					varsc.getAllVarsAsParametersWithStatus( LogicalVariable.Status.SIGNATURE_RESULT, LogicalVariable.Status.SIGNATURE_READONLY );
+					varsc.getAllVarsAsParametersWithStatus( 
+						LogicalVariable.Status.SIGNATURE_RESULT, 
+						LogicalVariable.Status.SIGNATURE_READONLY );
 
-				if ( args.size() > parameters.size() )
+				if ( args.size() != parameters.size() )
 				{
-					throw new SemanticException( null, "using more arguments (" + args.size() + ") than test sutiation has (" + parameters.size() + ")");
-				}
-
-				// TODO rewrite! according with additional args are marked with status OPTIONAL and this is more useful for checking
-				if ( args.size() + additionalArgs.size() > parameters.size() )
-				{
-					throw new SemanticException( null, "using more arguments (" + (args.size() + additionalArgs.size()) + ") than test sutiation has (" + parameters.size() + ")");
+					throw new SemanticException( 
+						null, 
+						"count of arguments (" + args.size() + ") must be equal with " + 
+						" count of test sutiation parameters (" + parameters.size() + ")");
 				}
 
 				// check args bitlens
@@ -119,17 +153,49 @@ this.tlb = tlb;
 						throw new SemanticException( null, "bitlens of variable and argument are not equal: " + argLen + " and " + varLen );
 					}
 				}
-				// TODO check actual names of results var (must different)
+				// check actual names of results var (must different)
+				for( int i = 0; i < args.size(); i++ )
+				{
+					if ( parameters.get(i).getStatus() != LogicalVariable.Status.SIGNATURE_RESULT )
+						continue;
+						
+					for( int j = i+1; j < args.size(); j++ )
+					{
+						if ( parameters.get(j).getStatus() != LogicalVariable.Status.SIGNATURE_RESULT )
+							continue;
+						
+						if ( args.get(i).equals( args.get(j) ) )
+						{
+							throw new SemanticException( null, "RESULT parameters must correspond to the different args" );
+						}
+					}
+				}
+			
+				// if var is constant in scheme but not readonly then error
+				for( int i = 0; i < args.size(); i++ )
+				{
+					if ( parameters.get(i).getStatus() != LogicalVariable.Status.SIGNATURE_READONLY
+						&&
+						! (scheme.getNameDefinition( args.get(i) ) instanceof ConstDefinition) )
+					{
+						throw new SemanticException( 
+							null, 
+							"Parameter corresponded to constant '" + 
+							parameters.get(i) + "' must be READONLY" );
+					}
+				}
 				
 				commandPrefix = prefix;
+				
+				stopTranslation = false;
 			}
 		(operator)*
 			{
-//				ecl	.append( varsc.printMedians( parameters ) ).append( "true." + eoln)
-//					.append( predsc.printPredicates() );
-				
-				StringBuffer postArgs = varsc.getAllVarsAsParametersWithStatus( LogicalVariable.Status.SIGNATURE_RESULT, LogicalVariable.Status.SIGNATURE_READONLY );
-				StringBuffer optional = varsc.getAllVarsAsParametersWithStatus( LogicalVariable.Status.OPTIONAL );
+				StringBuffer postArgs = varsc.getAllVarsAsParametersWithStatus(
+						LogicalVariable.Status.SIGNATURE_RESULT,
+						LogicalVariable.Status.SIGNATURE_READONLY );
+				StringBuffer optional = varsc.getAllVarsAsParametersWithStatus( 
+						LogicalVariable.Status.OPTIONAL );
 				if ( optional.length() > 0 )
 					postArgs.append( ", " );
 					
@@ -145,22 +211,49 @@ this.tlb = tlb;
 						.append( ", " ).append( physicalAddressAfterTranslation );
 				}
 				
-				if ( hasMemOperation )
+				if ( memOperation != null )
 				{
 					retval.eclipseProgram
 						.append( ", " ).append( physicalAddressForMemOperation )
 						.append( ", " ).append( memValue );
 				}
 				
-				// TODO generate warning if variable is RESULT but its postversion == its preversion
-					
+				// generate error if variable is RESULT but its postversion == its preversion
+				if ( ! stopTranslation )
+				{
+					for( int i = 0; i < args.size(); i++ )
+					{
+						if ( parameters.get(i).getStatus() != LogicalVariable.Status.SIGNATURE_RESULT )
+							continue;
+							
+						// if preversion == postversion /\ !stopTranslation than error!
+              			if ( parameters.get(i).current().startsWith("_0") ) { }
+              			{
+              				throw new SemanticException( null, "RESULT parameter " + parameters.get(i).getCanonicalName() + " isn't changed" );
+              			}
+					}
+				}
+									
 				retval.eclipseProgram.append( ") :- ").append( eoln )
 					.append( ecl )
 					.append( "true." ).append( eoln )
 					.append( predsc.printPredicates() ).append(eoln);
 				retval.signature = varsc.getSignature();
-				retval.hasMemoryOperation = hasMemOperation;
+				retval.memoryOperation = memOperation;
 				retval.hasAddressTranslation = (virtualAddress != null);
+				retval.isStoreAddressTranslation = store;
+				retval.readlist = new HashSet<String>();
+				for( LogicalVariable v : readlist )
+				{
+					if ( parameters.contains( v ) )
+						retval.readlist.add( args.get( parameters.indexOf( v ) ) );
+				}
+				retval.loadlist = new HashSet<String>();
+				for( LogicalVariable v : loadlogicallist )
+				{
+					if ( parameters.contains( v ) )
+						retval.loadlist.add( args.get( parameters.indexOf( v ) ) );
+				}
 			}
 	;
 
@@ -173,9 +266,7 @@ var_rule
 	: 'VAR'
 		( 'RESULT' { status = LogicalVariable.Status.SIGNATURE_RESULT; }
 		| 'READONLY' { status = LogicalVariable.Status.SIGNATURE_READONLY; }
-		| 'OPTIONAL' { status = LogicalVariable.Status.OPTIONAL; }
-		| { status = LogicalVariable.Status.SIGNATURE_RESULT; }
-		 )
+		| 'OPTIONAL' { status = LogicalVariable.Status.OPTIONAL; }	 )
 		ID ':' INTEGER 
 		{
 			varsc.addVar( $ID.text, Integer.parseInt( $INTEGER.text ), status, true );
@@ -193,86 +284,128 @@ operator
 	
 assertOperator
 	: 'ASSERT' predicate = boolexpr 
-		{ ecl.append( predicate .append( "(" ).append( varsc.getAllVarsAsParameters() ).append("),").append( eoln ));}
+		{
+			if ( ! stopTranslation )
+			{ 
+				ecl.append( 
+					predicate .append( "(" ).append( varsc.getAllVarsAsParameters() ).append("),")
+					.append( eoln )
+				);
+			}
+		}
 	;
 
 assignOperator
-	: ID '<-' name = expr 
+	: { loadReflect = false; }
+	  ID '<-' name = expr 
 		{
-			String id;
-			// each variable can't change its size!!!
-			if ( varsc.isKnown( $ID.text ) )
+			if ( ! stopTranslation )
 			{
-				if ( name.size != varsc.getVar( $ID, $ID.text ).size )
+				String id;
+				// each variable can't change its size!!!
+				if ( varsc.isKnown( $ID.text ) )
 				{
-					throw new SemanticException( $ID, "Incompatible sizes: size of " + $ID.text + " is " +  varsc.getVar( $ID, $ID.text ).size + " bit(s) and size of expression is " + name.size + "; these sizes must be the same" );
+					if ( name.size != varsc.getVar( $ID, $ID.text ).size )
+					{
+						throw new SemanticException( $ID, "Incompatible sizes: size of " + $ID.text + " is " +  varsc.getVar( $ID, $ID.text ).size + " bit(s) and size of expression is " + name.size + "; these sizes must be the same" );
+					}
+					
+					if ( varsc.getVar( $ID, $ID.text ).getStatus() == LogicalVariable.Status.SIGNATURE_READONLY )
+					{
+						throw new SemanticException( $ID, "Cannot change readonly variable: " + $ID.text );
+					}
+					
+					id = varsc.nextVersion( $ID, $ID.text );
+				}
+				else
+				{
+					varsc.addVar( $ID.text, name.size, LogicalVariable.Status.LOCAL, false );
+					id = varsc.getCurrent( $ID, $ID.text );			
 				}
 				
-				if ( varsc.getVar( $ID, $ID.text ).getStatus() == LogicalVariable.Status.SIGNATURE_READONLY )
-				{
-					throw new SemanticException( $ID, "Cannot change readonly variable: " + $ID.text );
-				}
+				writelist.add( varsc.getVar( $ID, $ID.text ) );
 				
-				id = varsc.nextVersion( $ID, $ID.text );
+				if ( loadReflect )
+				{
+					loadlogicallist.add( varsc.getVar( $ID, $ID.text ) );
+				}
+	
+				ecl.append( varsc.getSizePredicate( varsc.getVar( $ID, $ID.text ) ) )
+				.append( name.expressionBody )
+				.append( id ).append( " = " ).append( name.resultVarName ).append( "," ).append( eoln);
 			}
-			else
-			{
-				varsc.addVar( $ID.text, name.size, LogicalVariable.Status.LOCAL, false );
-				id = varsc.getCurrent( $ID, $ID.text );			
-			}
-
-			ecl.append( varsc.getSizePredicate( varsc.getVar( $ID, $ID.text ) ) )
-			.append( name.expressionBody )
-			.append( id ).append( " = " ).append( name.resultVarName ).append( "," ).append( eoln);
 		}
 	;
 
 procedure
-	: t = ( 'LoadMemory' | 'StoreMemory' ) 
+@init{store = false;}
+	: t = ( 'LoadMemory' { memOperation = MemoryCommand.LOAD; }
+	      | 'StoreMemory' { memOperation = MemoryCommand.STORE; } ) 
 			'(' 
 				    value = ID
-				',' size =  INTEGER
-				',' addr = ID
+				',' size  = INTEGER
+				',' addr  = ID
 				',' vAddr = ID
 				',' ( 'DATA' | 'INSTRUCTION' )
 			')'
 		{
-			if ( hasMemOperation )
+			if ( ! stopTranslation )
 			{
-				throw new SemanticException( t, "memory operation is already used" );
-			}
-			
-			hasMemOperation = true; 
-			
-			physicalAddressForMemOperation = varsc.getCurrent( addr, addr.getText() );
-			
-			// TODO check physVar size
-			
-			// TODO add new var for value and add to the signature
-			if ( ! varsc.isKnown( value.getText() ) )
-			{
-				varsc.addVar( 
-					  value.getText()
-					, Integer.parseInt(size.getText())
-					, LogicalVariable.Status.LOCAL
-					, false );
-			}
-			else
-			{
-			 // TODO check: sizeof( value ) == size ?
-			}
-			memValue = varsc.getCurrent( value, value.getText() );
-			
-			// TODO add other arguments support
-			
-			
+				if ( memOperation != null )
+				{
+					throw new SemanticException( t, "memory operation is already used" );
+				}				 
+				
+				physicalAddressForMemOperation = varsc.getCurrent( addr, addr.getText() );
+				
+				// check physVar size
+				if ( varsc.getVar( addr, addr.getText() ).size != physAddressBitLen )
+				{
+					throw new SemanticException( addr, "Size of physical address must be " + physAddressBitLen );
+				}
+				
+				// add new var for value and add to the signature
+				if ( ! varsc.isKnown( value.getText() ) )
+				{
+					varsc.addVar( 
+						  value.getText()
+						, 64
+						, LogicalVariable.Status.LOCAL
+						, false );
+				}
+				else
+				{
+					 // check: sizeof( value ) == 64
+					 if ( varsc.getVar( value, value.getText() ).size != 64 )
+					 {
+					 	throw new SemanticException( value, "'" + value.getText() + "' must be of 64 bits" );
+					 }
+				}
+				memValue = varsc.getCurrent( value, value.getText() );
+				
+				if ( memOperation == MemoryCommand.LOAD )
+				{
+					writelist.add( varsc.getVar( value, value.getText() ) );
+					loadlogicallist.add( varsc.getVar( value, value.getText() ) );
+				}
+				else
+				{
+					if ( ! writelist.add( varsc.getVar( value, value.getText() ) ) )
+						readlist.add( varsc.getVar( value, value.getText() ) );
+				}
+				
+				// TODO? if vAddr[size-1 .. 0] != 0 then throw new AddressException();
+				
+				// TODO add other arguments support
+				
+			}			
 		}
 	| t1 = 'AddressTranslation'
 		'('
 			    phys = ID 
 			',' virtual = ID
 			',' ('DATA'|'INSTRUCTION')
-			',' ('LOAD'|'STORE')
+			',' ('LOAD'|'STORE'{store=true;})
 		')'
 		{
 			if ( virtualAddress != null )
@@ -293,33 +426,54 @@ procedure
 			}
 			else
 			{
-			 // TODO check: sizeof( physical ) == tlb.getPhysicalAddressBitLen()
+				if ( varsc.getVar( phys, phys.getText() ).size != tlb.getPhysicalAddressBitLen() )
+				{
+					throw new SemanticException( 
+						phys, 
+						"Size of physical address variable '" + 
+						varsc.getVar( phys, phys.getText() ).getCanonicalName() +
+						"' must be equal to " +  tlb.getPhysicalAddressBitLen() );
+				}
 			}
 			
-			physicalAddressAfterTranslation = varsc.nextVersion( phys, phys.getText() );
-			
-			// pAddr[first] = vAddr[first]
-			StringBuffer tmp = varsc.newVar(); 
-			ecl.append( "numbers:getbits( " )
-				.append( tmp ).append( ", " )
-				.append( virtualAddress ).append( ", " )
-				.append( tlb.getVirtualAddressBitLen() ).append( ", " )
-				.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 ).append( ", " )
-				.append( "0 )," ).append( eoln );
+			if ( refill 
+				|| ((TLBExists)tlbSituation).getValid() == 0 
+				|| ( store && ((TLBExists)tlbSituation).getmoDify() == 0 ) )
+			{
+				stopTranslation = true;
+			}
+			else
+			{
+				physicalAddressAfterTranslation = varsc.nextVersion( phys, phys.getText() );
 				
-			StringBuffer tmp2 = varsc.newVar(); 
-			ecl.append( "numbers:getbits( " )
-				.append( tmp2 ).append( ", " )
-				.append( physicalAddressAfterTranslation ).append( ", " )
-				.append( tlb.getPhysicalAddressBitLen() ).append( ", " )
-				.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 ).append( ", " )
-				.append( "0 )," ).append( eoln );
-			
-			ecl.append( "numbers:equal( " )
-				.append( tmp ).append( ", " )
-				.append( tmp2 ).append( ", " )
-				.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 )
-			.append( ")," ).append( eoln );
+				// pAddr[first] = vAddr[first]
+				StringBuffer tmp = varsc.newVar(); 
+				ecl.append( "numbers:getbits( " )
+					.append( tmp ).append( ", " )
+					.append( virtualAddress ).append( ", " )
+					.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+					.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 ).append( ", " )
+					.append( "0 )," ).append( eoln );
+					
+				StringBuffer tmp2 = varsc.newVar(); 
+				ecl.append( "numbers:getbits( " )
+					.append( tmp2 ).append( ", " )
+					.append( physicalAddressAfterTranslation ).append( ", " )
+					.append( tlb.getPhysicalAddressBitLen() ).append( ", " )
+					.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 ).append( ", " )
+					.append( "0 )," ).append( eoln );
+				
+				ecl.append( "numbers:equal( " )
+					.append( tmp ).append( ", " )
+					.append( tmp2 ).append( ", " )
+					.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 )
+				.append( ")," ).append( eoln );	
+				
+				
+				if ( ! writelist.contains( varsc.getVar( phys, phys.getText() ) ) )
+					readlist.add( varsc.getVar( phys, phys.getText() ) );
+				writelist.add( varsc.getVar( virtual, virtual.getText() ) );
+			}
 		}
 	; 
 	
@@ -756,6 +910,14 @@ knownId returns [ExpressionResult name]
 			name = new ExpressionResult();
 			name.resultVarName = new StringBuffer( varsc.getCurrent( $ID, $ID.text ) );
 			name.size = varsc.getVar( $ID, $ID.text ).size;
+			if ( ! stopTranslation )
+			{
+				LogicalVariable var = varsc.getVar( $ID, $ID.text );
+				if ( ! writelist.contains( var ) )
+					readlist.add( var );
+				if ( loadlogicallist.contains( var ) )
+				  loadReflect = true;
+			}
 		}
 	;
 	
