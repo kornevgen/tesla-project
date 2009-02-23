@@ -181,11 +181,13 @@ labelTLB( TLB, SizeOfPFN ) :-
 	( foreach( T, TLB )
 	, param( SizeOfPFN )
 	do
-		T = tlbrow{ pfn0: PFN0, v0:V0, pfn1: PFN1, v1:V1 },
+		T = tlbrow{ pfn0: PFN0, v0:V0, d0:D0, pfn1: PFN1, v1:V1, d1:D1 },
 		numbers:sizeof( PFN0, SizeOfPFN ),
 		numbers:sizeof( PFN1, SizeOfPFN ),
 		numbers:random_result( PFN0 ),
 		numbers:random_result( PFN1 ),
 		( free(V0) -> V0 = 1 ;true ),
-		( free(V1) -> V1 = 1 ;true )
+		( free(V1) -> V1 = 1 ;true ),
+		( free(D0) -> D0 = 1 ;true ),
+		( free(D1) -> D1 = 1 ;true )
 	).

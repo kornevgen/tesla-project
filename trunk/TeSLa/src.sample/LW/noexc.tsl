@@ -1,4 +1,4 @@
-VAR rt: 32;
+VAR RESULT rt: 32;
 VAR READONLY base: 64;
 VAR READONLY offset: 16;
 
@@ -12,4 +12,4 @@ pAddr <- pAddr[31..3] || (pAddr[2..0] + (1||0^2));
 
 LoadMemory(memdoubleword, 64, pAddr, vAddr, DATA );
 
-rt <- (32)memdoubleword[63..32];
+rt <- memdoubleword[63..32];

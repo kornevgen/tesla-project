@@ -13,6 +13,7 @@ import ru.teslaprj.scheme.ts.TLBSituation;
 import ru.teslaprj.scheme.ts.TLBRefill;
 import ru.teslaprj.scheme.ts.TLBExists;
 import ru.teslaprj.scheme.Scheme;
+import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.ConstDefinition;
 import java.util.Set;
 import java.util.HashSet;
@@ -96,6 +97,7 @@ package ru.teslaprj.syntax;
 program[
       List<String> args
 	, Scheme scheme
+	, Command command
 	, String prefix
 	, List<Cache> cacheLevels
 	, TLB tlb
@@ -139,7 +141,8 @@ this.loadlogicallist = new HashSet<LogicalVariable>();
 				{
 					throw new SemanticException( 
 						null, 
-						"count of arguments (" + args.size() + ") must be equal with " + 
+						"command #" + scheme.getCommands().indexOf(command) +
+						": count of arguments (" + args.size() + ") must be equal with " + 
 						" count of test sutiation parameters (" + parameters.size() + ")");
 				}
 
@@ -150,7 +153,10 @@ this.loadlogicallist = new HashSet<LogicalVariable>();
 					int varLen = parameters.get(i).getBitlen();
 					if ( argLen != varLen )
 					{
-						throw new SemanticException( null, "bitlens of variable and argument are not equal: " + argLen + " and " + varLen );
+						throw new SemanticException( 
+							null, 
+							"command #" + scheme.getCommands().indexOf(command) +
+							": bitlens of variable and argument are not equal: " + argLen + " and " + varLen );
 					}
 				}
 				// check actual names of results var (must different)
@@ -166,7 +172,11 @@ this.loadlogicallist = new HashSet<LogicalVariable>();
 						
 						if ( args.get(i).equals( args.get(j) ) )
 						{
-							throw new SemanticException( null, "RESULT parameters must correspond to the different args" );
+							throw new SemanticException( 
+								null, 
+								"command #" + scheme.getCommands().indexOf(command) +
+								": RESULT parameters must correspond to the different args"
+							 );
 						}
 					}
 				}
@@ -176,11 +186,12 @@ this.loadlogicallist = new HashSet<LogicalVariable>();
 				{
 					if ( parameters.get(i).getStatus() != LogicalVariable.Status.SIGNATURE_READONLY
 						&&
-						! (scheme.getNameDefinition( args.get(i) ) instanceof ConstDefinition) )
+						scheme.getNameDefinition( args.get(i) ) instanceof ConstDefinition )
 					{
 						throw new SemanticException( 
 							null, 
-							"Parameter corresponded to constant '" + 
+							"command #" + scheme.getCommands().indexOf(command) +
+							": Parameter corresponded to constant '" + 
 							parameters.get(i).getCanonicalName() + "' must be READONLY" );
 					}
 				}
@@ -227,9 +238,14 @@ this.loadlogicallist = new HashSet<LogicalVariable>();
 							continue;
 							
 						// if preversion == postversion /\ !stopTranslation than error!
-              			if ( parameters.get(i).current().startsWith("_0") ) { }
+              			if ( parameters.get(i).current().startsWith("_0") )
               			{
-              				throw new SemanticException( null, "RESULT parameter " + parameters.get(i).getCanonicalName() + " isn't changed" );
+              				throw new SemanticException( 
+              					null,
+              					"command #" + scheme.getCommands().indexOf(command) + 
+              					": RESULT parameter " + 
+              					parameters.get(i).getCanonicalName() + 
+              					" isn't changed" );
               			}
 					}
 				}
@@ -338,7 +354,7 @@ assignOperator
 	;
 
 procedure
-@init{store = false;}
+@init{store = false; boolean mem = (memOperation != null);}
 	: t = ( 'LoadMemory' { memOperation = MemoryCommand.LOAD; }
 	      | 'StoreMemory' { memOperation = MemoryCommand.STORE; } ) 
 			'(' 
@@ -351,7 +367,7 @@ procedure
 		{
 			if ( ! stopTranslation )
 			{
-				if ( memOperation != null )
+				if ( mem )
 				{
 					throw new SemanticException( t, "memory operation is already used" );
 				}				 

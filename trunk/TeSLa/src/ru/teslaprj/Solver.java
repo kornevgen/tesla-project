@@ -75,6 +75,11 @@ public class Solver
 		{
 			throw new Error("variable 'eclipse.directory' is not set");
 		}
+		
+		if ( ! new File(System.getProperty("eclipse.directory") ).exists() )
+		{
+			throw new Error( "folder 'eclipse.directory' doesn't exist" );
+		}
 	}
 	
 	public Verdict solve( Scheme scheme, List<Cache> cacheState, TLB tlb )
@@ -265,7 +270,7 @@ public class Solver
     		final BigInteger VPNd2 = BitLen.intlist2bigint( (List<?>)tlbtag.arg(3) );
     		final Integer Mask = (Integer)tlbtag.arg(4);
     		final Integer G = (Integer)tlbtag.arg(5);
-    		final Integer Asid = (Integer)tlbtag.arg(6);
+    		final Integer Asid = BitLen.intlist2bigint( (List<?>)tlbtag.arg(6) ).intValue();
     		final BigInteger pfn0 = BitLen.intlist2bigint( (List<?>)tlbrow.arg(3) );
     		final Integer Valid0 = (Integer)tlbrow.arg(4);
     		final Integer moDify0 = (Integer)tlbrow.arg(5);
@@ -723,6 +728,7 @@ public class Solver
     	//TODO где задавать размер EntryHi?
     	for( Command command : scheme.getCommands() )
     	{
+    		entryHi.put(command, "0"); //TODO убрать это, когда будет сделан EntryHi!
     		// TODO сохранить историю значений EntryHi (список переменных-версий) для каждой команды
     		// TODO i1 = i2 /\ i1.g = 0 -> EntryHi1 = EntryHi2
     		commandPredicates.append( commandlikeTranslate( 
@@ -1263,6 +1269,7 @@ public class Solver
     		else
     			ecl.append( "[ " ).append( 0 ).append( "| " );
     	}
+    	ecl.append( "[]" );
     	for( int i = 0; i < scheme.getCommands().size(); i++ )
     	{
     		ecl.append( "]");
@@ -1799,6 +1806,7 @@ public class Solver
 		TeSLaParser.program_return prog = parser.program( 
 				  command.getArgs()
 				, scheme
+				, command
 				, prefix
 				, cacheLevels
 				, tlb
@@ -2270,6 +2278,7 @@ public class Solver
 		TeSLaParser.program_return prog = parser.program( 
 				  command.getArgs()
 				, scheme
+				, command
 				, prefix
 				, cacheLevels
 				, tlb

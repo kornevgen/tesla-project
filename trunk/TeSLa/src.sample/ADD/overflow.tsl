@@ -1,4 +1,4 @@
-VAR RESULT rd : 64;
+VAR READONLY rd : 64;
 VAR READONLY rs : 64;
 VAR READONLY rt : 64;
 
