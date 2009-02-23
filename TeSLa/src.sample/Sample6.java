@@ -12,6 +12,7 @@ import ru.teslaprj.Cache;
 import ru.teslaprj.Solver;
 import ru.teslaprj.TLB;
 import ru.teslaprj.TLBRow;
+import ru.teslaprj.Verdict;
 import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.ConstDefinition;
 import ru.teslaprj.scheme.Definition;
@@ -68,6 +69,21 @@ public class Sample6
 				@Override
 				public String getVirtualAddressVar() {
 					return null;
+				}
+
+				@Override
+				public Integer getG() {
+					return null;
+				}
+
+				@Override
+				public int getValid() {
+					return 1;
+				}
+
+				@Override
+				public int getmoDify() {
+					return 1;
 				}} );
 			m1.put( "LoadMemory", m1ts );
 			m1.put( "AddressTranslation", m11ts);
@@ -75,7 +91,6 @@ public class Sample6
 					new Command(
 							  "LW"
 							, Arrays.asList( "x", "y", "c" )
-							, null
 							, "noexc"
 							, m1
 						) );
@@ -83,7 +98,6 @@ public class Sample6
 					new Command(
 							  "SUB"
 							, Arrays.asList( "z", "y", "u" )
-							, null
 							, "noexception"
 							, null
 						) );
@@ -117,7 +131,7 @@ public class Sample6
 					return 10;
 				}
 			} );
-			Solver.Verdict verdict = solver.solve(scheme, cacheLevels, new TLB(){
+			Verdict verdict = solver.solve(scheme, cacheLevels, new TLB(){
 
 				@Override
 				public int getBufferSize() {
@@ -167,6 +181,11 @@ public class Sample6
 				@Override
 				public int getPhysicalAddressBitLen() {
 					return 32;
+				}
+
+				@Override
+				public int getASIDBitLen() {
+					return 3;
 				}} );
 			
 			// 3. распечатать ответ
