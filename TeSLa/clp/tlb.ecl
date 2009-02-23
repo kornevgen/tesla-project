@@ -2,19 +2,28 @@
 :- lib(ic).
 :- use_module( numbers ).
 
-:- export key/9.
+:- export key/11.
 :- export addRow/2.
 :- export closeRows/1.
 :- export onlyOne/1.
 :- export labelRows/1.
-:- export struct( tlbtag( index, range, vpnd2, mask ) ).
+:- export refill/7.
+
+:- export struct( tlbtag( index, range, vpnd2, mask, g, asid ) ).
 :- export oddbit/7.
 
-:- export addPfn/10.
+:- export addPfn/12.
 :- export labelTLB/2.
 
-key( VirtualAddress, SizeOfVA, Index, 
-	tlbtag{index:Index, range:Range, mask:Mask, vpnd2:VPNd2},
+key( VirtualAddress, SizeOfVA, Index, G, Asid,
+	tlbtag{
+		index:Index,
+		range:Range,
+		mask:Mask,
+		vpnd2:VPNd2,
+		g:G,
+		asid:Asid
+	  },
 	RangeEndBit, RangeStartBit, MaxMask,
 	VPNd2EndBit, VPNd2StartBit ) :-
 	range( Range, VirtualAddress, SizeOfVA, RangeEndBit, RangeStartBit ),
@@ -96,15 +105,42 @@ vp2( V, Mask, VPNd2 ) :-
 	scalar:exp2( DM, Mask ),
 	U #>= 0, U #< 2*DM,
 	VPNd2 #= V * 2 * DM + U .
-	 
+
+
+refill( Rows, 
+		VirtualAddress, SizeOfVA, 
+		RangeEndBit, RangeStartBit,
+		VPNd2EndBit, VPNd2StartBit
+ ) :-
+	( foreach( X, Rows ),
+	  param( VirtualAddress ),
+	  param( SizeOfVA ),
+	  param( RangeEndBit ),
+	  param( RangeStartBit ),
+	  param( VPNd2EndBit ),
+	  param( VPNd2StartBit )
+	do
+		X = tlbtag{range:R, mask:M, vpnd2:V},
+		( 
+			range( Range, VirtualAddress, SizeOfVA, RangeEndBit, RangeStartBit ),
+			RSize is RangeEndBit - RangeStartBit + 1,
+			numbers:notequal( Range, R, RSize )
+		; 
+			vp( [V1], VirtualAddress, SizeOfVA, VPNd2EndBit, VPNd2StartBit, M ),
+			vp2( V2, M, V ),
+			V1 #\= V2
+		)
+	).	 
 	
 labelRows( Rows ) :-
 	( foreach( X, Rows )
 	do
-		X = tlbtag{range:R, mask:M, vpnd2:V},
+		X = tlbtag{range:R, mask:M, vpnd2:V, g:G, asid:Asid},
 		numbers:random_result( R ),
 		indomain( M ),
-		numbers:random_result( V )
+		numbers:random_result( V ),
+		indomain( G, max ),
+		numbers:random_result( Asid )
 	) .		
 	
 getMask( Mask, [ tlbtag{mask:Mask,index:Index}|_], Index ) :- !.
@@ -114,18 +150,19 @@ addPfn(
 	TLB, 
 	Rows, Index,
 	VirtualAddress, SizeOfVA, VPNd2StartBit, 
-	PhysAddress, SizeOfPA, PFNEndBit, PFNStartBit
+	PhysAddress, SizeOfPA, PFNEndBit, PFNStartBit,
+	Valid, Modify
  ) :-
 	oddbit2( Odd, Index, VirtualAddress,  SizeOfVA, VPNd2StartBit, Rows ),
 	numbers:getbits( PFN, PhysAddress, SizeOfPA, PFNEndBit, PFNStartBit ),
-	addPfnToTLB( TLB, PFN, Rows, Index, Odd ).
+	addPfnToTLB( TLB, PFN, Rows, Index, Odd, Valid, Modify ).
 
-:- local struct( tlbrow( index, tlbtag, pfn0, pfn1 ) ).
+:- local struct( tlbrow( index, tlbtag, pfn0, v0, d0, pfn1, v1, d1 ) ).
 
-addPfnToTLB( TLB, PFN, [ TLBtag|_], Index, Odd ) :-
+addPfnToTLB( TLB, PFN, [ TLBtag|_], Index, Odd, Valid, Modify ) :-
 	TLBtag = tlbtag{ index:Index }, !,
-	( Odd = 0 -> addToTLB( TLB, tlbrow{ index:Index, tlbtag:TLBtag, pfn0: PFN } )
-	; addToTLB( TLB, tlbrow{ index:Index, tlbtag:TLBtag, pfn1: PFN } )
+	( Odd = 0 -> addToTLB( TLB, tlbrow{ index:Index, tlbtag:TLBtag, pfn0: PFN, v0: Valid, d0: Modify } )
+	; addToTLB( TLB, tlbrow{ index:Index, tlbtag:TLBtag, pfn1: PFN, v1: Valid, d1: Modify } )
 	).
 addToTLB( TLB, Row ) :-
 	( free( TLB ) -> TLB = [ Row | _ ]
@@ -144,9 +181,11 @@ labelTLB( TLB, SizeOfPFN ) :-
 	( foreach( T, TLB )
 	, param( SizeOfPFN )
 	do
-		T = tlbrow{ pfn0: PFN0, pfn1: PFN1 },
+		T = tlbrow{ pfn0: PFN0, v0:V0, pfn1: PFN1, v1:V1 },
 		numbers:sizeof( PFN0, SizeOfPFN ),
 		numbers:sizeof( PFN1, SizeOfPFN ),
 		numbers:random_result( PFN0 ),
-		numbers:random_result( PFN1 )
+		numbers:random_result( PFN1 ),
+		( free(V0) -> V0 = 1 ;true ),
+		( free(V1) -> V1 = 1 ;true )
 	).
