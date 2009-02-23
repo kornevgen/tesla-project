@@ -181,7 +181,7 @@ this.loadlogicallist = new HashSet<LogicalVariable>();
 						throw new SemanticException( 
 							null, 
 							"Parameter corresponded to constant '" + 
-							parameters.get(i) + "' must be READONLY" );
+							parameters.get(i).getCanonicalName() + "' must be READONLY" );
 					}
 				}
 				
