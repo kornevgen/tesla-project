@@ -67,8 +67,8 @@ public class Sample1
 					
 			// 2. вызвать решатель
 			Solver solver = new Solver( 
-					new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\src.sample" )
-					, new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\clp")
+					new File("src.sample" )
+					, new File("clp")
 				);
 
 			Verdict verdict = solver.solve(scheme, null, null );

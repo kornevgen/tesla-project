@@ -104,8 +104,8 @@ public class Sample6
 
 			// 2. вызвать решатель
 			Solver solver = new Solver( 
-					new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\src.sample" )
-					, new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\clp")
+					new File("src.sample" )
+					, new File("clp")
 				);
 			List<Cache> cacheLevels = new ArrayList<Cache>();
 			cacheLevels.add( new Cache()
@@ -220,8 +220,14 @@ public class Sample6
 						" range = " + row.getRange() +
 						", vpn/2 = " + row.getVPNd2() +
 						", mask = " + row.getMask() + 
+						", g = " + row.getGlobal() + 
+						", asid = " + row.getAsid() + 
 						", pfn0 = " + row.getPFN0() + 
-						", pfn1 = " + row.getPFN1()
+						", v0 = " + row.getValid0() +
+						", d0 = " + row.getmoDify0() +
+						", pfn1 = " + row.getPFN1() +
+						", v1 = " + row.getValid1() +
+						", d1 = " + row.getmoDify1()
 					);
 			}
 			
