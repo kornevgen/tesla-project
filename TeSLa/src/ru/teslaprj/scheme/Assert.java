@@ -1,6 +1,5 @@
 package ru.teslaprj.scheme;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,6 +15,6 @@ public class Assert extends Command
 		)
 		throws CommandDefinitionError
 	{
-		super("", args, new ArrayList<String>(), testSituation, testSituationParameters );
+		super("", args, testSituation, testSituationParameters );
 	}
 }

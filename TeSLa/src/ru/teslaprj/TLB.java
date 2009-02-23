@@ -25,4 +25,6 @@ public interface TLB
 	int getVPNd2StartBit();
 	
 	int getPFNBitLen();
+	
+	int getASIDBitLen();
 }

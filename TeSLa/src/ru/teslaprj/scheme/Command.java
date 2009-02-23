@@ -9,22 +9,17 @@ import java.util.Set;
 import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 import ru.teslaprj.scheme.ts.TLBHit;
 import ru.teslaprj.scheme.ts.TLBMiss;
+import ru.teslaprj.scheme.ts.TLBSituation;
 
-public class Command //implements Commandlike
+public class Command
 {
 	public Command(
 			String cop,
 			List<String> args,
-			List<String> additionalArgs, 
 			String testSituation,
 			Map<String, Set<ProcedureTestSituation>> testSituationParameters )
 		throws CommandDefinitionError
 	{
-		if ( additionalArgs == null )
-			this.additionalArgs = new ArrayList<String>();
-		else
-			this.additionalArgs = additionalArgs;
-		
 		if ( args == null )
 			this.args = new ArrayList<String>();
 		else
@@ -60,9 +55,6 @@ public class Command //implements Commandlike
 	public List<String> getArgs() {
 		return args;
 	}
-	public List<String> getAdditionalArgs() {
-		return additionalArgs;
-	}
 	public String getTestSituation() {
 		return testSituation;
 	}
@@ -95,10 +87,62 @@ public class Command //implements Commandlike
 	{
 		return testSituationParameters.containsKey( "StoreMemory" );
 	}
+	
+	public TLBSituation getTLBSituation()
+	{
+		if ( ! testSituationParameters.containsKey("AddressTranslation") )
+			return null;
+		for( ProcedureTestSituation ts : testSituationParameters.get("AddressTranslation") )
+		{
+			if ( ts instanceof TLBSituation )
+				return (TLBSituation)ts;
+		}
+		return null;
+	}
 
 	private String cop;
 	private List<String> args;
-	private List<String> additionalArgs;
 	private String testSituation;
 	private Map<String, Set<ProcedureTestSituation> > testSituationParameters;
+	
+	@Override
+	public String toString()
+	{
+		StringBuffer output = new StringBuffer( cop + " " );
+		
+		boolean isFirstArgument = true;
+		
+		for( String arg : args )
+		{
+			if ( isFirstArgument )
+				isFirstArgument = false;
+			else
+				output.append( ", " );
+			output.append( arg );
+		}
+		
+		output.append( " @ " )
+		.append( testSituation ).append( " ( ");
+		
+		isFirstArgument = true;
+		for( String ts : testSituationParameters.keySet() )
+		{
+			if ( isFirstArgument )
+				isFirstArgument = false;
+			else
+				output.append( ", " );
+			
+			output.append( ts ).append( "{ " );
+			for( ProcedureTestSituation pts : testSituationParameters.get(ts) )
+			{
+				//TODO сделать toString() по иерархии ProcedureTestSituation
+				output.append( pts.toString() ).append( " " );
+			}
+			output.append( " }" );
+		}
+		
+		output.append( " )" );
+		
+		return output.toString();
+	}
 }
