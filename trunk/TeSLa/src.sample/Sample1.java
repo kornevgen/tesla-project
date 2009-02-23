@@ -70,11 +70,8 @@ public class Sample1
 					new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\src.sample" )
 					, new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\clp")
 				);
-<<<<<<< .mine
+
 			Verdict verdict = solver.solve(scheme, null, null );
-=======
-			Solver.Verdict verdict = solver.solve(scheme, null, null );
->>>>>>> .r128
 			
 			// 3. распечатать ответ
 			Map<Definition, BigInteger> values = verdict.getDefinitionValues();
