@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Map;
 
 import ru.teslaprj.Solver;
+import ru.teslaprj.Verdict;
 import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.Definition;
 import ru.teslaprj.scheme.RegisterDefinition;
@@ -25,7 +26,6 @@ public class Sample1
 					new Command(
 							  "ADD"
 							, Arrays.asList( "x", "y", "z" )
-							, null
 							, "overflow"
 							, null
 						) );
@@ -33,7 +33,6 @@ public class Sample1
 					new Command(
 							  "ADD"
 							, Arrays.asList( "z", "x", "y" )
-							, null
 							, "overflow"
 							, null
 						) );
@@ -41,7 +40,6 @@ public class Sample1
 					new Command(
 							  "ADD"
 							, Arrays.asList( "y", "z", "x" )
-							, null
 							, "overflow"
 							, null
 						) );
@@ -49,7 +47,6 @@ public class Sample1
 					new Command(
 							  "ADD"
 							, Arrays.asList( "y", "z", "t" )
-							, null
 							, "overflow"
 							, null
 						) );
@@ -57,7 +54,6 @@ public class Sample1
 					new Command(
 							  "ADD"
 							, Arrays.asList( "y", "t", "x" )
-							, null
 							, "overflow"
 							, null
 						) );
@@ -65,7 +61,6 @@ public class Sample1
 					new Command(
 							  "ADD"
 							, Arrays.asList( "y", "y", "t" )
-							, null
 							, "noexception"
 							, null
 						) );
@@ -75,7 +70,11 @@ public class Sample1
 					new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\src.sample" )
 					, new File("C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa\\clp")
 				);
+<<<<<<< .mine
+			Verdict verdict = solver.solve(scheme, null, null );
+=======
 			Solver.Verdict verdict = solver.solve(scheme, null, null );
+>>>>>>> .r128
 			
 			// 3. распечатать ответ
 			Map<Definition, BigInteger> values = verdict.getDefinitionValues();
