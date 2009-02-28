@@ -1,0 +1,53 @@
+%\documentclass[conference, compsoc]{IEEEtran}
+\documentclass[conference, 10pt]{IEEEtran}
+\usepackage[cp1251]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{pscyr}
+\usepackage{graphicx}
+
+\begin{document}
+\title{Генерация тестовых данных для системного функционального тестирования кэш-памяти микропроцессоров}
+
+\author{\IEEEauthorblockN{Е.В.~Корныхин}
+\IEEEauthorblockA{Московский государственный университет им. М.В.~Ломоносова\\
+Email: kornevgen@gmail.com} }
+
+
+\maketitle
+
+
+\begin{abstract}
+В статье рассматривается задача генерации начального состояния
+кэш-памяти для тестовых шаблонов, использующихся в системном
+функциональном тестировании процессоров. Детально рассмотрены 2
+базисных способа организации кэш-памяти: полностью ассоциативный кэш
+и кэш прямого доступа. Генерация начального состояния кэш-памяти
+осуществляется путем решения ограничений, составленных для тестового
+шаблона.
+\end{abstract}
+
+\input{intro}
+
+\input{testtemplates}
+
+\input{full}
+
+\input{prm}
+
+\input{common}
+
+
+\begin{thebibliography}{1}
+
+\bibitem{IEEEhowto:kamkin}
+А.С.~Камкин, \emph{Генерация тестовых программ для микропроцессоров}
+// Труды ИСП РАН. \hskip 1em plus
+  0.5em minus 0.4em\relax Том 14(2). С.23-64. 2008.
+
+\end{thebibliography}
+
+
+
+
+% that's all folks
+\end{document}
