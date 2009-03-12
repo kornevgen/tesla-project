@@ -1,0 +1,82 @@
+\documentclass[conference]{IEEEtran}
+%\documentclass[conference, 10pt]{IEEEtran}
+%\usepackage[cp1251]{inputenc}
+%\usepackage[russian]{babel}
+%\usepackage{pscyr}
+\usepackage{graphicx}
+\usepackage{cite}
+
+\begin{document}
+\title{Test data generation for LRU cache-memory testing}
+
+\author{\IEEEauthorblockN{Evgeni Kornikhin}
+\IEEEauthorblockA{Moscow State University, Russia\\
+Email: kornevgen@gmail.com} }
+
+
+\maketitle
+
+
+\begin{abstract}
+System functional testing of microprocessors deals with many
+assembly programs of given behavior. The paper proposes new
+constraint-based algorithm of initial cache-memory contents
+generation for given behavior of assembly program (with cache misses
+and hits). Although algorithm works for any types of cache-memory,
+the paper describes algorithm in detail for basis types of
+cache-memory only: fully associative cache and direct mapped cache.
+\end{abstract}
+
+\input{intro}
+
+\input{testtemplates}
+
+\input{full}
+
+\input{prm}
+
+\input{common}
+
+\section{Conclusion}
+¬ статье рассматривалась задача генерации начального состо€ни€
+кэш-пам€ти дл€ тестовых шаблонов. ¬ статье предложен алгоритм,
+стро€щий систему ограничений на конечные множества адресов.
+–езультатом решени€ такой системы €вл€ютс€ начальные значени€
+регистров и €чеек кэш-пам€ти. ¬ статье детально рассмотрено
+построение ограничений дл€ полностью ассоциативной кэш-пам€ти и
+кэш-пам€ти пр€мого отображени€ (однако задача решена в общем
+случае).
+
+
+\begin{thebibliography}{1}
+
+\bibitem{IEEEhowto:kamkin}
+A.S.~Kamkin, \emph{Test program generation for microprocessors}
+// Proceedings of ISP RAS. \hskip 1em plus
+  0.5em minus 0.4em\relax Vol. 14(2). P.23-64. 2008.
+
+\bibitem{IEEEhowto:combinatorial}
+K.~Takayama, F.~Fallah, \emph{A new functional test program
+generation methodology} // Proceedings 2001 IEEE International
+Conference on Computer Design: VLSI in Computers and Processors.
+P.76Ц81. 2001.
+
+\bibitem{IEEEhowto:ATPG}
+F.~Ferrandi, D.~Sciuto, M.~Beardo, F.~Bruschi, \emph{An approach to
+functional testing of vliw architectures} // Proceedings of the IEEE
+International High-Level Validation and Test Workshop (HLDVTТ00).
+P.29Ц33. 2000.
+
+\bibitem{IEEEhowto:GenesysPro}
+Y.~Lichtenstein, M.~Rimon, M.~Vinov, M.~Behm, J.~Ludden,
+\emph{Industrial experience with test generation languages for
+processor verification} // Proceedings of the 41st Design Automation
+Conference (DACТ04). 2004.
+
+\end{thebibliography}
+
+
+
+
+% that's all folks
+\end{document}

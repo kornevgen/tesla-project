@@ -1,0 +1,46 @@
+\section{Introduction}
+
+System functional testing of microprocessors uses many assembly
+programs (\emph{test programs}). Such programs are loaded to the
+memory, executed, execution process is logged and analyzed. But
+modern processors testing requires a lot of test programs. Technical
+way of test program generation was proposed
+in~\cite{IEEEhowto:kamkin}. This way based on the microprocessor's
+model. Its first stage is systematic generation abstract test
+programs (\emph{test templates}). This abstract form doesn't contain
+initial state of microprocessor but contain sequence of instructions
+with arguments (registers) and with \emph{test situations} (behavior
+of this instruction; these can be overflow, cache hits, cache
+misses). The second stage is generation of initial microprocessor
+state for given test template. This stage is test data generation.
+Technical way from~\cite{IEEEhowto:kamkin} is useful for aimed
+testing when aim is expressed by instruction sequence with specific
+behavior. Initial microprocessor state includes initial values of
+registers and initial contents of cache-memory. Based on this state
+the third, final, stage is generation the sequence of instructions
+to reach initial microprocessor state. These sequence of
+instructions with test template get ready assembly program. This
+paper devoted to the second stage, i.e. initial state generation.
+
+Known researches about test data generation problem contain the
+following methods of its solving:
+\begin{enumerate}
+\item combinatorial methods;
+\item ATPG-based methods;
+\item constraint-based methods.
+\end{enumerate}
+
+Combinatorial methods are useful for simple test templates (each
+variable has explicit directive of its domain, each value in domain
+is possess)~\cite{IEEEhowto:combinatorial}. ATPG-based methods are
+useful for structural but not functional
+testing~\cite{IEEEhowto:ATPG}. Constraint-based methods are the most
+promising methods. Test template is translated to the set of
+constraints (predicates) with variables which represented test data.
+Then special solver generates values for variables to satisfy all
+constraints. This paper contains constraint-based method also. IBM
+uses constraint-based method in
+Genesys-Pro~\cite{IEEEhowto:GenesysPro}. But it works inefficiently
+on test templates from~\cite{IEEEhowto:kamkin}. Authors of another
+constraint-based methods restrict on registers only and don't
+consider cache-memory.
