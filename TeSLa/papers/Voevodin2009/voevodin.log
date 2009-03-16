@@ -1,0 +1,294 @@
+This is e-TeX, Version 3.141592-2.2 (MiKTeX 2.4) (preloaded format=latex 2006.5.11)  16 MAR 2009 15:21
+entering extended mode
+**voevodin.tex
+(voevodin.tex
+LaTeX2e <2003/12/01>
+Babel <v3.8a> and hyphenation patterns for english, french, german, ngerman, ru
+ssian, dumylang, nohyphenation, loaded.
+(IEEEtran.cls
+Document Class: IEEEtran 2007/03/05 V1.7a by Michael Shell
+-- See the "IEEEtran_HOWTO" manual for usage information.
+-- http://www.michaelshell.org/tex/ieeetran/
+\@IEEEtrantmpdimenA=\dimen102
+\@IEEEtrantmpdimenB=\dimen103
+\@IEEEtrantmpcountA=\count79
+\@IEEEtrantmpcountB=\count80
+\@IEEEtrantmptoksA=\toks14
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 366.
+
+(C:\texmf\tex\latex\psnfss\ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+)
+-- Using 8.5in x 11in (letter) paper.
+-- Using DVI output.
+\@IEEEnormalsizeunitybaselineskip=\dimen104
+-- This is a 10 point document.
+\CLASSINFOnormalsizebaselineskip=\dimen105
+\CLASSINFOnormalsizeunitybaselineskip=\dimen106
+\IEEEnormaljot=\dimen107
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <5> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <7> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <8> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <11> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <11> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <17> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <17> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <20> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <20> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <24> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 724.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <24> not available
+(Font)              Font shape `OT1/ptm/b/it' tried instead on input line 724.
+\IEEEilabelindentA=\dimen108
+\IEEEilabelindentB=\dimen109
+\IEEEilabelindent=\dimen110
+\IEEEelabelindent=\dimen111
+\IEEEdlabelindent=\dimen112
+\IEEElabelindent=\dimen113
+\IEEEiednormlabelsep=\dimen114
+\IEEEiedmathlabelsep=\dimen115
+\IEEEiedtopsep=\skip41
+\c@section=\count81
+\c@subsection=\count82
+\c@subsubsection=\count83
+\c@paragraph=\count84
+\c@IEEEsubequation=\count85
+\abovecaptionskip=\skip42
+\belowcaptionskip=\skip43
+\c@figure=\count86
+\c@table=\count87
+\@IEEEeqnnumcols=\count88
+\@IEEEeqncolcnt=\count89
+\@IEEEtmpitemindent=\dimen116
+\c@IEEEbiography=\count90
+\@IEEEtranrubishbin=\box26
+) (C:\texmf\tex\latex\base\inputenc.sty
+Package: inputenc 2004/02/05 v1.0d Input encoding file
+ (C:\texmf\tex\latex\cyrillic\cp1251.def
+File: cp1251.def 1999/11/16 v1.0d Input encoding file
+)) (C:\texmf\tex\generic\babel\babel.sty
+Package: babel 2004/02/19 v3.8a The Babel package
+
+(C:\texmf\tex\generic\babel\russianb.ldf
+Language: russianb 2004/02/19 v1.1o Russian support from the babel system
+ (C:\texmf\tex\generic\babel\babel.def
+File: babel.def 2004/02/19 v3.8a Babel common definitions
+\babel@savecnt=\count91
+\U@D=\dimen117
+) (C:\texmf\tex\latex\cyrillic\t2aenc.def
+File: t2aenc.def 2004/01/26 v1.0g Cyrillic encoding definition file
+)
+Package babel Info: Making " an active character on input line 199.
+)) (C:\texmf\tex\latex\pscyr\pscyr.sty
+Package: pscyr 2001/01/28 v0.4c Cyrillic Postscript fonts as default
+) (C:\texmf\tex\latex\graphics\graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
+
+(C:\texmf\tex\latex\graphics\keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks15
+)
+(C:\texmf\tex\latex\graphics\graphics.sty
+Package: graphics 2001/07/07 v1.0n Standard LaTeX Graphics (DPC,SPQR)
+ (C:\texmf\tex\latex\graphics\trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+) (C:\texmf\tex\latex\00miktex\graphics.cfg
+File: graphics.cfg 2003/03/12 v1.1 MiKTeX 'graphics' configuration
+)
+Package graphics Info: Driver file: dvips.def on input line 80.
+
+(C:\texmf\tex\latex\graphics\dvips.def
+File: dvips.def 1999/02/16 v3.0i Driver-dependant file (DPC,SPQR)
+))
+\Gin@req@height=\dimen118
+\Gin@req@width=\dimen119
+)
+\c@lemma=\count92
+ (voevodin.aux
+LaTeX Font Info:    Try loading font information for T2A+ptm on input line 5.
+LaTeX Font Info:    No file T2Aptm.fd. on input line 5.
+
+
+LaTeX Font Warning: Font shape `T2A/ptm/m/n' undefined
+(Font)              using `T2A/cmr/m/n' instead on input line 5.
+
+LaTeX Font Info:    Try loading font information for T2A+cmr on input line 5.
+(C:\texmf\tex\latex\cyrillic\t2acmr.fd
+File: t2acmr.fd 2001/08/11 v1.0a Computer Modern Cyrillic font definitions
+))
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 12.
+LaTeX Font Info:    ... okay on input line 12.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 12.
+LaTeX Font Info:    ... okay on input line 12.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 12.
+LaTeX Font Info:    ... okay on input line 12.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 12.
+LaTeX Font Info:    ... okay on input line 12.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 12.
+LaTeX Font Info:    ... okay on input line 12.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 12.
+LaTeX Font Info:    ... okay on input line 12.
+LaTeX Font Info:    Checking defaults for T2A/cmr/m/n on input line 12.
+LaTeX Font Info:    ... okay on input line 12.
+LaTeX Font Info:    Try loading font information for OT1+faq on input line 12.
+ (C:\texmf\tex\latex\pscyr\ot1faq.fd
+File: ot1faq.fd 2001/03/03 Fontinst v1.801 font definitions for OT1/faq.
+)
+LaTeX Font Info:    Try loading font information for T2A+faq on input line 12.
+
+(C:\texmf\tex\latex\pscyr\t2afaq.fd
+File: t2afaq.fd 2001/03/03 v0.4c PS font definitions for T2A/AntiquaPSCyr
+) (intro.tex) (review.tex
+File: test.eps Graphic file (type eps)
+ <test.eps>
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 15.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 15.
+
+Underfull \hbox (badness 10000) in paragraph at lines 18--23
+[][]\T2A/faq/m/it/10 тестирование с ис-поль-зо-ва-ни-ем кросс-
+ []
+
+
+Underfull \hbox (badness 1668) in paragraph at lines 18--23
+\T2A/faq/m/n/10 слож-но-сти его про-ве-де-ния: по-сле со-гла-со-ва-ния
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 18--23
+\T2A/faq/m/n/10 для кросс-компиляции, уже го-тов. Од-на-ко
+ []
+
+
+Underfull \hbox (badness 3343) in paragraph at lines 18--23
+\T2A/faq/m/n/10 га-ран-ти-ро-вать пол-но-ту та-кое те-сти-ро-ва-ние не
+ []
+
+[1
+
+
+]
+LaTeX Font Info:    Try loading font information for T2A+fer on input line 54.
+ (C:\texmf\tex\latex\pscyr\t2afer.fd
+File: t2afer.fd 2001/03/03 v0.4c PS font definitions for T2A/ERKurierPSCyr
+) [2]
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 185.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 185.
+ [3]) (full.tex
+File: full.eps Graphic file (type eps)
+ <full.eps>
+Underfull \hbox (badness 2460) in paragraph at lines 67--78
+[][]\T2A/faq/m/n/10 <<ограничения кэш-промаха>> ге-не-ри-ру-ют-ся для
+ []
+
+[4]
+Underfull \hbox (badness 4279) in paragraph at lines 106--108
+[][]\T2A/faq/m/n/10 Введем пе-ре-мен-ные на-чаль-но-го со-сто-я-ния кэш-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 109--114
+[][]\T2A/faq/m/n/10 Наша за-да-ча со-сто-ит в по-ис-ке зна-че-ний
+ []
+
+
+Underfull \hbox (badness 5217) in paragraph at lines 109--114
+\T2A/faq/m/n/10 шаб-ло-на бу-дут ис-пол-не-ны в за-дан-ных те-сто-вых
+ []
+
+) (prm.tex
+File: prm.eps Graphic file (type eps)
+ <prm.eps> [5]
+Underfull \hbox (badness 2460) in paragraph at lines 77--83
+[][]\T2A/faq/m/n/10 <<ограничения кэш-промаха>> ге-не-ри-ру-ют-ся для
+ []
+
+
+Underfull \hbox (badness 4279) in paragraph at lines 108--110
+[][]\T2A/faq/m/n/10 Введем пе-ре-мен-ные на-чаль-но-го со-сто-я-ния кэш-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 111--116
+[][]\T2A/faq/m/n/10 Наша за-да-ча со-сто-ит в по-ис-ке зна-че-ний
+ []
+
+
+Underfull \hbox (badness 5217) in paragraph at lines 111--116
+\T2A/faq/m/n/10 шаб-ло-на бу-дут ис-пол-не-ны в за-дан-ных те-сто-вых
+ []
+
+
+Underfull \hbox (badness 2142) in paragraph at lines 117--119
+[][]\T2A/faq/m/n/10 Согласно ал-го-рит-му для кэш-попаданий и кэш-
+ []
+
+) (common.tex
+File: common.eps Graphic file (type eps)
+ <common.eps>
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[6]
+Underfull \hbox (badness 2460) in paragraph at lines 59--65
+[][]\T2A/faq/m/n/10 <<ограничения кэш-промаха>> ге-не-ри-ру-ют-ся для
+ []
+
+File: fifo.eps Graphic file (type eps)
+<fifo.eps> [7]) (voevodin.bbl)
+
+** Conference Paper **
+Before submitting the final camera ready copy, remember to:
+
+ 1. Manually equalize the lengths of two columns on the last page
+ of your paper;
+
+ 2. Ensure that any PostScript and/or PDF output post-processing
+ uses only Type 1 fonts and that every step in the generation
+ process uses the appropriate paper size.
+
+[8] (voevodin.aux)
+
+LaTeX Font Warning: Some font shapes were not available, defaults substituted.
+
+ ) 
+Here is how much of TeX's memory you used:
+ 2344 strings out of 95681
+ 30591 string characters out of 1193216
+ 90668 words of memory out of 1077526
+ 5282 multiletter control sequences out of 35000
+ 71918 words of font info for 114 fonts, out of 500000 for 1000
+ 198 hyphenation exceptions out of 607
+ 26i,8n,24p,955b,304s stack positions out of 1500i,500n,5000p,200000b,32768s
+
+Output written on voevodin.dvi (8 pages, 105924 bytes).
