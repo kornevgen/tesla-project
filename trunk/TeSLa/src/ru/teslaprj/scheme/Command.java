@@ -104,6 +104,20 @@ public class Command
 	private List<String> args;
 	private String testSituation;
 	private Map<String, Set<ProcedureTestSituation> > testSituationParameters;
+	private int memValueSize = -1;
+
+	/**
+	 * @return 3 +> DOUBLEWORD (64bits), 
+	 *         2 +> WORD (32bits), 
+	 *         1 +> HALFWORD (16bits),
+	 *         0 +> BYTE (8bits) 
+	 */
+	public int getMemoryValueSize() {
+		return memValueSize;
+	}
+	public void setMemValueSize(int memValueSize) {
+		this.memValueSize = memValueSize;
+	}
 	
 	@Override
 	public String toString()

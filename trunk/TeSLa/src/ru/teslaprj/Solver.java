@@ -24,7 +24,7 @@ import ru.teslaprj.constraints.ArgumentsManager;
 import ru.teslaprj.constraints.Constraint;
 import ru.teslaprj.constraints.ConstraintManager;
 import ru.teslaprj.constraints.Constraint.Relation;
-import ru.teslaprj.constraints.args.PhysicalAddress;
+import ru.teslaprj.constraints.args.PhysicalAddressAfterTranslation;
 import ru.teslaprj.constraints.args.Tag;
 import ru.teslaprj.constraints.args.VirtualAddress;
 import ru.teslaprj.scheme.Assert;
@@ -34,6 +34,7 @@ import ru.teslaprj.scheme.Scheme;
 import ru.teslaprj.scheme.SchemeDefinitionError;
 import ru.teslaprj.scheme.ts.CacheHit;
 import ru.teslaprj.scheme.ts.CacheMiss;
+import ru.teslaprj.scheme.ts.CacheTestSituation;
 import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 import ru.teslaprj.scheme.ts.TLBExists;
 import ru.teslaprj.scheme.ts.TLBHit;
@@ -437,6 +438,7 @@ public class Solver
     	VarsController tagNames = new VarsController();
 
     	Set<Command> storeCommands = new HashSet<Command>();
+    	Set<Command> dataTlbCommands = new HashSet<Command>();
 
     	for( Command command : scheme.getCommands() )
     	{
@@ -449,6 +451,7 @@ public class Solver
     				, cacheLevels
     				, tlb
     				, storeCommands
+    				, dataTlbCommands
     				, falseVirtualAddresses
     			) );
     	}
@@ -554,10 +557,10 @@ public class Solver
         List<String> hitTags = new ArrayList<String>();
         List<String> missTags = new ArrayList<String>();
         
+        String tlb_latestSetVar_DATA = tagNames.newVar().toString();
         if ( tlb != null )
         {
-	        tlb_latestSetVar = tagNames.newVar().toString();
-	        ecl.append( tlb_latestSetVar ).append( " = [] ");
+	        ecl.append( tlb_latestSetVar_DATA ).append( " = [] ");
 	        for( int i = 1; i <= tlb.getBufferSize(); i++ )
 	        {
 	        	ecl.append( " \\/ [" + i + "] " );
@@ -565,10 +568,49 @@ public class Solver
 	        ecl.append( "," ).append( eoln );
         }
         
+        String tlb_latestSetVar_INSTRUCTION = tagNames.newVar().toString();
+        if ( tlb != null )
+        {
+	        ecl.append( tlb_latestSetVar_INSTRUCTION ).append( " = [] ");
+	        for( int i = 1; i <= tlb.getBufferSize(); i++ )
+	        {
+	        	ecl.append( " \\/ [" + i + "] " );
+	        }
+	        ecl.append( "," ).append( eoln );
+        }
+        
+    	// add false 'DATA' first-level cache
+    	if ( ! cacheLevels.isEmpty() )
+    	{
+    		final Cache cache1 = cacheLevels.get(0);
+    		Cache new_cache = new Cache(){
+				@Override
+				public int getAddressBitLength() {
+					return cache1.getAddressBitLength();
+				}
+
+				@Override
+				public int getSectionNumber() {
+					return cache1.getSectionNumber();
+				}
+
+				@Override
+				public int getSetNumberBitLength() {
+					return cache1.getSetNumberBitLength();
+				}
+
+				@Override
+				public int getTagBitLength() {
+					return cache1.getTagBitLength();
+				}};
+			cacheLevels.add(0, new_cache);
+    	}
+    	
     	// asserts on indexes from template
         // if virtual addresses are equal then tlb indexes are equal too !
     	ConstraintManager constraintManager = new ConstraintManager();
     	ArgumentsManager argManager = new ArgumentsManager();
+    	//TODO предполагает, что cache0 уже добавлен!
     	readConstraintsFromTemplate(
     			scheme,
     			constraintManager,
@@ -576,51 +618,79 @@ public class Solver
     			tagNames,
     			cacheLevels );
     	constraintManager.closeConstraints();
-    	Map<List<Command>, Relation> virtualAddressesConstraints =
-    		constraintManager.getVirtualAddressesConstraints();
+
     	if ( tlb != null )
     	{
-	    	for( List<Command> c : virtualAddressesConstraints.keySet() )
+        	Map<List<Command>, Relation> virtualAddressesStaticConstraints =
+        		constraintManager.getVirtualAddressesStaticConstraints();
+	    	for( List<Command> c : virtualAddressesStaticConstraints.keySet() )
 	    	{
-	    		if ( virtualAddressesConstraints.get(c) == Relation.EQ )
+	    		if ( virtualAddressesStaticConstraints.get(c) == Relation.EQ )
 	    		{
 	    			String tlb1 = tlbBufferIndexes.get(c.get(0));
 	    			String tlb2 = tlbBufferIndexes.get(c.get(1));
 	    			ecl.append( tlb1 + " #= " + tlb2 + eoln );
 	    		}
 	    	}
-	
-	        String hitsStructure = tagNames.newVar().toString();
-	        ecl.append( hitsStructure ).append( " = _," ).append( eoln );
-	        String vytesnStructure = tagNames.newVar().toString();
-	        ecl.append( vytesnStructure ).append( " = _," ).append( eoln );
-	    	// TODO add DATA cache and INSTRUCTION cache
-	    	for( Command cmd : tlbCommands )
+
+	        String hitsStructure_DATA = tagNames.newVar().toString();
+	        ecl.append( hitsStructure_DATA ).append( " = _," ).append( eoln );
+	        String vytesnStructure_DATA = tagNames.newVar().toString();
+	        ecl.append( vytesnStructure_DATA ).append( " = _," ).append( eoln );
+
+	        String hitsStructure_INSTRUCTION = tagNames.newVar().toString();
+	        ecl.append( hitsStructure_INSTRUCTION ).append( " = _," ).append( eoln );
+	        String vytesnStructure_INSTRUCTION = tagNames.newVar().toString();
+	        ecl.append( vytesnStructure_INSTRUCTION ).append( " = _," ).append( eoln );
+	    	
+	        for( Command cmd : tlbCommands )
 	    	{
-	    		tlbOperationTranslate(
+	        	boolean isDATAinAddressTranslation = dataTlbCommands.contains(cmd);
+
+	        	String s = tlbOperationTranslate(
 	    				  cmd
 	    				, tlb
 	    				, tagNames
 	    				, ecl
 	    				, tlbBufferIndexes.get(cmd)
 	    				, tlbBufferVytesnIndexes.get(cmd)
-	    				, hitsStructure
-	    				, vytesnStructure
+	    				, (isDATAinAddressTranslation? hitsStructure_DATA : hitsStructure_INSTRUCTION )
+	    				, (isDATAinAddressTranslation? vytesnStructure_DATA : vytesnStructure_INSTRUCTION )
 	    				, hitTags
 	    				, missTags
 	    				, vytesnTags
+	    				, (isDATAinAddressTranslation? tlb_latestSetVar_DATA : tlb_latestSetVar_INSTRUCTION )
 	    			);
+	        	if ( isDATAinAddressTranslation )
+	        	{
+	        		tlb_latestSetVar_DATA = s;
+	        	}
+	        	else
+	        	{
+	        		tlb_latestSetVar_INSTRUCTION = s;	        		
+	        	}
 	    	}
 	    	//////////// 4a. tlbLRU
 	    	ecl.append( "% LRU predicates" ).append( eoln );
-	    	
-	    	StringBuffer tmpset = tagNames.newVar();
+
+	    	StringBuffer tmpset_DATA = tagNames.newVar();
 	    	ecl.append( "lru:makeSet( ")
-	    		.append( tmpset ).append( ", " )
-	    		.append( hitsStructure ).append( ", " )
-	    		.append( vytesnStructure ).append( " )," ).append( eoln );
+	    		.append( tmpset_DATA ).append( ", " )
+	    		.append( hitsStructure_DATA ).append( ", " )
+	    		.append( vytesnStructure_DATA ).append( " )," ).append( eoln );
 			ecl.append( "lru:vytesnTagsLRU( [ " )
-				.append( tmpset ).append( " ], ")
+				.append( tmpset_DATA ).append( " ], ")
+				.append( tlb.getBufferSize() )
+			.append( ")," ).append( eoln );
+	    	ecl.append( eoln );
+	
+	    	StringBuffer tmpset_INSTRUCTION = tagNames.newVar();
+	    	ecl.append( "lru:makeSet( ")
+	    		.append( tmpset_INSTRUCTION ).append( ", " )
+	    		.append( hitsStructure_INSTRUCTION ).append( ", " )
+	    		.append( vytesnStructure_INSTRUCTION ).append( " )," ).append( eoln );
+			ecl.append( "lru:vytesnTagsLRU( [ " )
+				.append( tmpset_INSTRUCTION ).append( " ], ")
 				.append( tlb.getBufferSize() )
 			.append( ")," ).append( eoln );
 	    	ecl.append( eoln );
@@ -674,28 +744,22 @@ public class Solver
     	}
     	
     	// 5a. simple constraints on virtual addresses from test template
-    	for( List<Command> c : virtualAddressesConstraints.keySet() )
+    	Map<List<Command>, Relation> virtualAddressesStaticConstraints =
+    			constraintManager.getVirtualAddressesStaticConstraints();
+    	for( List<Command> c : virtualAddressesStaticConstraints.keySet() )
     	{
     		String va1 = virtualAddresses.get(c.get(0));
     		String va2 = virtualAddresses.get(c.get(1));
-    		switch( virtualAddressesConstraints.get(c) )
+    		switch( virtualAddressesStaticConstraints.get(c) )
     		{
-    		case EQ: ecl.append( 
-    				"numbers:equal( " + 
-    				va1 + ", " + 
-    				va2 + ", " +
-    				tlb.getVirtualAddressBitLen() + 
-    				" )," + eoln ); break;
-    		case NEQ: ecl.append( 
-    				"numbers:notequal( " +
-    				va1 + ", " + 
-    				va2 + ", " +
-    				tlb.getVirtualAddressBitLen() +
-    				" )," + eoln ); break;
+    		case EQ: ecl.append( "numbers:equal( " + va1 + ", " + va2 + ", " +
+    				tlb.getVirtualAddressBitLen() +	" )," + eoln ); break;
+    		case NEQ: ecl.append( "numbers:notequal( " + va1 + ", " + va2 + ", " +
+    				tlb.getVirtualAddressBitLen() +	" )," + eoln ); break;
     		}
     	}
 
-    	// dynamic constraints on virtual addresses
+    	// "dynamic" constraints on virtual addresses (not from constraintManager!)
     	for( String diffVar : diffFalseVars.keySet() )
     	{
     		List<Command> diffCmds = diffFalseVars.get( diffVar );
@@ -725,12 +789,12 @@ public class Solver
     	Map<Command, String> entryHi = new HashMap<Command, String>();
     	Set<Command> loadCommands = new HashSet<Command>();
 		Map<Command, Set<String> > loadsMap = new HashMap<Command, Set<String>>();
-    	//TODO где задавать размер EntryHi?
+    	//где задавать размер EntryHi?
     	for( Command command : scheme.getCommands() )
     	{
-    		entryHi.put(command, "0"); //TODO убрать это, когда будет сделан EntryHi!
-    		// TODO сохранить историю значений EntryHi (список переменных-версий) для каждой команды
-    		// TODO i1 = i2 /\ i1.g = 0 -> EntryHi1 = EntryHi2
+    		entryHi.put(command, "0"); // убрать это, когда будет сделан EntryHi!
+    		// сохранить историю значений EntryHi (список переменных-версий) для каждой команды
+    		// i1 = i2 /\ i1.g = 0 -> EntryHi1 = EntryHi2
     		commandPredicates.append( commandlikeTranslate( 
     				  command
     				, scheme
@@ -872,9 +936,9 @@ public class Solver
     			ecl.append( diff + " = " + staticConstraints.get(diff) + "," + eoln );
     	}
     	
-    	// dynamic difference constraints! TODO ВСЕ ???
+    	// TODO dynamic difference constraints on set differences
     	// for example, ~d12 /\ ~d13 -> ~d23,  d12 <-> d21
-    	ecl.append( constraintManager.getDynamicConstraints() );
+    	ecl.append( constraintManager.getDynamicConstraints( setdiffs + virtualaddressesdiffs - but vadiffs has not values :(  ) );
     	
     	// 12. build set distribution from Constraints
     	ecl.append( "labeling( [0" );
@@ -927,9 +991,9 @@ public class Solver
     		Tag tag1 = tagPair.get(0);
     		Tag tag2 = tagPair.get(1);
     		String tagVar1 = tagVars.get(tag1.getCommand())
-				.get( cacheLevels.get( tag1.getLevel() - 1 ) );
+				.get( cacheLevels.get( tag1.getLevel() ) );
     		String tagVar2 = tagVars.get(tag2.getCommand())
-				.get( cacheLevels.get( tag2.getLevel() - 1 ) );
+				.get( cacheLevels.get( tag2.getLevel() ) );
     		switch( tagStaticConstraints.get(tagPair) )
     		{
     		case EQ: ecl.append( tagVar1 + " #= " + tagVar2 + eoln ); break;
@@ -939,14 +1003,15 @@ public class Solver
     	
     	/////// 20. инициализация
     	StringBuffer cacheslist = new StringBuffer( "Caches" );
-    	for( int level = 1; level <= cacheLevels.size(); level++ )
-    	{
-    		ecl.append( "CurrentSetsOfLevel" ).append( level ).append( " = _ ,").append( eoln );
-        	ecl.append( cacheslist )
-        		.append( " = [ CurrentSetsOfLevel" ).append( level ).append( " | ");
-        	cacheslist = tagNames.newVar();
-        	ecl.append( cacheslist ).append( " ]," ).append( eoln );
-    	}
+    	if ( ! cacheLevels.isEmpty() )
+	    	for( int level = 0; level <= cacheLevels.size(); level++ )
+	    	{
+	    		ecl.append( "CurrentSetsOfLevel" ).append( level ).append( " = _ ,").append( eoln );
+	        	ecl.append( cacheslist )
+	        		.append( " = [ CurrentSetsOfLevel" ).append( level ).append( " | ");
+	        	cacheslist = tagNames.newVar();
+	        	ecl.append( cacheslist ).append( " ]," ).append( eoln );
+	    	}
     	ecl.append( cacheslist ).append( " = []," ).append( eoln );
 		
     	List<StringBuffer> initialTagLists = new ArrayList<StringBuffer>();
@@ -1005,12 +1070,12 @@ public class Solver
 				{
 					ecl.append( tag ).append(" in " ).append( setVar ).append( ", " ).append( eoln );
 				}
-				
+
 				ecl
 				.append( "lru:initialize( " ) // set initial state of 'set' if it is not set yet
 					.append( sets.get(cache) ).append( ", " ) // in runtime 'setVar' is int constant!
 					.append( setVar ).append( ", " )
-					.append( "CurrentSetsOfLevel" ).append( (cacheLevels.indexOf(cache) + 1) ).append( ", " )
+					.append( "CurrentSetsOfLevel" ).append( cacheLevels.indexOf(cache) ).append( ", " )
 					.append( setlist ).append( ", " )
 					.append( tagsetlist )
 				.append( " )," ).append( eoln );
@@ -1039,8 +1104,6 @@ public class Solver
         ///////////// 40. cache operation translation
 //    	Map<Cache, Map<Integer, Integer>> currentSetVersions = new HashMap<Cache, Map<Integer,Integer>>();
     	
-    	// TODO add DATA cache and INSTRUCTION cache
-    	
 //    	for( Cache cache : cacheLevels )
 //    	{
 //    		currentSetVersions.put( cache, new HashMap<Integer, Integer>() );
@@ -1068,7 +1131,7 @@ public class Solver
     	
     	//////////// 50. LRU
     	ecl.append( "% LRU predicates" ).append( eoln );
-    	int level = 1;
+    	int level = 0;
     	for( Cache cache : cacheLevels )
     	{
     		ecl.append( "lru:vytesnTagsLRU( " )
@@ -1149,47 +1212,46 @@ public class Solver
 				virtualAddresses, physicalAddressesAfterTrans, rows);
     	
 		// 80. LOAD-STORE constraints => diff on indexes
-    	if ( tlb != null )
-    	{
-			load_store( 
-					  ecl
-					, scheme
-					, constraintManager
-					, argManager
-					, normalCommands
-					, tagNames
-					, tagVars
-					, setVars
-					, indexVars
-					, values
-					, tlb.getPhysicalAddressBitLen()
-				);
-    	}
+		load_store( 
+				  ecl
+				, scheme
+				, constraintManager
+				, argManager
+				, normalCommands
+				, tagNames
+				, tagVars
+				, setVars
+				, indexVars
+				, values
+				, ( tlb != null ? tlb.getPhysicalAddressBitLen() : 
+					( !cacheLevels.isEmpty() ? cacheLevels.get(0).getAddressBitLength() : 0 ) )
+			);
 		
 		// phys в LoadMemory = tag||set||idx
-		for( Command command : normalCommands )
-		{
-			String physicalAddress = physicalAddressesForMemOperation.get( command );
-			String tag = "[ " + tagVars.get(command).get(cacheLevels.get(0)) + " ]";
-			String set = "[ " + setVars.get(command).get(cacheLevels.get(0)) + " ]";
-			String index = indexVars.get(command);
-			String tmp = tagNames.newVar().toString();
-			int tslen = cacheLevels.get(0).getTagBitLength() + cacheLevels.get(0).getSetNumberBitLength();
-			ecl.append( "numbers:concat( " )
-				.append( tmp ).append( ", " )
-				.append( tag ).append( ", " )
-				.append( cacheLevels.get(0).getTagBitLength() ).append( ", " )
-				.append( set ).append( ", " )
-				.append( cacheLevels.get(0).getSetNumberBitLength() )
-			.append( " )," ).append( eoln )
-			.append( "numbers:concat( " )
-				.append( physicalAddress ).append( ", " )
-				.append( tmp ).append( ", " )
-				.append( tslen ).append( ", " )
-				.append( index ).append( ", " )
-				.append( tlb.getPhysicalAddressBitLen() - tslen )
-			.append( " )," ).append( eoln );
-		}
+		if ( ! cacheLevels.isEmpty() )
+			for( Command command : normalCommands )
+			{
+				String physicalAddress = physicalAddressesForMemOperation.get( command );
+				String tag = "[ " + tagVars.get(command).get(cacheLevels.get(0)) + " ]";
+				String set = "[ " + setVars.get(command).get(cacheLevels.get(0)) + " ]";
+				String index = indexVars.get(command);
+				String tmp = tagNames.newVar().toString();
+				int tslen = cacheLevels.get(0).getTagBitLength() + cacheLevels.get(0).getSetNumberBitLength();
+				ecl.append( "numbers:concat( " )
+					.append( tmp ).append( ", " )
+					.append( tag ).append( ", " )
+					.append( cacheLevels.get(0).getTagBitLength() ).append( ", " )
+					.append( set ).append( ", " )
+					.append( cacheLevels.get(0).getSetNumberBitLength() )
+				.append( " )," ).append( eoln )
+				.append( "numbers:concat( " )
+					.append( physicalAddress ).append( ", " )
+					.append( tmp ).append( ", " )
+					.append( tslen ).append( ", " )
+					.append( index ).append( ", " )
+					.append( tlb.getPhysicalAddressBitLen() - tslen )
+				.append( " )," ).append( eoln );
+			}
 		
     	// labeling of virtual addresses
     	for( String index : indexVars.values() )
@@ -1476,14 +1538,18 @@ public class Solver
     	}
 	}
 
-	private void createSetsAndTagsNames(final List<Cache> cacheLevels,
-			final TLB tlb, StringBuffer ecl, VarsController tagNames,
+	private void createSetsAndTagsNames(
+			final List<Cache> cacheLevels,
+			final TLB tlb,
+			StringBuffer ecl, 
+			VarsController tagNames,
 			Set<Command> normalCommands,
 			Map<Command, Map<Cache, String>> setVars,
 			Map<Command, Map<Cache, String>> tagVars,
 			Map<Command, String> indexVars,
 			Map<Command, Map<Cache, String>> fakeSetVars,
-			Map<Command, Map<Cache, String>> vytesntagVars) {
+			Map<Command, Map<Cache, String>> vytesntagVars)
+	{
 		for( Command cmd : normalCommands )
     	{
     		Map<Cache, String> sets = new HashMap<Cache, String>();
@@ -1491,6 +1557,7 @@ public class Solver
     		Map<Cache, String> vytesntags = new HashMap<Cache, String>();
     		Map<Cache, String> fakeSets = new HashMap<Cache, String>();
     		
+    		// TODO а если не все уровни кэш-памяти нужны команде (не участвуют в тестовой ситуации?)
     		for( Cache cache : cacheLevels )
     		{
     			String set = tagNames.newVar().toString();
@@ -1515,7 +1582,7 @@ public class Solver
     				for( ProcedureTestSituation pts : ts )
     				{
     					if ( pts instanceof CacheMiss 
-    							&& cacheLevels.get( ((CacheMiss)pts).getLevel() - 1 ).equals( cache ) )
+    							&& cacheLevels.get( ((CacheMiss)pts).getLevel() ).equals( cache ) )
     					{
     						String vyt = tagNames.newVar().toString();
     	    				vytesntags.put(cache, vyt);
@@ -1780,8 +1847,8 @@ public class Solver
      * @throws RecognitionException
      */
     private StringBuffer commandlikeTranslate( 
-    		  final Command command
-    		, final Scheme scheme
+    		  Command command
+    		, Scheme scheme
     		, Map<String, Integer> varVersions
     		, StringBuffer ecl
     		, VarsController tagsVersions
@@ -1893,12 +1960,84 @@ public class Solver
 			
 			if ( prog.memoryOperation == MemoryCommand.LOAD )
 				LoadCommands.add(command);
+
+			if ( prog.isDataCacheused )
+				Level0Searching:
+				for( String procedure : command.getTestSituationParameters().keySet() )
+				{
+					if ( procedure != "LoadMemory" && procedure != "StoreMemory" )
+						continue;
+					
+					Set<ProcedureTestSituation> parameters = command.getTestSituationParameters().get(procedure);
+					for( ProcedureTestSituation proc : parameters )
+					{
+						if ( proc instanceof CacheTestSituation )
+						{
+							if ( ((CacheTestSituation) proc).getLevel() == 1 )
+							{
+								// change level to 0
+								CacheTestSituation proc0;
+								if ( proc instanceof CacheHit )
+								{
+									final CacheHit procTS = (CacheHit)proc;
+									proc0 = new CacheHit(){
+										@Override
+										public int getLevel() {
+											return 0;
+										}
+
+										@Override
+										public String getSetVar() {
+											return procTS.getSetVar();
+										}
+
+										@Override
+										public String getTagVar() {
+											return procTS.getTagVar();
+										}};
+								}
+								else if ( proc instanceof CacheMiss )
+								{
+									final CacheMiss procTS = (CacheMiss)proc;
+									proc0 = new CacheMiss(){
+										@Override
+										public String getVTagVar() {
+											return procTS.getVTagVar();
+										}
+
+										@Override
+										public int getLevel() {
+											return 0;
+										}
+
+										@Override
+										public String getSetVar() {
+											return procTS.getSetVar();
+										}
+
+										@Override
+										public String getTagVar() {
+											return procTS.getTagVar();
+										}};
+								}
+								else
+									throw new Error("unexpecting type of cache test situation");
+								
+								parameters.remove( (CacheTestSituation)proc );
+								parameters.add( proc0 );
+								break Level0Searching;
+							}
+						}
+					}
+				}
 		}
 		
 		ecl.append( ")," ).append( eoln );
 		
 		
 		ecl.append( eoln );
+		
+		command.setMemValueSize( prog.memValueSize );
 		
 		for( String var : changedVars )
 		{
@@ -1940,7 +2079,7 @@ public class Solver
 						}
 						
 						CacheHit hit = (CacheHit)ts;
-						Cache cache = cacheLevels.get( hit.getLevel() - 1 );
+						Cache cache = cacheLevels.get( hit.getLevel() );
 						String tag = tagVars.get( cache );
 						String tagset = tag + "set";
 						
@@ -1954,8 +2093,8 @@ public class Solver
 						String setNumber = setVars.get( cache );
 						
 						ecl.append( "lru:latestSetVar( " )
+						.append( hitSetsStructure ).append( ", " )
 							.append( setVar ).append( ", " )
-							.append( hitSetsStructure ).append( ", " )
 							.append( "_, " )
 							.append( setVarsStructure ).append( ", " )
 							.append( setNumber )
@@ -1985,7 +2124,7 @@ public class Solver
 						}
 						
 						CacheMiss miss = (CacheMiss)ts;
-						Cache cache = cacheLevels.get( miss.getLevel() - 1 );
+						Cache cache = cacheLevels.get( miss.getLevel() );
 						String tag = tagVars.get( cache );
 						String tagset = tag + "set";
 
@@ -2122,8 +2261,8 @@ public class Solver
 
     }
 
-    private String tlb_latestSetVar;
-    private void tlbOperationTranslate(
+//    private String tlb_latestSetVar;
+    private String tlbOperationTranslate(
 	  		  Command command
 	  		, TLB tlb
 	  		, VarsController tagsVersions
@@ -2135,11 +2274,12 @@ public class Solver
 	  		, final List<String> hitTags
 	  	    , final List<String> vytesnTags
 	  	    , final List<String> missTags
+	  	    , final String tlb_latestSetVar
 		  	)
 	{
 		Map<String, Set<ProcedureTestSituation>> testSituation = command.getTestSituationParameters();
 		if ( ! testSituation.containsKey( "AddressTranslation" ) )
-			return;
+			return "";
 
 		TLBSituation tlbSituation = command.getTLBSituation();
 		if ( tlbSituation instanceof TLBHit )
@@ -2161,6 +2301,8 @@ public class Solver
 			.append( eoln );
 
 		    hitTags.add( index );
+		    
+		    return tlb_latestSetVar;
 		}
 		else if ( tlbSituation instanceof TLBMiss )
 		{
@@ -2231,11 +2373,13 @@ public class Solver
 			.append( ")," ).append( eoln )
 			.append( eoln );
 			
-			tlb_latestSetVar = nextSetVar.toString();
 
 			vytesnTags.add( vytesnIndex );
 		    missTags.add( index );
+			return nextSetVar.toString();
 		}
+		else
+			return tlb_latestSetVar;
   }
     
     /**
@@ -2265,6 +2409,7 @@ public class Solver
     		, List<Cache> cacheLevels
     		, TLB tlb
     		, Set<Command> storeCommands
+    		, Set<Command> dataCommands
     		, Map<Command, String> falseVirtualAddresses
     	)
     	throws IOException, RecognitionException
@@ -2350,9 +2495,17 @@ public class Solver
 			varVersions.put( var, version + 1 );
 		}
 		
-		if ( prog.isStoreAddressTranslation )
+		if ( prog.hasAddressTranslation )
 		{
-			storeCommands.add(command);
+			if ( prog.isStoreAddressTranslation )
+			{
+				storeCommands.add(command);
+			}
+			
+			if ( prog.isDataTLBused )
+			{
+				dataCommands.add(command);
+			}
 		}
 		
 		return prog.eclipseProgram;
@@ -2417,24 +2570,22 @@ public class Solver
     	}
     	ecl.append( "] )," ).append( eoln );
     	
-    	// 4. build and write dynamic constraints on flags
+    	// 4. write dynamic constraints on physForMemoryDiff
     	//TODO записать в это место ВСЕ динамические ограничения ??
     	// или как-то выделить динам.ограничения на эти diff?
     	// а если это завязано на другие переменные?..
     	ecl.append( constraintManager.getDynamicConstraints() );
     	
     	// 5. LOAD-STORE model on flags
-    	// 5a: LOAD-STORE
     	viewed.clear();
     	// phys +> all load-store diffs with it
-    	Map<Command, Set<String>> lsdiffs = new HashMap<Command, Set<String>>();
     	for( Command cmd1 : reverseMemoryCommands )
     	{
     		viewed.add(cmd1);
     		if ( ! cmd1.isLOAD() )
     			continue;
     		int bracesCount = 0;
-    		Set<String> diffs = new HashSet<String>();
+        	// 5a: LOAD-STORE
     		for( Command cmd2 : reverseMemoryCommands )
     		{
     			if ( viewed.contains(cmd2) )
@@ -2442,37 +2593,13 @@ public class Solver
     			if ( ! cmd2.isSTORE() )
     				continue;
     			
-    			String diff = physDiffVars.get(findPair(physDiffVars.keySet(), cmd1, cmd2));
-    			String value1 = values.get(cmd1);
-    			String value2 = values.get(cmd2);
-    			ecl.append( "( " ).append( diff ).append( " = 1 -> " )
-    			.append( value1 ).append( " #= " ).append( value2 ).append( ";" ).append( eoln );
+    			//TODO STORE-инструкция меняет не просто часть, а весь регистр целиком?
+    			
+    			physAddrAndValuesIntersection(ecl, versions, values,
+						physicalAddressBitLen, cmd1, cmd2);
     			bracesCount++;
-    			diffs.add( diff );
     		}
-    		lsdiffs.put( cmd1, diffs );
-    		ecl.append( "true" );
-    		for( int i = 0; i < bracesCount; i++ )
-    		{
-    			ecl.append( ")");
-    		}
-    		ecl.append(",").append( eoln );
-    	}
-    	// 5b: LOAD-LOAD
-    	viewed.clear();
-    	for( Command cmd1 : reverseMemoryCommands )
-    	{
-    		viewed.add(cmd1);
-    		if ( ! cmd1.isLOAD() )
-    			continue;
-    		Set<String> diffs = lsdiffs.get(cmd1);
-    		ecl.append( "( true" );
-    		for( String d : diffs )
-    		{
-    			ecl.append( ", " + d + " = 0" );
-    		}
-    		ecl.append( " -> " ).append( eoln );
-    		int bracesCount = 0;
+        	// 5b: LOAD-LOAD
     		for( Command cmd2 : reverseMemoryCommands )
     		{
     			if ( viewed.contains(cmd2) )
@@ -2480,20 +2607,17 @@ public class Solver
     			if ( ! cmd2.isLOAD() )
     				continue;
     			
-    			String diff = physDiffVars.get(findPair(physDiffVars.keySet(), cmd1, cmd2));
-    			String value1 = values.get(cmd1);
-    			String value2 = values.get(cmd2);
-    			ecl.append( "( " ).append( diff ).append( " = 1 -> " )
-    			.append( value1 ).append( " #= " ).append( value2 ).append( ";" ).append( eoln );
+    			physAddrAndValuesIntersection(ecl, versions, values,
+						physicalAddressBitLen, cmd1, cmd2);
+    			
     			bracesCount++;
     		}
     		ecl.append( "true" );
     		for( int i = 0; i < bracesCount; i++ )
     		{
-    			ecl.append( ")" );
+    			ecl.append( ")");
     		}
-    		ecl.append( eoln ).append( "; true )," );
-    		ecl.append( eoln );
+    		ecl.append(",").append( eoln );
     	}
     	
     	// 6. translate flags to tags, sets, indexes difference
@@ -2546,6 +2670,89 @@ public class Solver
     		.append( eoln );
     	}
     }
+
+	private void physAddrAndValuesIntersection(StringBuffer ecl,
+			VarsController versions, Map<Command, String> values,
+			int physicalAddressBitLen, Command cmd1, Command cmd2) {
+		String value1 = values.get(cmd1);
+		String value2 = values.get(cmd2);
+		int s = Math.max(cmd1.getMemoryValueSize(), cmd2.getMemoryValueSize());
+		int min = Math.min( cmd1.getMemoryValueSize(), cmd2.getMemoryValueSize() );
+		// phys1[physBitLen .. s] = phys2[physBitLen .. s] -> val1 = val2
+		ecl.append( "( numbers:boundedEqual( " )
+			.append( cmd1.getPhysicalAddress() ).append( ", " )
+			.append( cmd2.getPhysicalAddress() ).append( ", " )
+			.append( physicalAddressBitLen ).append( ", " )
+			.append( physicalAddressBitLen - 1 ).append( ", " )
+			.append( s )
+		.append( " ) -> " );
+		// равенство пересечений
+		if ( s == min )
+		{
+			ecl.append( "numbers:equal( " )
+				.append( value1 ).append( ", " )
+				.append( value2 ).append( ", " )
+				.append( s )
+			.append( " );").append( eoln );
+		}
+		else
+		{
+			if ( cmd1.getMemoryValueSize() > cmd2.getMemoryValueSize() )
+				valuesIntersection(
+						ecl, versions, physicalAddressBitLen,
+						value1, value2, s, min);
+			else
+				valuesIntersection(
+						ecl, versions, physicalAddressBitLen,
+						value2, value1, s, min);    					
+		}
+	}
+
+	private void valuesIntersection(StringBuffer ecl, VarsController versions,
+			int physicalAddressBitLen, String value1, String value2, int s,
+			int min) {
+		// пусть они отличаются на N бит 
+		// => value[valuelen-1..0] делится на 2^N интервалов, 
+		// один интервал соответствует месту для val2 внутри val1
+		// а соответствие определяется значащими в phys2 битами
+		// phys2[s-1..cmd2.valuelen] = 1 -> val1[..] = val2
+		ecl.append( "( " );
+
+		String phys2Part = versions.newVar().toString();
+		ecl.append( "numbers:getbits( " )
+			.append( "[ " ).append( phys2Part ).append( "], " )
+			.append( min ).append( ", " )
+			.append( physicalAddressBitLen ).append( ", " )
+			.append( s-1 ).append( ", " )
+			.append( min )
+		.append( " )," ).append( eoln );
+		
+		int partsCount = (int)Math.pow( 2, s - min );
+		int value1len = (int)Math.pow( 2, s + 3 );
+		int partLen = value1len / partsCount;
+		int brCount = 0;
+		for( int partN = partsCount-1; partN >= 0; brCount++,partN-- )
+		{
+			// TODO как-то учесть BigEndian...
+			int value1EndBit = (partN + 1) * partLen - 1;
+			int value1StartBit = partN * partLen;
+			// ( phys2Part #= partN -> getbits( value2, value1, endbit, startbit ) ; 
+			ecl.append( "( " ).append( phys2Part ).append( " #= " ).append( partN ).append( " -> " ).append( eoln );
+			ecl.append( "numbers:getbits( ")
+				.append( value2 ).append( ", " )
+				.append( value1 ).append( ", " )
+				.append( value1len ).append( ", " )
+				.append( value1EndBit ).append( ", " )
+				.append( value1StartBit )
+			.append( " ) ; ").append( eoln );    					
+		}
+		ecl.append( "true");
+		for( ; brCount > 0; brCount-- )
+		{
+			ecl.append( " )" );
+		}
+		ecl.append( "),").append( eoln );
+	}
     
     private List<Command> buildReverse( Scheme scheme, Set<Command> memory )
     {
@@ -2558,17 +2765,6 @@ public class Solver
     			result.add(cmd);
     	}
     	return result;
-    }
-    
-    private List<Command> findPair( Set<List<Command>> s, Command c1, Command c2 )
-    {
-    	for( List<Command> c : s )
-    	{
-    		if ( c.get(0).equals(c1) && c.get(1).equals(c2)
-    			|| c.get(0).equals(c2) && c.get(1).equals(c1) )
-    			return c;
-    	}
-    	return null;
     }
     
     private void readConstraintsFromTemplate(
@@ -2606,7 +2802,7 @@ public class Solver
 
 								@Override
 								public Cache getCache() {
-									return cacheLevels.get( hit.getLevel() - 1 );
+									return cacheLevels.get( hit.getLevel() );
 								}
 
 								@Override
@@ -2645,7 +2841,7 @@ public class Solver
 
 								@Override
 								public Cache getCache() {
-									return cacheLevels.get( miss.getLevel() - 1 );
+									return cacheLevels.get( miss.getLevel() );
 								}
 
 								@Override
@@ -2692,7 +2888,7 @@ public class Solver
 								}}
 						);
 					argManager.addArgument(
-							new PhysicalAddress(){
+							new PhysicalAddressAfterTranslation(){
 								@Override
 								public Command getCommand() {
 									return c;
@@ -2719,7 +2915,7 @@ public class Solver
 								}}
 						);
 					argManager.addArgument(
-							new PhysicalAddress(){
+							new PhysicalAddressAfterTranslation(){
 								@Override
 								public Command getCommand() {
 									return c;
@@ -2741,13 +2937,18 @@ public class Solver
     		{
     			Argument first = argManager.getArgument( a.getArgs().get(0) );
     			Argument second = argManager.getArgument( a.getArgs().get(1) );
-    			Constraint c;
-    			if ( a.getTestSituation().equals( "=" ) )
-    				c = new Constraint( Relation.EQ, first, second );
-    			else
-    				c = new Constraint( Relation.NEQ, first, second );
+    			// TODO проверить, что эти аргументы одного динамического типа
+    			// что у них одинаковый битовый размер
+    			// и если это теги, сеты, то что еще они относятся к одному уровню кэша
+    			// Если что-нибудь из этого не выполнено, выдавать ошибку!
+    			// проверить, возможен ли тут уровень0 для тегов-сетов!
+    			Constraint c = new Constraint (
+    					( a.getTestSituation().equals( "=" ) ? Relation.EQ : Relation.NEQ ),
+    					first, 
+    					second );
     			constraintManager.add( c );
     		}
+    		//TODO else выдать ошибку, что в таком виде спец.ограничения не описывают!
     	}
     }
     

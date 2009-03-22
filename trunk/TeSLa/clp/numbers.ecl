@@ -12,8 +12,10 @@
 :- export lessSigned/3.
 :- export greaterORequalSigned/3.
 :- export lessORequalSigned/3.
+
 :- export notequal/3.
 :- export equal/3.
+:- export boundedEqual/5.
 
 :- export getbit/4.
 :- export getbits/5.
@@ -186,6 +188,102 @@ equal( X, Y, Size ) :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% X[EndBit..StartBit] == Y[EndBit..StartBit]
+
+boundedEqual( X, Y, Size, EndBit, StartBit ) :-
+	integers( [Size, EndBit, StartBit] ), 
+	sizeof( X, Size ), sizeof( Y, Size ),
+	EndBit < Size,
+	StartBit =< EndBit,
+	StartBit >= 0,
+	
+	chunksize( C ),
+	FullChunksBeforeEnd is (EndBit+1) div C,
+	( StartBit mod C = 0 
+		-> FullChunksBeforeStart is StartBit div C
+		;  FullChunksBeforeStart is 1 + StartBit div C
+	),
+
+	( FullChunksBeforeEnd > FullChunksBeforeStart ->
+		length( X1, FullChunksBeforeEnd ),
+		append( _, X1, X ),
+		MiddleLen is FullChunksBeforeEnd - FullChunksBeforeStart,
+		length( MX, MiddleLen ),
+		append( MX, _, X1 ),
+		
+		length( Y1, FullChunksBeforeEnd ),
+		append( _, Y1, Y ),
+		length( MY, MiddleLen ),
+		append( MY, _, Y1 ),
+		
+		MX = MY
+	; true
+	),
+	
+	( ( FullChunksBeforeEnd > FullChunksBeforeStart 
+	  ; FullChunksBeforeEnd = FullChunksBeforeStart, StartBit mod C = 0 )
+	  	->
+		TailBits is (EndBit + 1) mod C,
+		( TailBits > 0 -> 
+			length( X1, FullChunksBeforeEnd ),
+			append( _, [ Xh | X1 ], X ),
+			length( Y1, FullChunksBeforeEnd ),
+			append( _, [ Yh | Y1 ], Y ),
+			exp2( DT, TailBits ),
+			% bounds on Xh, Yh, _ ?
+			Xh - Yh #= DT * _
+		; true )		
+	; true
+	), 
+	
+	( FullChunksBeforeEnd > FullChunksBeforeStart ->
+		HeadBits is StartBit mod C,
+		( HeadBits > 0 ->
+			F is FullChunksBeforeStart - 1,
+			length( X1, F ),
+			append( _, [ Xh | X1 ], X ),
+			length( Y1, F ),
+			append( _, [ Yh | Y1 ], Y ),
+			exp2( DH, HeadBits ),
+			abs(Xh - Yh) #< DH,
+			% как вариант: искать целое число в пересечении [Xh/DH -1+eps..Yh/DH], если Xh > Yh + наоборот
+			integers([T]), T #>= 0,
+			DH*T #=< Xh,
+			2*DH*T #> 2*Xh - 2*DH + 1,
+			DH*T #=< Yh,
+			2*DH*T #> 2*Yh - 2*DH + 1				
+		; true )	
+	; true
+	), 
+	
+	( ( FullChunksBeforeEnd = FullChunksBeforeStart, StartBit mod C > 0 ) ->	
+			length( X1, FullChunksBeforeEnd ),
+			append( _, [ Xh | X1 ], X ),
+			length( Y1, FullChunksBeforeEnd ),
+			append( _, [ Yh | Y1 ], Y ),
+			
+			E is EndBit mod C,
+			S is StartBit mod C,
+			
+			E < C-1,
+			
+			exp2( DS, S ),
+			DSm1 is DS - 1,
+			exp2( DE, E ),
+			ES is E - S + 1,
+			exp2( DES, ES ),
+			DESm1 is DES - 1,
+			
+			[X2,Y2] #:: [0 .. DSm1],
+			XY3 #:: [0 .. DESm1],
+			X4 #>= 0, Y4 #>= 0,
+			Xh #= X2 + DS * XY3 + 2*DE * X4,
+			Yh #= Y2 + DS * XY3 + 2*DE * Y4
+	; true
+	).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 getbit( [Bit], X, SizeOfX, Index ) :-
 	sizeof( X, SizeOfX ),
 
@@ -314,7 +412,10 @@ pow( Y, X, SizeOfX, N ) :-
 			exp2( DC, C ),
 			DC1 is DC - 1,
 			fillConst( Y1, FullChunks, DC1 ),
-			Y = [ DLS1 | Y1 ]
+			( LastSize = 0 ->
+				  Y = Y1 
+				; Y = [ DLS1 | Y1 ]
+			)
 		)
 	;	sizeof( X, SizeOfX ),
 		powCycle( Y, [], 0, X, SizeOfX, N, [] )
@@ -347,6 +448,7 @@ fillConst( [ Const | L ], Len, Const ) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 sum( Z, X, Y, Size ) :-
+	sizeof( X, Size ), sizeof( Y, Size ), sizeof( Z, Size ),
 	length( X, L ), length( Y, L ), length( Z, L ), 
 	sumWithCurry( Z, X, Y, Size, 0 ).
 

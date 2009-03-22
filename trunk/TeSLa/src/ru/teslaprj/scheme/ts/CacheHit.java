@@ -1,10 +1,5 @@
 package ru.teslaprj.scheme.ts;
 
-public interface CacheHit extends ProcedureTestSituation
+public interface CacheHit extends CacheTestSituation
 {
-	int getLevel();
-	
-	String getTagVar();
-	
-	String getSetVar();
 }
