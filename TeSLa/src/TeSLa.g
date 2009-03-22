@@ -68,6 +68,9 @@ package ru.teslaprj.syntax;
 	String physicalAddressForMemOperation = null;
 	String memValue = null;
 	MemoryCommand memOperation;
+	int memValueSize = 0;
+	boolean isDataTLBused;
+	boolean isDataCacheused;
 	
 	boolean refill;
 	boolean store;
@@ -109,8 +112,11 @@ program[
 	 , MemoryCommand memoryOperation
 	 , boolean hasAddressTranslation
 	 , boolean isStoreAddressTranslation
+	 , boolean isDataTLBused
+	 , boolean isDataCacheused
 	 , Set<String> readlist
 	 , Set<String> loadlist
+	 , int memValueSize
 	 ]
 @init {
 List<LogicalVariable> parameters = new ArrayList<LogicalVariable>();
@@ -238,7 +244,7 @@ this.loadlogicallist = new HashSet<LogicalVariable>();
 							continue;
 							
 						// if preversion == postversion /\ !stopTranslation than error!
-              			if ( parameters.get(i).current().startsWith("_0") )
+              			if ( parameters.get(i).current().startsWith("_1") )
               			{
               				throw new SemanticException( 
               					null,
@@ -270,6 +276,9 @@ this.loadlogicallist = new HashSet<LogicalVariable>();
 					if ( parameters.contains( v ) )
 						retval.loadlist.add( args.get( parameters.indexOf( v ) ) );
 				}
+				retval.memValueSize = this.memValueSize;
+				retval.isDataTLBused = this.isDataTLBused;
+				retval.isDataCacheused = this.isDataCacheused;
 			}
 	;
 
@@ -354,15 +363,15 @@ assignOperator
 	;
 
 procedure
-@init{store = false; boolean mem = (memOperation != null);}
+@init{store = false; boolean mem = (memOperation != null); int size = -1; }
 	: t = ( 'LoadMemory' { memOperation = MemoryCommand.LOAD; }
 	      | 'StoreMemory' { memOperation = MemoryCommand.STORE; } ) 
 			'(' 
 				    value = ID
-				',' size  = INTEGER
+				',' ('DOUBLEWORD' {size=3;} | 'WORD' {size=2;} | 'HALFWORD' {size=1;} | 'BYTE' {size=0;} ) 
 				',' addr  = ID
 				',' vAddr = ID
-				',' ( 'DATA' | 'INSTRUCTION' )
+				',' ( 'DATA'{isDataCacheused=true;} | 'INSTRUCTION'{isDataCacheused=false;} )
 			')'
 		{
 			if ( ! stopTranslation )
@@ -380,21 +389,23 @@ procedure
 					throw new SemanticException( addr, "Size of physical address must be " + physAddressBitLen );
 				}
 				
+				int valueBitLen = (int)Math.pow( 2, size + 3 );
+				
 				// add new var for value and add to the signature
 				if ( ! varsc.isKnown( value.getText() ) )
 				{
 					varsc.addVar( 
 						  value.getText()
-						, 64
+						, valueBitLen
 						, LogicalVariable.Status.LOCAL
 						, false );
 				}
 				else
 				{
-					 // check: sizeof( value ) == 64
-					 if ( varsc.getVar( value, value.getText() ).size != 64 )
+					 // check: sizeof( value ) == valueBitLen
+					 if ( varsc.getVar( value, value.getText() ).size != valueBitLen )
 					 {
-					 	throw new SemanticException( value, "'" + value.getText() + "' must be of 64 bits" );
+					 	throw new SemanticException( value, "'" + value.getText() + "' must be of " + valueBitLen + " bits" );
 					 }
 				}
 				memValue = varsc.getCurrent( value, value.getText() );
@@ -410,17 +421,16 @@ procedure
 						readlist.add( varsc.getVar( value, value.getText() ) );
 				}
 				
-				// TODO? if vAddr[size-1 .. 0] != 0 then throw new AddressException();
+				// if vAddr[size-1 .. 0] != 0 then throw new AddressException();
 				
-				// TODO add other arguments support
-				
+				this.memValueSize = size;				
 			}			
 		}
 	| t1 = 'AddressTranslation'
 		'('
 			    phys = ID 
 			',' virtual = ID
-			',' ('DATA'|'INSTRUCTION')
+			',' ('DATA'{isDataTLBused=true;}|'INSTRUCTION'{isDataTLBused=false;})
 			',' ('LOAD'|'STORE'{store=true;})
 		')'
 		{
