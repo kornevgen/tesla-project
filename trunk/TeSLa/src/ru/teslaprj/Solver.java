@@ -938,7 +938,7 @@ public class Solver
     	
     	// TODO dynamic difference constraints on set differences
     	// for example, ~d12 /\ ~d13 -> ~d23,  d12 <-> d21
-    	ecl.append( constraintManager.getDynamicConstraints( setdiffs + virtualaddressesdiffs - but vadiffs has not values :(  ) );
+//    	ecl.append( constraintManager.getDynamicConstraints( setdiffs + virtualaddressesdiffs - but vadiffs has not values :(  ) );
     	
     	// 12. build set distribution from Constraints
     	ecl.append( "labeling( [0" );
@@ -2574,7 +2574,7 @@ public class Solver
     	//TODO записать в это место ВСЕ динамические ограничения ??
     	// или как-то выделить динам.ограничения на эти diff?
     	// а если это завязано на другие переменные?..
-    	ecl.append( constraintManager.getDynamicConstraints() );
+//TODO    	ecl.append( constraintManager.getDynamicConstraints() );
     	
     	// 5. LOAD-STORE model on flags
     	viewed.clear();
