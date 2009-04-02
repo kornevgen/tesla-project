@@ -9,6 +9,7 @@
 :- export labelRows/1.
 :- export refill/7.
 
+%%%%                      scalar number number scalar scalar number
 :- export struct( tlbtag( index, range, vpnd2, mask, g, asid ) ).
 :- export oddbit/7.
 
@@ -70,8 +71,8 @@ oddbit( Odd, Index, VirtualAddress, SizeOfVA, VPNd2StartBit, MaxMask, Rows ) :-
 addRow( Rows, TLBtag ) :-
 	( free( Rows )
 		-> Rows = [ TLBtag | _ ]
-		; Rows = [ tlbtag{index:I, range:Rg, mask:M, vpnd2:V} | Tl ],
-			TLBtag = tlbtag{index:Index, range:Range, mask:Mask, vpnd2:VPNd2 },
+		; Rows = [ tlbtag{index:I, range:[Rg], mask:M, vpnd2:[V]} | Tl ],
+			TLBtag = tlbtag{index:Index, range:[Range], mask:Mask, vpnd2:[VPNd2] },
 			( I = Index
 				-> Range #= Rg, Mask #= M, VPNd2 #= V
 				; addRow( Tl, TLBtag )
@@ -90,8 +91,8 @@ onlyOne( [ TLBtag | Tl ] ) :-
 	( foreach( X, Tl ),
 	  param( TLBtag )
 	do
-		TLBtag = tlbtag{range:R1, mask:M1, vpnd2:V1},
-		X = tlbtag{range:R2, mask:M2, vpnd2:V2},
+		TLBtag = tlbtag{range:[R1], mask:M1, vpnd2:[V1]},
+		X = tlbtag{range:[R2], mask:M2, vpnd2:[V2]},
 		( R1 #\= R2
 		; vp2( VV, M2, V1 ), VV #\= V2
 		; vp2( VV, M1, V2 ), VV #\= V1

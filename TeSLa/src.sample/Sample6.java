@@ -139,7 +139,7 @@ public class Sample6
 				}
 
 				@Override
-				public int getSize() {
+				public int getJTLBSize() {
 					return 5;
 				}
 

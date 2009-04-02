@@ -6,7 +6,7 @@ public interface TLB
 	int getBufferSize();
 	
 	/** количество строк в TLB */
-	int getSize();
+	int getJTLBSize();
 	
 	/** битовый размер виртуального адреса */
 	int getVirtualAddressBitLen();

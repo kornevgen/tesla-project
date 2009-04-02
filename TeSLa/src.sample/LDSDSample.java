@@ -28,8 +28,6 @@ public class LDSDSample
 {
 	public static void main( String[] args )
 	{
-		try
-		{
 			// 1. сформировать схему
 			// перебор зависимостей:
 			/**
@@ -61,11 +59,13 @@ public class LDSDSample
 			{
 				for( List<String> dep : deps )
 				{
-					List<String> params1 = new ArrayList<String>( dep );
-					List<String> params2 = new ArrayList<String>( dep );
+					List<String> params1 = new ArrayList<String>( dep.subList(0, 2) );
+					List<String> params2 = new ArrayList<String>( dep.subList(2, 4) );
 					params1.add("c1");
 					params2.add("c2");
 					
+					try
+					{
 					Scheme scheme = new Scheme() ;
 					scheme.addDefinition( new RegisterDefinition( "x", 64 ) );
 					scheme.addDefinition( new RegisterDefinition( "y", 64 ) );
@@ -269,8 +269,8 @@ public class LDSDSample
 					m1.put( "AddressTranslation", m11ts.get(0));
 
 					Map<String, Set<ProcedureTestSituation>> m2 = new HashMap<String, Set<ProcedureTestSituation>>();
-					m1.put( "StoreMemory", m1ts.get(1) );
-					m1.put( "AddressTranslation", m11ts.get(1));
+					m2.put( "StoreMemory", m1ts.get(1) );
+					m2.put( "AddressTranslation", m11ts.get(1));
 
 					scheme.addCommand( new Command("LD", params1, "regular", m1));
 					scheme.addCommand( new Command("SD", params2, "regular", m2));
@@ -280,12 +280,12 @@ public class LDSDSample
 
 						@Override
 						public int getBufferSize() {
-							return 3;
+							return 4;
 						}
 
 						@Override
-						public int getSize() {
-							return 5;
+						public int getJTLBSize() {
+							return 48;
 						}
 
 						@Override
@@ -295,22 +295,22 @@ public class LDSDSample
 
 						@Override
 						public int getRangeEndBit() {
-							return 10;
+							return 39;
 						}
 
 						@Override
 						public int getRangeStartBit() {
-							return 10;
+							return 38;
 						}
 
 						@Override
 						public int getVPNd2EndBit() {
-							return 9;
+							return 37;
 						}
 
 						@Override
 						public int getVPNd2StartBit() {
-							return 6;
+							return 12;
 						}
 
 						@Override
@@ -320,7 +320,7 @@ public class LDSDSample
 
 						@Override
 						public int getPFNBitLen() {
-							return 20;
+							return 24;
 						}
 
 						@Override
@@ -330,7 +330,7 @@ public class LDSDSample
 
 						@Override
 						public int getASIDBitLen() {
-							return 3;
+							return 8;
 						}};
 
 					
@@ -346,7 +346,7 @@ public class LDSDSample
 						@Override
 						public int getSectionNumber()
 						{
-							return 8;
+							return 4;
 						}
 
 						@Override
@@ -389,65 +389,67 @@ public class LDSDSample
 					} );
 
 					Verdict verdict = solver.solve(scheme, cacheLevels, tlb );
+
 					//TODO print answer, check answer
-				}
-			}
-			
-			
-
-			
-			// 3. распечатать ответ
-			Map<Definition, BigInteger> values = verdict.getDefinitionValues();
-			for( Definition def : values.keySet() )
-			{
-				System.out.println( def + " = " + values.get( def ) );	
-			}
-
-			List<Map<Long, List<Long>>> caches = verdict.getCacheInitialization();
-			for( Cache cache : cacheLevels )
-			{
-				int level = cacheLevels.indexOf( cache );
-				Map<Long, List<Long>> sets = caches.get( level );
-				for( long setNumber : sets.keySet() )
-				{
-					System.out.print( 
-							"level " + ( level + 1 ) + 
-							": set " + setNumber + ": _ " );
-					for( Long tag : sets.get( setNumber ) )
+					// 3. распечатать ответ
+					Map<Definition, BigInteger> values = verdict.getDefinitionValues();
+					for( Definition def : values.keySet() )
 					{
-						System.out.print( ", " + tag );
+						System.out.println( def + " = " + values.get( def ) );	
 					}
-					System.out.println();
+
+					List<Map<Long, List<Long>>> caches = verdict.getCacheInitialization();
+					for( Cache cache : cacheLevels )
+					{
+						int level = cacheLevels.indexOf( cache );
+						Map<Long, List<Long>> sets = caches.get( level );
+						for( long setNumber : sets.keySet() )
+						{
+							System.out.print( 
+									"level " + ( level + 1 ) + 
+									": set " + setNumber + ": _ " );
+							for( Long tag : sets.get( setNumber ) )
+							{
+								System.out.print( ", " + tag );
+							}
+							System.out.println();
+						}
+					}
+					
+					Map<Integer, TLBRow> tlbrows = verdict.getTlbrows();
+					for( TLBRow row : tlbrows.values() )
+					{
+						System.out.println( "tlb:" +
+								" range = " + row.getRange() +
+								", vpn/2 = " + row.getVPNd2() +
+								", mask = " + row.getMask() + 
+								", g = " + row.getGlobal() + 
+								", asid = " + row.getAsid() + 
+								", pfn0 = " + row.getPFN0() + 
+								", v0 = " + row.getValid0() +
+								", d0 = " + row.getmoDify0() +
+								", pfn1 = " + row.getPFN1() +
+								", v1 = " + row.getValid1() +
+								", d1 = " + row.getmoDify1()
+							);
+					}
+					
+					Map<BigInteger, BigInteger> memory = verdict.getMemory();
+					for( BigInteger address : memory.keySet() )
+					{
+						System.out.println( "memory[ " + address + " ] = " + memory.get(address) );
+					}
+					}
+					catch( Exception e )
+					{
+						e.printStackTrace();
+						return;
+					}
 				}
 			}
 			
-			Map<Integer, TLBRow> tlb = verdict.getTlbrows();
-			for( TLBRow row : tlb.values() )
-			{
-				System.out.println( "tlb:" +
-						" range = " + row.getRange() +
-						", vpn/2 = " + row.getVPNd2() +
-						", mask = " + row.getMask() + 
-						", g = " + row.getGlobal() + 
-						", asid = " + row.getAsid() + 
-						", pfn0 = " + row.getPFN0() + 
-						", v0 = " + row.getValid0() +
-						", d0 = " + row.getmoDify0() +
-						", pfn1 = " + row.getPFN1() +
-						", v1 = " + row.getValid1() +
-						", d1 = " + row.getmoDify1()
-					);
-			}
 			
-			Map<BigInteger, BigInteger> memory = verdict.getMemory();
-			for( BigInteger address : memory.keySet() )
-			{
-				System.out.println( "memory[ " + address + " ] = " + memory.get(address) );
-			}
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
+
+			
 	}
 }
