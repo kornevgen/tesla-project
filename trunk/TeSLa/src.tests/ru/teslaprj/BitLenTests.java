@@ -1,4 +1,4 @@
-package ru.kornevgen;
+package ru.teslaprj;
 
 import static org.junit.Assert.*;
 import org.junit.Test;
