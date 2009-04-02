@@ -1,0 +1,9 @@
+VAR READONLY rt : 64;
+VAR READONLY base : 64;
+VAR READONLY offset : 16;
+
+vAddr <- (64)offset + base;
+ASSERT vAddr[2..0] = 0;
+
+AddressTranslation( pAddr, vAddr, DATA, STORE );
+StoreMemory( rt, DOUBLEWORD, pAddr, vAddr, DATA );

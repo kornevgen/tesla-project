@@ -1,0 +1,3 @@
+VAR READONLY x : 10000 ;
+
+ASSERT x[0] >+ x[1] ;

@@ -1,0 +1,9 @@
+VAR READONLY rd : 64;
+VAR READONLY rs : 64;
+VAR READONLY rt : 64;
+
+ASSERT WordValue( rs ) AND WordValue( rt );
+
+temp <- rs[31]||rs[31..0] - rt[31]||rt[31..0];
+
+ASSERT temp[32] # temp[31];
