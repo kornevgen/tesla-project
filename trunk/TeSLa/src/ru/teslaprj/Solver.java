@@ -518,7 +518,7 @@ public class Solver
 	    			ecl.append( ", " ).append( vindex );
 				}
 	    	}
-	    	ecl.append( "] #:: [ 1 .. " ).append( tlb.getSize() ).append(" ],").append( eoln );
+	    	ecl.append( "] #:: [ 1 .. " ).append( tlb.getJTLBSize() ).append(" ],").append( eoln );
 
 	    	// i1.g != i2.g => i1 != i2
 	    	viewed_cmds.clear();
@@ -629,7 +629,7 @@ public class Solver
 	    		{
 	    			String tlb1 = tlbBufferIndexes.get(c.get(0));
 	    			String tlb2 = tlbBufferIndexes.get(c.get(1));
-	    			ecl.append( tlb1 + " #= " + tlb2 + eoln );
+	    			ecl.append( tlb1 + " #= " + tlb2 + "," + eoln  );
 	    		}
 	    	}
 
@@ -1491,7 +1491,7 @@ public class Solver
 						.append( virtualAddress2 ).append( ", " )
 						.append( tlb.getVirtualAddressBitLen() ).append( ", " )
 						.append( tlb.getVPNd2StartBit() ).append( ", " )
-						.append( tlb.getMaximumOfMask() )
+						.append( tlb.getMaximumOfMask() ).append( ", " )
 						.append( rows )
 					.append( " ), " ).append( eoln )
 					.append( "numbers:getbits( " )
@@ -1644,8 +1644,8 @@ public class Solver
 							&&
 						set1BitLength == set2BitLength )
 					{
-						ecl.append( tag1 + " #= " + tag2 + eoln );
-						ecl.append( set1 + " #= " + set2 + eoln );
+						ecl.append( tag1 + " #= " + tag2 + "," + eoln );
+						ecl.append( set1 + " #= " + set2 + "," + eoln );
 					}
 					
 					if ( tag1BitLength < tag2BitLength )
@@ -2288,7 +2288,7 @@ public class Solver
 					
 			ecl
 			.append( index ).append( " in " ).append( tlb_latestSetVar ).append( "," ).append( eoln )
-			.append( "intset( " ).append( tagset ).append( ", 1, " ).append( tlb.getSize() ).append( " ), " )
+			.append( "intset( " ).append( tagset ).append( ", 1, " ).append( tlb.getJTLBSize() ).append( " ), " )
 			.append( "#( " ).append( tagset ).append( ", 1 ), " )
 			.append( index ).append( " in " ).append( tagset ).append( "," ).append( eoln )
 			
@@ -2346,16 +2346,16 @@ public class Solver
 				.append( vytesnStructure )
 			.append( ")," ).append( eoln )
 			
-			.append( "intset( " ).append( vytesnTagSet ).append( ", 1, " ).append( tlb.getSize() ).append( " )," )
+			.append( "intset( " ).append( vytesnTagSet ).append( ", 1, " ).append( tlb.getJTLBSize() ).append( " )," )
 			.append( "#( " ).append( vytesnTagSet ).append( ", 1 )," )
 			.append( vytesnIndex ).append( " in " ).append( vytesnTagSet ).append( "," ).append( eoln )
 			
 			.append( eoln )
 			
 			.append( "% тег - причина промаха").append( eoln )
-			.append( index ).append( " #:: [ 1 .. ").append( tlb.getSize() ).append(" ], " )
+			.append( index ).append( " #:: [ 1 .. ").append( tlb.getJTLBSize() ).append(" ], " )
 			.append( index ).append( " notin " ).append( tlb_latestSetVar ).append( "," ).append( eoln )
-			.append( "intset( " ).append( tagset ).append( ", 1, ").append( tlb.getSize() ).append( " ), " )
+			.append( "intset( " ).append( tagset ).append( ", 1, ").append( tlb.getJTLBSize() ).append( " ), " )
 			.append( "#( " ).append( tagset ).append( ", 1 ), ")
 			.append( index ).append( " in " ).append( tagset ).append( "," ).append( eoln )
 			.append( eoln );
