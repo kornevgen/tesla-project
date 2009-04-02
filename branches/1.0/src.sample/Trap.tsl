@@ -1,0 +1,6 @@
+/* page 356 of MIPS64_Vol_II.pdf */
+
+VAR READONLY RS : 32;
+VAR READONLY immediate : 16;
+
+ASSERT RS >=- (32)immediate ;

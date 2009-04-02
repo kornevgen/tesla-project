@@ -1,0 +1,26 @@
+ћодуль ic инструмента ECLiPSe некорректно работает с ограничени€ми, в которых используютс€ длинные константы.
+
+например, C #= 9221120237041090560  ---> C = C{9221120237041089536 .. 9221120237041091584}  -- это решено через замену #= на ac_eq(.)
+getbit(X, 18446744073709551467, 64, 33) возвращает X = 0, хот€ верный ответ ’ = 1
+div2exp2(C, 18446744073709551467, 8589934592) возвращает 2 возможности ответа... (хот€ возможность всего одна)
+
+ƒо 2^32 константны хран€тс€ в виде целых чисел (long). ѕри больших значени€х примен€етс€ double, но такое представление точно только пока цела€ часть влезает в мантиссу (т.е. до 2^51). ƒальше начинаютс€ приближени€.
+
+¬от, что пишетс€ в документации по этому поводу:
+In IC there bounds on integer variables can
+be infinite (though variables should not be assigned infinite values).
+However, since floating point numbers are used in the underlying implementation,
+not every integer value is representable. Specifically, integer
+variables and constraints ought to behave as expected until the
+values being manipulated become large enough that they approach the
+precision limit of a double precision floating point number (2^51 or so).
+Beyond this, lack of precision may mean that the solver cannot be
+sure which integer is intended, in which case the solver starts behaving
+more like an interval solver than a traditional finite domain solver.
+Note however that this precision limit is way beyond what is normally
+supported by finite domain solvers (typically substantially less than
+2^32). Note also that deliberately working with integer variables in this
+kind of range is not particularly recommended; the main intention is
+for the computation to be УsafeФ if it strays up into this region by
+ensuring no overflow problems.
+

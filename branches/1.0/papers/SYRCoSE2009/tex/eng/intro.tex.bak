@@ -1,0 +1,53 @@
+\section{Introduction}
+
+System functional testing of microprocessors uses many assembly
+programs (\emph{test programs}). Such programs are loaded to the
+memory, executed, execution process is logged and analyzed. But
+modern processors testing requires a lot of test programs. Technical
+way of test program generation was proposed
+in~\ref{IEEEhowto:kamkin}. This way based on the microprocessor's
+model. Its first stage is systematic generation abstract test
+programs (\emph{test templates}). This abstract form doesn't contain
+initial state of microprocessor but contain sequence of instructions
+with arguments (registers) and with \emph{test situations} (behavior
+of this instruction; these can be overflow, cache hits, cache
+misses). The second, the final, stage is generation of initial
+microprocessor state for given test template. This stage is test
+data generation. Technical way from~\ref{IEEEhowto:kamkin} is useful
+for aimed testing when aim is expressed by instruction sequence with
+specific behavior.
+
+Initial microprocessor state includes initial values of registers
+and initial contents of cache-memory. This state  По тестовым данным
+строится набор инструкций инициализации микропроцессора (загрузка
+значений в регистры, кэш и т.д.), который добавляется в начало
+тестового шаблона. Полученную таким образом тестовую программу можно
+исполнить и проверить, совпадает ли поведение каждой инструкции с
+тем, что было заявлено в тестовом шаблоне.
+
+Среди известных работ по генерации тестовых данных для
+микропроцессоров можно выделить следующие методы ее решения:
+\begin{enumerate}
+\item комбинаторные техники;
+\item решение задачи ATPG;
+\item разрешение ограничений.
+\end{enumerate}
+
+Однако комбинаторные техники применимы только в случае простых
+шаблонов, где для тестовых данных явно указаны диапазоны значений, и
+внутри это диапазона все значения равноправны. Генерация тестовых
+данных через решение задачи ATPG (Automatic Test Pattern Generation)
+скорее подходит не для функционального, а для структурного
+тестирования микропроцессоров. Использование разрешения ограничений
+представляется наиболее перспективной техникой генерации тестовых
+данных.
+
+Почти 20-летние разработки компании IBM в этой области привели к
+созданию инструмента Genesys-Pro для генерации тестовых программ по
+тестовых шаблонам с использованием разрешения ограничений. Однако
+для шаблонов, генерируемых методом из~\ref{kamkin}, в ряде ситуаций,
+где есть зависимости, Genesys-Pro будет работать неэффективно. А
+авторы других инструментов зачастую останавливаются на тестировании
+лишь регистровой части микропроцессоров. Все эти факторы делают
+актуальной задачу генерации тестовых данных иным методом, но с
+использованием разрешения ограничений.
