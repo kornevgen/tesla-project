@@ -9,7 +9,7 @@ import org.antlr.runtime.Token;
 public class BitLen
 {
 	///THIS CONSTANT MUST BE EQUAL TO THE SAME IN NUMBERS.ecl !!!!!!
-	public static final int WORD_VALUE = 32;
+	public static final int WORD_VALUE = 45;
 	
 	public static int bitlen( StringBuffer number )
 	{

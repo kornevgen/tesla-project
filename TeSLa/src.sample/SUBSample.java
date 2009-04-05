@@ -66,6 +66,12 @@ public class SUBSample
 			public int getSetNumberBitLength() {
 				return 10;
 			}
+
+			@Override
+			public long getTag(int section, int row) {
+				// TODO Auto-generated method stub
+				return 0;
+			}
 		} );
 
         // Postcondition
