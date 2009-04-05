@@ -34,7 +34,7 @@
 
 :- export random_result/1.
 
-chunksize( 32 ).  %parameter MUST BE EQUAL WITH THE SAME IN BitLen class !!!
+chunksize( 45 ).  %parameter MUST BE EQUAL WITH THE SAME IN BitLen class !!!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

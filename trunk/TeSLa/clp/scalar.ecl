@@ -9,6 +9,8 @@
 :- export getbitFromNumber/3.
 :- export getbitsFromNumber/4.
 
+:- export boundedNotEqual/4.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Result := 2^X, X >= 0
@@ -89,3 +91,9 @@ getbitsFromNumber( Result, Number, EndIndex, StartIndex ) :-
 	Result #>= 0, Result #< D,
 	integers([Result]), 
 	C #= _ * D + Result .
+
+boundedNotEqual( [X], [Y], EndBit, StartBit ) :-
+	integers( [X, Y] ),
+	getbitsFromNumber( X1, X, EndBit, StartBit ),
+	getbitsFromNumber( Y1, Y, EndBit, StartBit ),
+	X1 #\= Y1.

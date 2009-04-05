@@ -192,7 +192,9 @@ public class Solver
 		finally
 		{
 	        // Destroy the Eclipse process
-			try { ((EmbeddedEclipse) eclipse).destroy(); } catch( IOException e ) {}
+			try { ((EmbeddedEclipse) eclipse).destroy(); }
+			catch( IOException e ) {}
+			catch( NullPointerException e ){}
 		}
 	}
 
@@ -224,39 +226,39 @@ public class Solver
     	// cache
     	@SuppressWarnings("unchecked")
     	List<List<CompoundTerm>> cacheResults = (List<List<CompoundTerm>>)result.arg( defNumber++ );
-    	int cacheLevel = 0;
-    	for( List<CompoundTerm> setsForCacheLevel : cacheResults )
-    	{
-    		Map< Long, List<Long> > sets = new HashMap<Long, List<Long>>();
-    		int setSize = cacheLevels.get( cacheLevel ++ ).getSectionNumber();
-    		for( CompoundTerm set : setsForCacheLevel )
-    		{
-    			Object setNumber = set.arg(1);
-    			Long longSetNumber;
-				if ( setNumber instanceof Integer )
-					longSetNumber = (long)((Integer)setNumber).intValue();
-				else if ( setNumber instanceof Long )
-					longSetNumber = (Long)setNumber;
-				else
-					throw new Error( "unexpected eclipse behaviour: unknown type " + setNumber.getClass() );
-
-				@SuppressWarnings( "unchecked" )
-				List<CompoundTerm> hits = (List<CompoundTerm>)set.arg(3);
-    			List<Long> tags = new ArrayList<Long>();
-    			for( int i = 0; i < setSize; i++ )
-    			{
-    				Object tag = hits.get( i ).arg(1);
-    				if ( tag instanceof Integer )
-    					tags.add( (long)((Integer)tag).intValue() );
-    				else if ( tag instanceof Long )
-    					tags.add( (Long)tag );
-    				else
-    					throw new Error( "unexpected eclipse behaviour: unknown type " + tag.getClass() );
-    			}
-    			sets.put( longSetNumber, tags );
-    		}
-    		caches.add( sets );
-    	}
+//    	int cacheLevel = 0;
+//    	for( List<CompoundTerm> setsForCacheLevel : cacheResults )
+//    	{
+//    		Map< Long, List<Long> > sets = new HashMap<Long, List<Long>>();
+//    		int setSize = cacheLevels.get( cacheLevel ++ ).getSectionNumber();
+//    		for( CompoundTerm set : setsForCacheLevel )
+//    		{
+//    			Object setNumber = set.arg(1);
+//    			Long longSetNumber;
+//				if ( setNumber instanceof Integer )
+//					longSetNumber = (long)((Integer)setNumber).intValue();
+//				else if ( setNumber instanceof Long )
+//					longSetNumber = (Long)setNumber;
+//				else
+//					throw new Error( "unexpected eclipse behaviour: unknown type " + setNumber.getClass() );
+//
+//				@SuppressWarnings( "unchecked" )
+//				List<CompoundTerm> hits = (List<CompoundTerm>)set.arg(3);
+//    			List<Long> tags = new ArrayList<Long>();
+//    			for( int i = 0; i < setSize; i++ )
+//    			{
+//    				Object tag = hits.get( i ).arg(1);
+//    				if ( tag instanceof Integer )
+//    					tags.add( (long)((Integer)tag).intValue() );
+//    				else if ( tag instanceof Long )
+//    					tags.add( (Long)tag );
+//    				else
+//    					throw new Error( "unexpected eclipse behaviour: unknown type " + tag.getClass() );
+//    			}
+//    			sets.put( longSetNumber, tags );
+//    		}
+//    		caches.add( sets );
+//    	}
         
     	
     	// TLB
@@ -417,7 +419,7 @@ public class Solver
     	// сгенерировать предикат go: последовательность вызовов унифицированных "предикатов go"
 		List<String> names = scheme.getDefinedNames();
 		ecl.append( ":- export go/" ).append( names.size() + 5 ).append( "." ).append(eoln).append(eoln);
-    	ecl.append( "go( _, Caches, TLB, Memory, TLBIndexes" );
+    	ecl.append( "go( _, _, TLB, Memory, TLBIndexes" ); //TODO add Caches if needed
     	// initial states of sets
 		for( String name : names )
 		{
@@ -579,59 +581,64 @@ public class Solver
 	        ecl.append( "," ).append( eoln );
         }
         
-    	// add false 'DATA' first-level cache
-    	if ( ! cacheLevels.isEmpty() )
-    	{
-    		final Cache cache1 = cacheLevels.get(0);
-    		Cache new_cache = new Cache(){
-				@Override
-				public int getAddressBitLength() {
-					return cache1.getAddressBitLength();
-				}
-
-				@Override
-				public int getSectionNumber() {
-					return cache1.getSectionNumber();
-				}
-
-				@Override
-				public int getSetNumberBitLength() {
-					return cache1.getSetNumberBitLength();
-				}
-
-				@Override
-				public int getTagBitLength() {
-					return cache1.getTagBitLength();
-				}};
-			cacheLevels.add(0, new_cache);
-    	}
+//    	// add false 'DATA' first-level cache
+//    	if ( ! cacheLevels.isEmpty() )
+//    	{
+//    		final Cache cache1 = cacheLevels.get(0);
+//    		Cache new_cache = new Cache(){
+//				@Override
+//				public int getAddressBitLength() {
+//					return cache1.getAddressBitLength();
+//				}
+//
+//				@Override
+//				public int getSectionNumber() {
+//					return cache1.getSectionNumber();
+//				}
+//
+//				@Override
+//				public int getSetNumberBitLength() {
+//					return cache1.getSetNumberBitLength();
+//				}
+//
+//				@Override
+//				public int getTagBitLength() {
+//					return cache1.getTagBitLength();
+//				}
+//
+//				@Override
+//				public long getTag(int section, int row) {
+//					return cache1.getTag(section, row);
+//				}};
+//			cacheLevels.add(0, new_cache);
+//    	}
     	
-    	// asserts on indexes from template
-        // if virtual addresses are equal then tlb indexes are equal too !
-    	ConstraintManager constraintManager = new ConstraintManager();
-    	ArgumentsManager argManager = new ArgumentsManager();
-    	//TODO предполагает, что cache0 уже добавлен!
-    	readConstraintsFromTemplate(
-    			scheme,
-    			constraintManager,
-    			argManager,
-    			tagNames,
-    			cacheLevels );
-    	constraintManager.closeConstraints();
+//    	// asserts on indexes from template
+//        // if virtual addresses are equal then tlb indexes are equal too !
+//    	ConstraintManager constraintManager = new ConstraintManager();
+//    	ArgumentsManager argManager = new ArgumentsManager();
+//    	//TTODO предполагает, что cache0 уже добавлен!
+//    	readConstraintsFromTemplate(
+//    			scheme,
+//    			constraintManager,
+//    			argManager,
+//    			tagNames,
+//    			cacheLevels );
+//    	constraintManager.closeConstraints();
 
     	if ( tlb != null )
     	{
-        	Map<List<Command>, Relation> virtualAddressesStaticConstraints =
-        		constraintManager.getVirtualAddressesStaticConstraints();
-	    	for( List<Command> c : virtualAddressesStaticConstraints.keySet() )
-	    	{
-	    		if ( virtualAddressesStaticConstraints.get(c) == Relation.EQ )
-	    		{
-	    			String tlb1 = tlbBufferIndexes.get(c.get(0));
-	    			String tlb2 = tlbBufferIndexes.get(c.get(1));
-	    			ecl.append( tlb1 + " #= " + tlb2 + "," + eoln  );
-	    		}
-	    	}
+//        	Map<List<Command>, Relation> virtualAddressesStaticConstraints =
+//        		constraintManager.getVirtualAddressesStaticConstraints();
+//	    	for( List<Command> c : virtualAddressesStaticConstraints.keySet() )
+//	    	{
+//	    		if ( virtualAddressesStaticConstraints.get(c) == Relation.EQ )
+//	    		{
+//	    			String tlb1 = tlbBufferIndexes.get(c.get(0));
+//	    			String tlb2 = tlbBufferIndexes.get(c.get(1));
+//	    			ecl.append( tlb1 + " #= " + tlb2 + "," + eoln  );
+//	    		}
+//	    	}
 
 	        String hitsStructure_DATA = tagNames.newVar().toString();
 	        ecl.append( hitsStructure_DATA ).append( " = _," ).append( eoln );
@@ -743,21 +750,21 @@ public class Solver
     				tlb.getVirtualAddressBitLen() + " )," + eoln );
     	}
     	
-    	// 5a. simple constraints on virtual addresses from test template
-    	Map<List<Command>, Relation> virtualAddressesStaticConstraints =
-    			constraintManager.getVirtualAddressesStaticConstraints();
-    	for( List<Command> c : virtualAddressesStaticConstraints.keySet() )
-    	{
-    		String va1 = virtualAddresses.get(c.get(0));
-    		String va2 = virtualAddresses.get(c.get(1));
-    		switch( virtualAddressesStaticConstraints.get(c) )
-    		{
-    		case EQ: ecl.append( "numbers:equal( " + va1 + ", " + va2 + ", " +
-    				tlb.getVirtualAddressBitLen() +	" )," + eoln ); break;
-    		case NEQ: ecl.append( "numbers:notequal( " + va1 + ", " + va2 + ", " +
-    				tlb.getVirtualAddressBitLen() +	" )," + eoln ); break;
-    		}
-    	}
+//    	// 5a. simple constraints on virtual addresses from test template
+//    	Map<List<Command>, Relation> virtualAddressesStaticConstraints =
+//    			constraintManager.getVirtualAddressesStaticConstraints();
+//    	for( List<Command> c : virtualAddressesStaticConstraints.keySet() )
+//    	{
+//    		String va1 = virtualAddresses.get(c.get(0));
+//    		String va2 = virtualAddresses.get(c.get(1));
+//    		switch( virtualAddressesStaticConstraints.get(c) )
+//    		{
+//    		case EQ: ecl.append( "numbers:equal( " + va1 + ", " + va2 + ", " +
+//    				tlb.getVirtualAddressBitLen() +	" )," + eoln ); break;
+//    		case NEQ: ecl.append( "numbers:notequal( " + va1 + ", " + va2 + ", " +
+//    				tlb.getVirtualAddressBitLen() +	" )," + eoln ); break;
+//    		}
+//    	}
 
     	// "dynamic" constraints on virtual addresses (not from constraintManager!)
     	for( String diffVar : diffFalseVars.keySet() )
@@ -882,296 +889,653 @@ public class Solver
     		}
     	}
     	
-    	Map<Command, Map<Cache, String>> setVars = new HashMap<Command, Map<Cache,String>>();
-    	Map<Command, Map<Cache, String>> tagVars = new HashMap<Command, Map<Cache,String>>();
-    	Map<Command, String> indexVars = new HashMap<Command, String>();
-    	Map<Command, Map<Cache, String>> fakeSetVars = new HashMap<Command, Map<Cache,String>>();
-    	Map<Command, Map<Cache, String>> vytesntagVars = new HashMap<Command, Map<Cache,String>>();
+//    	Map<Command, Map<Cache, String>> setVars = new HashMap<Command, Map<Cache,String>>();
+//    	Map<Command, Map<Cache, String>> tagVars = new HashMap<Command, Map<Cache,String>>();
+//    	Map<Command, String> indexVars = new ... ();
+//    	Map<Command, Map<Cache, String>> fakeSetVars = new HashMap<Command, Map<Cache,String>>();
+//    	Map<Command, Map<Cache, String>> vytesntagVars = new HashMap<Command, Map<Cache,String>>();
+//    	
+//    	createSetsAndTagsNames(
+//    			cacheLevels
+//    			, tlb
+//    			, ecl
+//    			, tagNames
+//    			, normalCommands
+//    			, setVars, tagVars, indexVars, fakeSetVars,	vytesntagVars);
     	
-    	createSetsAndTagsNames(
-    			cacheLevels
-    			, tlb
-    			, ecl
-    			, tagNames
-    			, normalCommands
-    			, setVars, tagVars, indexVars, fakeSetVars,	vytesntagVars);    	
-    	
-    	// introduction of "difference between sets vars" and put it to the constraintManager
+    	/**
+    	 * TODO define "diff": 
+    	 * 1) on tagsets;
+    	 * 2) on regions of tagsets for cache level 1;
+    	 * 3) on regions of tagsets for cache level 2;
+    	 */
+    	Map<List<Command>, String> tagsetDiffs = new HashMap<List<Command>, String>();
+    	Map<List<Command>, String> regions1Diffs = new HashMap<List<Command>, String>();
+    	Map<List<Command>, String> regions2Diffs = new HashMap<List<Command>, String>();
+
     	ecl.append( "[0" );
-    	Map<Cache, Map<List<Command>, String>> setDiffs = new HashMap<Cache, Map<List<Command>,String>>();
-    	for( Cache cache : cacheLevels )
-    	{
-    		Map<List<Command>, String> diffs = new HashMap<List<Command>, String>();
-    		Collection<Command> cmd1viewed = new HashSet<Command>();
-    		for( Command cmd1 : normalCommands )
-    		{
-        		Collection<Command> cmd2viewed = new HashSet<Command>();
-    			for( Command cmd2 : normalCommands )
-    			{
-    				if ( cmd2 != cmd1  &&
-    						! ( cmd1viewed.contains(cmd2) && cmd2viewed.contains(cmd1) )
-    					)// already viewed
-    				{
-	    				String diff = tagNames.newVar().toString();
-	    				diffs.put( Arrays.asList(cmd1, cmd2), diff );
-	    				constraintManager.addDifferenceVar(
-	    						  argManager.getSet( cmd1, cache )
-	    						, argManager.getSet( cmd2, cache )
-	    						, diff );
-	    				ecl.append( ", " + diff );
-    				}
-    				cmd2viewed.add( cmd2 );
-    			}
-    			cmd1viewed.add( cmd1 );
-    		}
-    		setDiffs.put( cache, diffs );
-    	}
-    	ecl.append( " ] #:: [0..1]," + eoln );
-    	
-    	// static constraints on sets
-    	Map<String, Integer> staticConstraints = constraintManager.getStaticConstraints();
-    	for( String diff : staticConstraints.keySet() )
-    	{
-    		if ( setDiffs.containsValue( diff ) )
-    			ecl.append( diff + " = " + staticConstraints.get(diff) + "," + eoln );
-    	}
-    	
-    	// TODO dynamic difference constraints on set differences
-    	// for example, ~d12 /\ ~d13 -> ~d23,  d12 <-> d21
-//    	ecl.append( constraintManager.getDynamicConstraints( setdiffs + virtualaddressesdiffs - but vadiffs has not values :(  ) );
-    	
-    	// 12. build set distribution from Constraints
-    	ecl.append( "labeling( [0" );
-    	for( Map<List<Command>, String> d : setDiffs.values() )
-    	{
-    		for( String diffVar : d.values() )
-    		{
-    			ecl.append( ", " + diffVar );
-    		}
-    	}
-    	ecl.append( " ] )," ).append( eoln );
-
-    	// build diff on fakes
-    	for( Cache cache : cacheLevels )
-    	{
-    		Map<List<Command>, String> differs = setDiffs.get( cache );
-    		for( List<Command> vars : differs.keySet() )
-    		{
-    			String fakeSet1 = fakeSetVars.get(vars.get(0)).get(cache);
-    			String fakeSet2 = fakeSetVars.get(vars.get(1)).get(cache);
-    			ecl.append( "( " + differs.get(vars) + " = 0 " +
-    					"-> " + fakeSet1 + " #\\= " + fakeSet2 +
-    					"; " + fakeSet1 + " #= " + fakeSet2 + " )," + eoln );
-    		}
-    	}
-    	
-    	// labeling of fakes
-    	ecl.append( "labeling( [ 0" );
-    	for( Map<Cache, String> sets : fakeSetVars.values() )
-    	{
-    		for( String fakeSet : sets.values() )
-    		{
-    			ecl.append( ", " ).append( fakeSet );
-    		}
-    	}
-    	ecl.append( "] )," ).append( eoln );
-    	    	
-    	// 14. cache test situations
-    	
-    	varVersions.clear();
-    	for( String name : names )
-    	{
-    		varVersions.put( name, 0 );
-    	}
-    	
-    	Map< List<Tag>, Relation > tagStaticConstraints =
-    		constraintManager.getTagStaticConstraints();
-    	for( List<Tag> tagPair : tagStaticConstraints.keySet() )
-    	{
-    		Tag tag1 = tagPair.get(0);
-    		Tag tag2 = tagPair.get(1);
-    		String tagVar1 = tagVars.get(tag1.getCommand())
-				.get( cacheLevels.get( tag1.getLevel() ) );
-    		String tagVar2 = tagVars.get(tag2.getCommand())
-				.get( cacheLevels.get( tag2.getLevel() ) );
-    		switch( tagStaticConstraints.get(tagPair) )
-    		{
-    		case EQ: ecl.append( tagVar1 + " #= " + tagVar2 + eoln ); break;
-    		case NEQ: ecl.append( tagVar1 + " #\\= " + tagVar2 + eoln ); break;
-    		}
-    	}
-    	
-    	/////// 20. инициализация
-    	StringBuffer cacheslist = new StringBuffer( "Caches" );
-    	if ( ! cacheLevels.isEmpty() )
-	    	for( int level = 0; level <= cacheLevels.size(); level++ )
-	    	{
-	    		ecl.append( "CurrentSetsOfLevel" ).append( level ).append( " = _ ,").append( eoln );
-	        	ecl.append( cacheslist )
-	        		.append( " = [ CurrentSetsOfLevel" ).append( level ).append( " | ");
-	        	cacheslist = tagNames.newVar();
-	        	ecl.append( cacheslist ).append( " ]," ).append( eoln );
-	    	}
-    	ecl.append( cacheslist ).append( " = []," ).append( eoln );
-		
-    	List<StringBuffer> initialTagLists = new ArrayList<StringBuffer>();
-		for( Map<Cache, String> sets : fakeSetVars.values() )
+    	{ Collection<Command> cmd1viewed = new HashSet<Command>();
+		for( Command cmd1 : normalCommands )
 		{
-			// this is a 'memory instruction'
-			for( Cache cache : sets.keySet() )
+    		Collection<Command> cmd2viewed = new HashSet<Command>();
+			for( Command cmd2 : normalCommands )
 			{
-				int Max = (int)Math.pow(2, cache.getTagBitLength() ) - 1;
-
-				List<StringBuffer> tags = new ArrayList<StringBuffer>();
-				StringBuffer list = tagNames.newVar();
-				StringBuffer setlist = list;
-				StringBuffer list2 = tagNames.newVar();
-				StringBuffer tagsetlist = list2;
-				for( int setPosition = 0; setPosition < cache.getSectionNumber(); setPosition++ )
+				if ( cmd2 != cmd1  &&
+						! ( cmd1viewed.contains(cmd2) && cmd2viewed.contains(cmd1) )
+					)// already viewed
 				{
-					StringBuffer tag = tagNames.newVar();
-					tags.add( tag );
-					ecl
-					.append( tag ).append( " #:: [ 0 .. " ).append( Max ).append( " ], " )
-					.append( "intset( " )
-						.append( tag ).append( "set, " )
-						.append( "0, " )
-						.append( Max )
-					.append( " ), " )
-					.append( "#( " ).append( tag ).append( "set, 1 ), " )
-					.append( tag ).append( " in " ).append( tag ).append( "set," ).append( eoln )
-					.append( list ).append( " = [ " ).append( tag ).append( " | " );
-					list = tagNames.newVar();
-					ecl.append( list ).append( " ]," ).append( eoln )
-					.append( list2 ).append( " = [ " ).append( tag ).append( "set | " );
-					list2 = tagNames.newVar();
-					ecl.append( list2 ).append( " ]," ).append( eoln );
+    				String tagsetDiff = tagNames.newVar().toString();
+    				String r1Diff = tagNames.newVar().toString();
+    				String r2Diff = tagNames.newVar().toString();
+    				List<Command> c;
+    				if (cmd1.hashCode() < cmd2.hashCode() )
+    					c = Arrays.asList(cmd1, cmd2);
+    				else    					
+    					c = Arrays.asList(cmd2, cmd1);
+    				tagsetDiffs.put( c, tagsetDiff );
+    				regions1Diffs.put( c, r1Diff );
+    				regions2Diffs.put( c, r2Diff );
+    				//TTODO add diff to contraintManager
+    				ecl.append( ", " + tagsetDiff + ", " + r1Diff + ", " + r2Diff );
 				}
-				ecl.append( list ).append( " = []," ).append( eoln );
-				ecl.append( list2 ).append( " = []," ).append( eoln );
-				ecl.append( "ic_global:alldifferent( ").append( setlist ).append( " )," ).append( eoln );
-				initialTagLists.add( setlist );
-				
-				// 'setVar' is var for intset with initial values of set
-				StringBuffer setVar = tagNames.newVar();
-				ecl
-				.append( "intset( " )
-					.append( setVar )
-					.append( ", 0, " )
-					.append( Max )
-				.append( " ), " )
-				
-				.append( "#( " )
-					.append( setVar ).append( ", " )
-					.append( tags.size() )
-				.append( " )," ).append( eoln );
-				
-				for( StringBuffer tag : tags )
-				{
-					ecl.append( tag ).append(" in " ).append( setVar ).append( ", " ).append( eoln );
-				}
-
-				ecl
-				.append( "lru:initialize( " ) // set initial state of 'set' if it is not set yet
-					.append( sets.get(cache) ).append( ", " ) // in runtime 'setVar' is int constant!
-					.append( setVar ).append( ", " )
-					.append( "CurrentSetsOfLevel" ).append( cacheLevels.indexOf(cache) ).append( ", " )
-					.append( setlist ).append( ", " )
-					.append( tagsetlist )
-				.append( " )," ).append( eoln );
+				cmd2viewed.add( cmd2 );
 			}
-		}
-    	ecl.append( eoln );
+			cmd1viewed.add( cmd1 );
+		} }
     	
-    	////////// 30. assert's -- deprecation because an assert is similar to a command
-//    	for( Assert asert : scheme.getAsserts() )
-//    		commandPredicates.append( 
-//    				commandlikeTranslate( 
-//    						  asert
-//    						, scheme
-//    						, varVersions
-//    						, ecl
-//    						, null
-//    						, cacheLevels
-//    						, null
-//    						, null
-//    						, null
-//    						, null
-//    						, tlb
-//    					)
-//    			);
+    	//TODO select 'диапазоны вытеснения'
+    	// пока будем генерировать один вариант (с минимальными диапазонами)
+    	// раз диапазоны минимальные, то можно сразу вычислить равенства регионов!
+    	
+    	// вводим переменные начального состояния (для каждого уровня)
+    	// пока регион всего один
+    	List<String> initial1 = new ArrayList<String>();
+    	List<String> initial2 = new ArrayList<String>();
+    	Map<Cache, List<String>> initials = new HashMap<Cache, List<String>>();
+    	initials.put(cacheLevels.get(0), initial1);
+    	initials.put(cacheLevels.get(1), initial2);
+    	// в одном списке все переменные с разными значениями, но одинаковыми R(S)
+    	// вводим diff на них
+    	// initialVar >< command +> DiffVar
+    	Map<String, Map<Command, String>> initial1Diffs = new HashMap<String, Map<Command,String>>();
+    	for( int i = 0; i < cacheLevels.get(0).getSectionNumber(); i++ )
+    	{
+    		String init1Var = tagNames.newVar().toString();
+    		initial1.add( init1Var );
+    		Map<Command, String> d = new HashMap<Command, String>();
+    		for( Command cmd : scheme.getCommands() )
+    		{
+    			// create diffvar
+        		String diffVar = tagNames.newVar().toString();
+    			d.put( cmd, diffVar );
+    			ecl.append( ", " ).append( diffVar );
+    		}
+    		initial1Diffs.put(init1Var, d);
+    	}
+    	Map<String, Map<Command, String>> initial2Diffs = new HashMap<String, Map<Command,String>>();
+    	for( int i = 0; i < cacheLevels.get(1).getSectionNumber(); i++ )
+    	{
+    		String init2Var = tagNames.newVar().toString();
+    		initial2.add( init2Var );
+    		Map<Command, String> d = new HashMap<Command, String>();
+    		for( Command cmd : scheme.getCommands() )
+    		{
+    			// create diffvar
+        		String diffVar = tagNames.newVar().toString();
+    			d.put( cmd, diffVar );
+    			ecl.append( ", " ).append( diffVar );
+    		}
+    		initial2Diffs.put(init2Var, d);    		
+    	}
+    	ecl.append( "] #:: [0..1]," ).append( eoln );
+    	
+    	Map<Cache, Map<String, Map<Command, String>>> cache2init = new HashMap<Cache, Map<String,Map<Command,String>>>();
+    	cache2init.put(cacheLevels.get(0), initial1Diffs );
+    	cache2init.put(cacheLevels.get(1), initial2Diffs );
+    	
+    	CacheProblem cacheProblem = new CacheProblem( scheme.getCommands(), initials );
+    	
+    	//TODO сгенерировать ограничения на diff'ы:
+    	for( Cache cache : cacheLevels )
+    	{
+    		for( CacheProblem.Hit hit : cacheProblem.getHits(cache) )
+    		{
+				// add constraint (tagset \notisin vytesned) 
+    			for( CacheProblem.ProcessElement v : hit.cacheState.vytesned )
+    			{
+    				// add constraint diff( tagset, v ) = 0
+    				// 1. find diff var...
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), hit, v );
+    				ecl.append( var ).append(" = 0," ).append( eoln );
+    			}
+    		}
 
-        ///////////// 40. cache operation translation
-//    	Map<Cache, Map<Integer, Integer>> currentSetVersions = new HashMap<Cache, Map<Integer,Integer>>();
+    		for( CacheProblem.Miss miss : cacheProblem.getMisses(cache) )
+    		{
+				// add constraint (miss.rangeStart \notisin vytesned) 
+    			for( CacheProblem.ProcessElement v : miss.cacheState.vytesned )
+    			{
+    				// add constraint diff( tagset, v ) = 0
+    				// 1. find diff var...
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss.rangeStart, v );
+    				ecl.append( var ).append(" = 0," ).append( eoln );
+    			}
+    			
+        		// 1) rangeStart \isin {between}  (went to the beginning!)  (from equation of vytesned tagset)
+    			for( CacheProblem.Rangeable v : miss.range )
+    			{
+    				// add constraint diff( tagset, v ) = 0
+    				// 1. find diff var...
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss.rangeStart, v );
+    				ecl.append( var ).append(" = 0," ).append( eoln );
+    			}
+    		}
+    		
+    		for( CacheProblem.Hit hit : cacheProblem.getHits(cache) )
+    		{	
+    			// add constraint( tagset \isin (init U vytesn) )
+    			for( CacheProblem.InitialTagSet v : hit.cacheState.initial )
+    			{
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), hit, v );
+    				ecl.append( var ).append( " + " );
+    			}
+    			for( CacheProblem.ProcessElement v : hit.cacheState.vytesn )
+    			{
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), hit, v );
+    				ecl.append( var ).append( " + " );
+    			}
+    			ecl.append( " 0 #>= 1," ).append( eoln );
+    		}
+    		
+    		// vytesn \notisin cachestate
+			// vytesned \isin cachestate  (нужно ли?)
+			// regions of vytesned and startRegion are equals
+			// equation of vytesned tagset
+    		
+    		for( CacheProblem.Miss miss : cacheProblem.getMisses(cache) )
+    		{	
+    			// add constraint( miss.rangeStart \isin (init U vytesn) )
+    			for( CacheProblem.InitialTagSet v : miss.cacheState.initial )
+    			{
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss.rangeStart, v );
+    				ecl.append( var ).append( " + " );
+    			}
+    			for( CacheProblem.ProcessElement v : miss.cacheState.vytesn )
+    			{
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss.rangeStart, v );
+    				ecl.append( var ).append( " + " );
+    			}
+    			ecl.append( " 0 #>= 1," ).append( eoln );
+    		}
+
+    		
+    		for( CacheProblem.Miss miss : cacheProblem.getMisses(cache) )
+    		{    			
+    			ecl.append( "( " );
+    			for( CacheProblem.InitialTagSet v : miss.cacheState.initial )
+    			{
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss, v );
+    				ecl.append( var ).append( " = 0, ");
+    			}
+    			for( CacheProblem.ProcessElement v : miss.cacheState.vytesn )
+    			{
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss, v );
+    				ecl.append( var ).append( " = 0, " );
+    			}
+    			ecl.append( "true; " );
+    			for( CacheProblem.ProcessElement v : miss.cacheState.vytesned )
+    			{
+    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss, v );
+    				ecl.append( var ).append( " + " );
+    			}
+    			ecl.append( " 0 #>= 1 )," ).append( eoln );
+    		}
+    		
+    		// equations of vytesned tagsets
+    		// { init + vytesn } \ { between + vytesned } = { rangeStart }
+    		// 1) rangeStart \isin {between}  (went to the beginning!)
+    		// 2) init = rangeStart \/ init != rangeStart, init \notisin {between + vytesned}
+    		// 3) vytesn = rangeStart \/ vytesn != rangeStart, vytesn \notisin {between + vytesned}
+    		for( CacheProblem.Miss miss : cacheProblem.getMisses(cache))
+    		{
+    			List<CacheProblem.Rangeable> l = new ArrayList<CacheProblem.Rangeable>( miss.cacheState.initial );
+    			l.addAll( miss.cacheState.vytesn );
+    			
+    			for( CacheProblem.Rangeable init : l )
+    			{
+    				String var = cacheProblem.findDiffVar(tagsetDiffs, cache2init.get(cache), init, miss.rangeStart );
+    				ecl.append( "( " ).append( var ).append( " = 1 ; " ).append( var ).append( " = 0, ");
+    				for( CacheProblem.Rangeable b : miss.range )
+    				{
+        				String v = cacheProblem.findDiffVar(tagsetDiffs, cache2init.get(cache), init, b );
+        				ecl.append( v ).append( " = 0," );
+    				}
+    				ecl.append( "true)," ).append( eoln );
+    			}
+    		}
+    	}
+    	//TODO транзитивность:  d(x,y) = 1 -> (d(x,z) = d(y,z))  + другие 2 варианта с циклической заменой x,y,z
+    	// + dR + dS
+    	for( List<Command> cmds : tagsetDiffs.keySet() )
+    	{
+    		ecl.append( "( " ).append( tagsetDiffs.get(cmds) ).append( " = 1 -> ");
+    		for( Command cmd : scheme.getCommands() )
+    		{
+    			if ( cmds.get(0).equals(cmd) || cmds.get(1).equals(cmd) )
+    				continue;
+    			
+				String v1 = cacheProblem.findDiffVar(tagsetDiffs, cmds.get(0), cmd );
+				String v2 = cacheProblem.findDiffVar(tagsetDiffs, cmds.get(1), cmd );
+				ecl.append( v1 ).append( " #= " ).append( v2 ).append( ", " );
+    		}
+        	for( Map<String, Map<Command, String>> initialDiffs : cache2init.values() )
+        	{
+        		for( Map<Command, String> cs : initialDiffs.values() )
+        		{
+    				String v1 = cs.get(cmds.get(0) );
+    				String v2 = cs.get(cmds.get(1) );
+    				ecl.append( v1 ).append( " #= " ).append( v2 ).append( ", " );        			
+        		}
+        	}
+			ecl.append( " true ; true ),").append( eoln );
+    	}
+    	for( Map<String, Map<Command, String>> initialDiffs : cache2init.values() )
+    	{
+    		for( String iniTag : initialDiffs.keySet() )
+    		{
+    			for( Command cmd : initialDiffs.get(iniTag).keySet() )
+    			{
+    				String var = initialDiffs.get(iniTag).get( cmd );
+    				ecl.append( "( " ).append( var ).append( " = 1 -> " );
+    				for( String iniTag2 : initialDiffs.keySet() )
+    				{
+    					if ( iniTag2.equals( iniTag ) )
+    						continue;
+    					
+    					String v = initialDiffs.get( iniTag2 ).get( cmd );
+    					ecl.append( v ).append( " = 0, " );
+    				}
+    				ecl.append( " true ; true )," ).append( eoln );
+    			}
+    		}
+    	}
     	
+    	/**
+    	 * TODO связи diff'ов разных типов:
+    	 * 1) d(x,y)=1 -> dR(x,y) = 1, dS(x,y) = 1
+    	 * 2) dR(x,y)=0 -> d(x,y) = 0, dS(x,y) = 0 (последнее если сет в L2 больше сета в L1)
+    	 * 3) dS(x,y)=0 -> d(x,y) = 0
+    	 * 4) (если сет в L2 больше сета в L1) dS(x,y) = 1 -> dR(x,y) = 1
+    	 */
+    	
+    	//TODO labeling diff'ов
+    	ecl.append( "labeling( [ 0" );
+    	for( String diff : tagsetDiffs.values() )
+    	{
+    		ecl.append( ", " ).append( diff );
+    	}
+    	for( Map<String, Map<Command, String>> initialDiffs : cache2init.values() )
+    	{
+    		for( Map<Command, String> cs : initialDiffs.values() )
+    		{
+    			for( String s : cs.values() )
+    			{
+    				ecl.append( ", " ).append( s );
+    			}
+    		}
+    	}
+    	ecl.append( " ])," ).append( eoln );
+
+    	// подбор начального состояния кэша
+    	Map<Cache, String> regions = new HashMap<Cache, String>();
+    	int physLen = cacheLevels.get(0).getAddressBitLength();
+    	for( Cache cache : cacheLevels )
+    	{
+    		String region = tagNames.newVar().toString();
+    		regions.put( cache, region );
+        	ecl.append( "( " );
+	    	for( int i = 0; i < 10; i++ )//TODO (int)Math.pow(2, cache.getSetNumberBitLength()); i++ )
+	    	{
+	    		int row = 0;
+		    	for( String init1 : initials.get(cache) )
+		    	{
+		    		ecl.append( init1 ).append( " = " )
+		    		.append( cache.getTag(i, row++) * (long)Math.pow(2, physLen - cache.getTagBitLength() )
+		    				+ i * (long)Math.pow(2, physLen - cache.getTagBitLength() - cache.getSetNumberBitLength() )
+		    				).append( ", " );
+		    	}
+		    	ecl.append( "true;" ).append( eoln );
+	    	}
+	    	ecl.append( "false ),").append( eoln );
+    	}
+    	
+    	
+    	//TODO перевести ограничения на diff в ограничения на части физических адресов (boundedEqual)
+    	for( Cache cache : cacheLevels )
+    	{
+    		for( String init : cache2init.get(cache).keySet() )
+    		{
+    			Map<Command, String> cs = cache2init.get(cache).get(init);
+    			for( Command cmd : cs.keySet() )
+    			{
+    				ecl.append( "( " ).append( cs.get(cmd) ).append( " = 1 -> " )
+    				.append( "numbers:boundedEqual( [" )
+    					.append( init ).append( "], " )
+    					.append( physicalAddressesForMemOperation.get( cmd ) ).append( ", " )
+    					.append( physLen ).append( ", " )
+    					.append( physLen - 1 ).append( ", " )
+    					.append( physLen - cache.getTagBitLength() - cache.getSetNumberBitLength() )
+    				.append( " ) ;" ).append( eoln )
+    				.append( "scalar:boundedNotEqual( [" )
+    					.append( init ).append( "], " )
+    					.append( physicalAddressesForMemOperation.get( cmd ) ).append( ", " )
+    					.append( physLen - 1 ).append( ", " )
+    					.append( physLen - cache.getTagBitLength() - cache.getSetNumberBitLength() )
+    				.append( ") )," ).append( eoln );
+    			}
+    		}
+    	}
+    	for( List<Command> cmds : tagsetDiffs.keySet() )
+    	{
+    		String var = tagsetDiffs.get(cmds);
+    		String phys1 = physicalAddressesForMemOperation.get( cmds.get(0) );
+    		String phys2 = physicalAddressesForMemOperation.get( cmds.get(1) );
+    		
+    		ecl.append( "( " ).append( var ).append( " = 1 -> " )
+    		.append( "numbers:boundedEqual( " )
+    			.append( phys1 ).append( ", " )
+    			.append( phys2 ).append( ", " )
+    			.append( physLen ).append( ", " )
+    			.append( physLen - 1 ).append( ", " )
+    			.append( physLen 
+    					- cacheLevels.get(0).getTagBitLength()
+    					- cacheLevels.get(0).getSetNumberBitLength()
+			).append( " ) ;" ).append( eoln ).append( "scalar:boundedNotEqual( ")
+    			.append( phys1 ).append( ", " )
+    			.append( phys2 ).append( ", " )
+    			.append( physLen - 1 ).append( ", " )
+    			.append( physLen 
+    					- cacheLevels.get(0).getTagBitLength()
+    					- cacheLevels.get(0).getSetNumberBitLength() )
+    		.append( " ) )," ).append( eoln );
+    	}
+    	
+//    	// introduction of "difference between sets vars" and put it to the constraintManager
+//    	ecl.append( "[0" );
+//    	Map<Cache, Map<List<Command>, String>> setDiffs = new HashMap<Cache, Map<List<Command>,String>>();
 //    	for( Cache cache : cacheLevels )
 //    	{
-//    		currentSetVersions.put( cache, new HashMap<Integer, Integer>() );
+//    		Map<List<Command>, String> diffs = new HashMap<List<Command>, String>();
+//    		Collection<Command> cmd1viewed = new HashSet<Command>();
+//    		for( Command cmd1 : normalCommands )
+//    		{
+//        		Collection<Command> cmd2viewed = new HashSet<Command>();
+//    			for( Command cmd2 : normalCommands )
+//    			{
+//    				if ( cmd2 != cmd1  &&
+//    						! ( cmd1viewed.contains(cmd2) && cmd2viewed.contains(cmd1) )
+//    					)// already viewed
+//    				{
+//	    				String diff = tagNames.newVar().toString();
+//	    				diffs.put( Arrays.asList(cmd1, cmd2), diff );
+//	    				constraintManager.addDifferenceVar(
+//	    						  argManager.getSet( cmd1, cache )
+//	    						, argManager.getSet( cmd2, cache )
+//	    						, diff );
+//	    				ecl.append( ", " + diff );
+//    				}
+//    				cmd2viewed.add( cmd2 );
+//    			}
+//    			cmd1viewed.add( cmd1 );
+//    		}
+//    		setDiffs.put( cache, diffs );
 //    	}
-   
-        vytesnTags = new ArrayList<String>();
-        hitTags = new ArrayList<String>();
-        missTags = new ArrayList<String>();
-
-        for( Command cmd : normalCommands )
-        {
-            cacheOperationTranslate(
-          		  cmd
-          		, cacheLevels
-          		, tagNames
-          		, ecl
-          		, fakeSetVars.get(cmd)
-          		, tagVars.get( cmd )
-          		, vytesntagVars.get( cmd )
-          		, hitTags
-          		, missTags
-          		, vytesnTags
-          	);
-        }
-    	
-    	//////////// 50. LRU
-    	ecl.append( "% LRU predicates" ).append( eoln );
-    	int level = 0;
-    	for( Cache cache : cacheLevels )
-    	{
-    		ecl.append( "lru:vytesnTagsLRU( " )
-    			.append( "CurrentSetsOfLevel" ).append( level++ ).append( ", " )
-    			.append( cache.getSectionNumber() )
-    		.append( ")," ).append( eoln );
-    	}
-    	ecl.append( eoln );
-    	
-		/////////////// 60. labeling
-    	// 61. выбор вытесняемых тегов
-    	ecl.append( "%вытесненные" ).append( eoln );
-    	for( String vt : vytesnTags )
-    	{
-		    ecl.append( "indomain( " ).append( vt ).append( " )," ).append( eoln );
-    	}
-    	vytesnTags = null;
-    	
-    	// 62. выбор hit-тегов
-    	ecl.append( "%hit" ).append( eoln );
-    	for( String ht : hitTags )
-    	{
-		    ecl.append( "indomain( " ).append( ht ).append( " )," ).append( eoln );
-    	}
-    	hitTags = null;
-    	
-    	// 63. выбор miss тегов
-    	ecl.append( "%miss" ).append( eoln );
-    	for( String mt : missTags )
-    	{
-		    ecl.append( "indomain( " ).append( mt ).append( " )," ).append( eoln );
-    	}
-    	missTags = null;
-    	
-    	// 64. labeling( Seti_0 ) initial sets  - to below ??
-    	for( StringBuffer ist : initialTagLists )
-    	{
-    		ecl.append( "labeling( " ).append( ist ).append( " )," ).append( eoln );
-    	}
-    	initialTagLists = null;
+//    	ecl.append( " ] #:: [0..1]," + eoln );
+//    	
+//    	// static constraints on sets
+//    	Map<String, Integer> staticConstraints = constraintManager.getStaticConstraints();
+//    	for( String diff : staticConstraints.keySet() )
+//    	{
+//    		if ( setDiffs.containsValue( diff ) )
+//    			ecl.append( diff + " = " + staticConstraints.get(diff) + "," + eoln );
+//    	}
+//    	
+//    	// TTODO dynamic difference constraints on set differences
+//    	// for example, ~d12 /\ ~d13 -> ~d23,  d12 <-> d21
+////    	ecl.append( constraintManager.getDynamicConstraints( setdiffs + virtualaddressesdiffs - but vadiffs has not values :(  ) );
+//    	
+//    	// 12. build set distribution from Constraints
+//    	ecl.append( "labeling( [0" );
+//    	for( Map<List<Command>, String> d : setDiffs.values() )
+//    	{
+//    		for( String diffVar : d.values() )
+//    		{
+//    			ecl.append( ", " + diffVar );
+//    		}
+//    	}
+//    	ecl.append( " ] )," ).append( eoln );
+//
+//    	// build diff on fakes
+//    	for( Cache cache : cacheLevels )
+//    	{
+//    		Map<List<Command>, String> differs = setDiffs.get( cache );
+//    		for( List<Command> vars : differs.keySet() )
+//    		{
+//    			String fakeSet1 = fakeSetVars.get(vars.get(0)).get(cache);
+//    			String fakeSet2 = fakeSetVars.get(vars.get(1)).get(cache);
+//    			ecl.append( "( " + differs.get(vars) + " = 0 " +
+//    					"-> " + fakeSet1 + " #\\= " + fakeSet2 +
+//    					"; " + fakeSet1 + " #= " + fakeSet2 + " )," + eoln );
+//    		}
+//    	}
+//    	
+//    	// labeling of fakes
+//    	ecl.append( "labeling( [ 0" );
+//    	for( Map<Cache, String> sets : fakeSetVars.values() )
+//    	{
+//    		for( String fakeSet : sets.values() )
+//    		{
+//    			ecl.append( ", " ).append( fakeSet );
+//    		}
+//    	}
+//    	ecl.append( "] )," ).append( eoln );
+//    	    	
+//    	// 14. cache test situations
+//    	
+//    	varVersions.clear();
+//    	for( String name : names )
+//    	{
+//    		varVersions.put( name, 0 );
+//    	}
+//    	
+//    	Map< List<Tag>, Relation > tagStaticConstraints =
+//    		constraintManager.getTagStaticConstraints();
+//    	for( List<Tag> tagPair : tagStaticConstraints.keySet() )
+//    	{
+//    		Tag tag1 = tagPair.get(0);
+//    		Tag tag2 = tagPair.get(1);
+//    		String tagVar1 = tagVars.get(tag1.getCommand())
+//				.get( cacheLevels.get( tag1.getLevel() ) );
+//    		String tagVar2 = tagVars.get(tag2.getCommand())
+//				.get( cacheLevels.get( tag2.getLevel() ) );
+//    		switch( tagStaticConstraints.get(tagPair) )
+//    		{
+//    		case EQ: ecl.append( tagVar1 + " #= " + tagVar2 + eoln ); break;
+//    		case NEQ: ecl.append( tagVar1 + " #\\= " + tagVar2 + eoln ); break;
+//    		}
+//    	}
+//    	
+//    	/////// 20. инициализация
+//    	StringBuffer cacheslist = new StringBuffer( "Caches" );
+//    	if ( ! cacheLevels.isEmpty() )
+//	    	for( int level = 0; level <= cacheLevels.size(); level++ )
+//	    	{
+//	    		ecl.append( "CurrentSetsOfLevel" ).append( level ).append( " = _ ,").append( eoln );
+//	        	ecl.append( cacheslist )
+//	        		.append( " = [ CurrentSetsOfLevel" ).append( level ).append( " | ");
+//	        	cacheslist = tagNames.newVar();
+//	        	ecl.append( cacheslist ).append( " ]," ).append( eoln );
+//	    	}
+//    	ecl.append( cacheslist ).append( " = []," ).append( eoln );
+//		
+//    	List<StringBuffer> initialTagLists = new ArrayList<StringBuffer>();
+//		for( Map<Cache, String> sets : fakeSetVars.values() )
+//		{
+//			// this is a 'memory instruction'
+//			for( Cache cache : sets.keySet() )
+//			{
+//				int Max = (int)Math.pow(2, cache.getTagBitLength() ) - 1;
+//
+//				List<StringBuffer> tags = new ArrayList<StringBuffer>();
+//				StringBuffer list = tagNames.newVar();
+//				StringBuffer setlist = list;
+//				StringBuffer list2 = tagNames.newVar();
+//				StringBuffer tagsetlist = list2;
+//				for( int setPosition = 0; setPosition < cache.getSectionNumber(); setPosition++ )
+//				{
+//					StringBuffer tag = tagNames.newVar();
+//					tags.add( tag );
+//					ecl
+//					.append( tag ).append( " #:: [ 0 .. " ).append( Max ).append( " ], " )
+//					.append( "intset( " )
+//						.append( tag ).append( "set, " )
+//						.append( "0, " )
+//						.append( Max )
+//					.append( " ), " )
+//					.append( "#( " ).append( tag ).append( "set, 1 ), " )
+//					.append( tag ).append( " in " ).append( tag ).append( "set," ).append( eoln )
+//					.append( list ).append( " = [ " ).append( tag ).append( " | " );
+//					list = tagNames.newVar();
+//					ecl.append( list ).append( " ]," ).append( eoln )
+//					.append( list2 ).append( " = [ " ).append( tag ).append( "set | " );
+//					list2 = tagNames.newVar();
+//					ecl.append( list2 ).append( " ]," ).append( eoln );
+//				}
+//				ecl.append( list ).append( " = []," ).append( eoln );
+//				ecl.append( list2 ).append( " = []," ).append( eoln );
+//				ecl.append( "ic_global:alldifferent( ").append( setlist ).append( " )," ).append( eoln );
+//				initialTagLists.add( setlist );
+//				
+//				// 'setVar' is var for intset with initial values of set
+//				StringBuffer setVar = tagNames.newVar();
+//				ecl
+//				.append( "intset( " )
+//					.append( setVar )
+//					.append( ", 0, " )
+//					.append( Max )
+//				.append( " ), " )
+//				
+//				.append( "#( " )
+//					.append( setVar ).append( ", " )
+//					.append( tags.size() )
+//				.append( " )," ).append( eoln );
+//				
+//				for( StringBuffer tag : tags )
+//				{
+//					ecl.append( tag ).append(" in " ).append( setVar ).append( ", " ).append( eoln );
+//				}
+//
+//				ecl
+//				.append( "lru:initialize( " ) // set initial state of 'set' if it is not set yet
+//					.append( sets.get(cache) ).append( ", " ) // in runtime 'setVar' is int constant!
+//					.append( setVar ).append( ", " )
+//					.append( "CurrentSetsOfLevel" ).append( cacheLevels.indexOf(cache) ).append( ", " )
+//					.append( setlist ).append( ", " )
+//					.append( tagsetlist )
+//				.append( " )," ).append( eoln );
+//			}
+//		}
+//    	ecl.append( eoln );
+//    	
+//    	////////// 30. assert's -- deprecation because an assert is similar to a command
+////    	for( Assert asert : scheme.getAsserts() )
+////    		commandPredicates.append( 
+////    				commandlikeTranslate( 
+////    						  asert
+////    						, scheme
+////    						, varVersions
+////    						, ecl
+////    						, null
+////    						, cacheLevels
+////    						, null
+////    						, null
+////    						, null
+////    						, null
+////    						, tlb
+////    					)
+////    			);
+//
+//        ///////////// 40. cache operation translation
+////    	Map<Cache, Map<Integer, Integer>> currentSetVersions = new HashMap<Cache, Map<Integer,Integer>>();
+//    	
+////    	for( Cache cache : cacheLevels )
+////    	{
+////    		currentSetVersions.put( cache, new HashMap<Integer, Integer>() );
+////    	}
+//   
+//        vytesnTags = new ArrayList<String>();
+//        hitTags = new ArrayList<String>();
+//        missTags = new ArrayList<String>();
+//
+//        for( Command cmd : normalCommands )
+//        {
+//            cacheOperationTranslate(
+//          		  cmd
+//          		, cacheLevels
+//          		, tagNames
+//          		, ecl
+//          		, fakeSetVars.get(cmd)
+//          		, tagVars.get( cmd )
+//          		, vytesntagVars.get( cmd )
+//          		, hitTags
+//          		, missTags
+//          		, vytesnTags
+//          	);
+//        }
+//    	
+//    	//////////// 50. LRU
+//    	ecl.append( "% LRU predicates" ).append( eoln );
+//    	int level = 0;
+//    	for( Cache cache : cacheLevels )
+//    	{
+//    		ecl.append( "lru:vytesnTagsLRU( " )
+//    			.append( "CurrentSetsOfLevel" ).append( level++ ).append( ", " )
+//    			.append( cache.getSectionNumber() )
+//    		.append( ")," ).append( eoln );
+//    	}
+//    	ecl.append( eoln );
+//    	
+//		/////////////// 60. labeling
+//    	// 61. выбор вытесняемых тегов
+//    	ecl.append( "%вытесненные" ).append( eoln );
+//    	for( String vt : vytesnTags )
+//    	{
+//		    ecl.append( "indomain( " ).append( vt ).append( " )," ).append( eoln );
+//    	}
+//    	vytesnTags = null;
+//    	
+//    	// 62. выбор hit-тегов
+//    	ecl.append( "%hit" ).append( eoln );
+//    	for( String ht : hitTags )
+//    	{
+//		    ecl.append( "indomain( " ).append( ht ).append( " )," ).append( eoln );
+//    	}
+//    	hitTags = null;
+//    	
+//    	// 63. выбор miss тегов
+//    	ecl.append( "%miss" ).append( eoln );
+//    	for( String mt : missTags )
+//    	{
+//		    ecl.append( "indomain( " ).append( mt ).append( " )," ).append( eoln );
+//    	}
+//    	missTags = null;
+//    	
+//    	// 64. labeling( Seti_0 ) initial sets  - to below ??
+//    	for( StringBuffer ist : initialTagLists )
+//    	{
+//    		ecl.append( "labeling( " ).append( ist ).append( " )," ).append( eoln );
+//    	}
+//    	initialTagLists = null;
     	
     	// 65. random_result( var )  - to below ??
 		for( String name : names )
@@ -1180,85 +1544,87 @@ public class Solver
 				.append( eoln );
 		}
 		
-		// 70. common labeling ( Constraints[[s1 = s2]] + s1 = v1[..] + labeling(s1, v1) )
-    	for( Cache cache : cacheLevels )
-    	{
-    		Map<List<Command>, String> differs = setDiffs.get( cache );
-    		for( List<Command> vars : differs.keySet() )
-    		{
-    			String set1 = setVars.get(vars.get(0)).get(cache);
-    			String set2 = setVars.get(vars.get(1)).get(cache);
-    			ecl.append( "( " + differs.get(vars) + " = 0 " +
-    					"-> " + set1 + " #\\= " + set2 +
-    					"; " + set1 + " #= " + set2 + " )," + eoln );
-    		}
-    	}
-    	
-    	// labeling of sets
-    	ecl.append( "labeling( [ 0" );
-    	for( Map<Cache, String> sets : setVars.values() )
-    	{
-    		for( String set : sets.values() )
-    		{
-    			ecl.append( ", " ).append( set );
-    		}
-    	}
-    	ecl.append( "] )," ).append( eoln );
-
-    	settagvaIntersections(cacheLevels, tlb, ecl, tagNames,
-				normalCommands, setVars, tagVars);
+//		// 70. common labeling ( Constraints[[s1 = s2]] + s1 = v1[..] + labeling(s1, v1) )
+//    	for( Cache cache : cacheLevels )
+//    	{
+//    		Map<List<Command>, String> differs = setDiffs.get( cache );
+//    		for( List<Command> vars : differs.keySet() )
+//    		{
+//    			String set1 = setVars.get(vars.get(0)).get(cache);
+//    			String set2 = setVars.get(vars.get(1)).get(cache);
+//    			ecl.append( "( " + differs.get(vars) + " = 0 " +
+//    					"-> " + set1 + " #\\= " + set2 +
+//    					"; " + set1 + " #= " + set2 + " )," + eoln );
+//    		}
+//    	}
+//    	
+//    	// labeling of sets
+//    	ecl.append( "labeling( [ 0" );
+//    	for( Map<Cache, String> sets : setVars.values() )
+//    	{
+//    		for( String set : sets.values() )
+//    		{
+//    			ecl.append( ", " ).append( set );
+//    		}
+//    	}
+//    	ecl.append( "] )," ).append( eoln );
+//
+//    	settagvaIntersections(cacheLevels, tlb, ecl, tagNames,
+//				normalCommands, setVars, tagVars);
     	
     	oddbitConstraints(tlb, ecl, tagNames, tlbBufferIndexes,
 				virtualAddresses, physicalAddressesAfterTrans, rows);
     	
 		// 80. LOAD-STORE constraints => diff on indexes
+    	ecl.append("%LOAD-STORE constraints").append( eoln );
 		load_store( 
 				  ecl
 				, scheme
-				, constraintManager
-				, argManager
+//				, constraintManager
+//				, argManager
 				, normalCommands
 				, tagNames
-				, tagVars
-				, setVars
-				, indexVars
+//				, tagsetDiffs
+//				, indexVars
 				, values
 				, ( tlb != null ? tlb.getPhysicalAddressBitLen() : 
 					( !cacheLevels.isEmpty() ? cacheLevels.get(0).getAddressBitLength() : 0 ) )
 			);
 		
-		// phys в LoadMemory = tag||set||idx
-		if ( ! cacheLevels.isEmpty() )
-			for( Command command : normalCommands )
-			{
-				String physicalAddress = physicalAddressesForMemOperation.get( command );
-				String tag = "[ " + tagVars.get(command).get(cacheLevels.get(0)) + " ]";
-				String set = "[ " + setVars.get(command).get(cacheLevels.get(0)) + " ]";
-				String index = indexVars.get(command);
-				String tmp = tagNames.newVar().toString();
-				int tslen = cacheLevels.get(0).getTagBitLength() + cacheLevels.get(0).getSetNumberBitLength();
-				ecl.append( "numbers:concat( " )
-					.append( tmp ).append( ", " )
-					.append( tag ).append( ", " )
-					.append( cacheLevels.get(0).getTagBitLength() ).append( ", " )
-					.append( set ).append( ", " )
-					.append( cacheLevels.get(0).getSetNumberBitLength() )
-				.append( " )," ).append( eoln )
-				.append( "numbers:concat( " )
-					.append( physicalAddress ).append( ", " )
-					.append( tmp ).append( ", " )
-					.append( tslen ).append( ", " )
-					.append( index ).append( ", " )
-					.append( tlb.getPhysicalAddressBitLen() - tslen )
-				.append( " )," ).append( eoln );
-			}
+//		// phys в LoadMemory = tagset||idx
+//		if ( ! cacheLevels.isEmpty() )
+//			for( Command command : normalCommands )
+//			{
+//				String physicalAddress = physicalAddressesForMemOperation.get( command );
+//				String tag = "[ " + tagVars.get(command).get(cacheLevels.get(0)) + " ]";
+//				String set = "[ " + setVars.get(command).get(cacheLevels.get(0)) + " ]";
+//				String index = indexVars.get(command);
+//				String tmp = tagNames.newVar().toString();
+//				int tslen = cacheLevels.get(0).getTagBitLength() + cacheLevels.get(0).getSetNumberBitLength();
+//				ecl.append( "numbers:concat( " )
+//					.append( tmp ).append( ", " )
+//					.append( tag ).append( ", " )
+//					.append( cacheLevels.get(0).getTagBitLength() ).append( ", " )
+//					.append( set ).append( ", " )
+//					.append( cacheLevels.get(0).getSetNumberBitLength() )
+//				.append( " )," ).append( eoln )
+//				.append( "numbers:concat( " )
+//					.append( physicalAddress ).append( ", " )
+//					.append( tmp ).append( ", " )
+//					.append( tslen ).append( ", " )
+//					.append( index ).append( ", " )
+//					.append( tlb.getPhysicalAddressBitLen() - tslen )
+//				.append( " )," ).append( eoln );
+//			}
+
+
 		
     	// labeling of virtual addresses
-    	for( String index : indexVars.values() )
-    	{
-    		ecl.append( "numbers:random_result( " )
-    		.append(index).append( " )," ).append( eoln );
-    	}
+//    	for( String index : indexVars.values() )
+//    	{
+//    		ecl.append( "numbers:random_result( " )
+//    		.append(index).append( " )," ).append( eoln );
+//    	}
     	for( String virtualAddress : virtualAddresses.values() )
     	{
     		ecl.append( "numbers:random_result( " )
@@ -1341,7 +1707,7 @@ public class Solver
 		ecl.append( "true." ).append( eoln )
 		.append( eoln )
 		.append( commandPredicates );
-
+		
     	return ecl;
     }
 
@@ -1475,7 +1841,6 @@ public class Solver
 
     			ecl.append( "( " ).append( index1 ).append( " #\\= " ).append( index2 )
     				.append( " -> true ; " ).append( eoln )
-    				.append( "( " )
     				.append( "tlb:oddbit( " )
 						.append( oddbit1 ).append( ", " )
 						.append( tlbBufferIndexes.get(cmd1) ).append( ", " )
@@ -1532,7 +1897,7 @@ public class Solver
 						.append( ", " ).append( "numbers:notequal( " )
 									.append( pfn1 ).append( ", " )
 									.append( pfn2 ).append( ", " )
-									.append( tlb.getPFNBitLen() ).append( " ) ) ) )," ).append( eoln );    			
+									.append( tlb.getPFNBitLen() ).append( " ) ) )," ).append( eoln );    			
 					}
     		}
     	}
@@ -1957,79 +2322,80 @@ public class Solver
 		{
 			ecl.append( ", " ).append( physicalAddressForMemOperation )
 			.append( ", " ).append( value );
-			
-			if ( prog.memoryOperation == MemoryCommand.LOAD )
-				LoadCommands.add(command);
+	
+			// зачем это??
+//			if ( prog.memoryOperation == MemoryCommand.LOAD )
+//				LoadCommands.add(command);
 
-			if ( prog.isDataCacheused )
-				Level0Searching:
-				for( String procedure : command.getTestSituationParameters().keySet() )
-				{
-					if ( procedure != "LoadMemory" && procedure != "StoreMemory" )
-						continue;
-					
-					Set<ProcedureTestSituation> parameters = command.getTestSituationParameters().get(procedure);
-					for( ProcedureTestSituation proc : parameters )
-					{
-						if ( proc instanceof CacheTestSituation )
-						{
-							if ( ((CacheTestSituation) proc).getLevel() == 1 )
-							{
-								// change level to 0
-								CacheTestSituation proc0;
-								if ( proc instanceof CacheHit )
-								{
-									final CacheHit procTS = (CacheHit)proc;
-									proc0 = new CacheHit(){
-										@Override
-										public int getLevel() {
-											return 0;
-										}
-
-										@Override
-										public String getSetVar() {
-											return procTS.getSetVar();
-										}
-
-										@Override
-										public String getTagVar() {
-											return procTS.getTagVar();
-										}};
-								}
-								else if ( proc instanceof CacheMiss )
-								{
-									final CacheMiss procTS = (CacheMiss)proc;
-									proc0 = new CacheMiss(){
-										@Override
-										public String getVTagVar() {
-											return procTS.getVTagVar();
-										}
-
-										@Override
-										public int getLevel() {
-											return 0;
-										}
-
-										@Override
-										public String getSetVar() {
-											return procTS.getSetVar();
-										}
-
-										@Override
-										public String getTagVar() {
-											return procTS.getTagVar();
-										}};
-								}
-								else
-									throw new Error("unexpecting type of cache test situation");
-								
-								parameters.remove( (CacheTestSituation)proc );
-								parameters.add( proc0 );
-								break Level0Searching;
-							}
-						}
-					}
-				}
+//			if ( prog.isDataCacheused )
+//				Level0Searching:
+//				for( String procedure : command.getTestSituationParameters().keySet() )
+//				{
+//					if ( procedure != "LoadMemory" && procedure != "StoreMemory" )
+//						continue;
+//					
+//					Set<ProcedureTestSituation> parameters = command.getTestSituationParameters().get(procedure);
+//					for( ProcedureTestSituation proc : parameters )
+//					{
+//						if ( proc instanceof CacheTestSituation )
+//						{
+//							if ( ((CacheTestSituation) proc).getLevel() == 1 )
+//							{
+//								// change level to 0
+//								CacheTestSituation proc0;
+//								if ( proc instanceof CacheHit )
+//								{
+//									final CacheHit procTS = (CacheHit)proc;
+//									proc0 = new CacheHit(){
+//										@Override
+//										public int getLevel() {
+//											return 0;
+//										}
+//
+//										@Override
+//										public String getSetVar() {
+//											return procTS.getSetVar();
+//										}
+//
+//										@Override
+//										public String getTagVar() {
+//											return procTS.getTagVar();
+//										}};
+//								}
+//								else if ( proc instanceof CacheMiss )
+//								{
+//									final CacheMiss procTS = (CacheMiss)proc;
+//									proc0 = new CacheMiss(){
+//										@Override
+//										public String getVTagVar() {
+//											return procTS.getVTagVar();
+//										}
+//
+//										@Override
+//										public int getLevel() {
+//											return 0;
+//										}
+//
+//										@Override
+//										public String getSetVar() {
+//											return procTS.getSetVar();
+//										}
+//
+//										@Override
+//										public String getTagVar() {
+//											return procTS.getTagVar();
+//										}};
+//								}
+//								else
+//									throw new Error("unexpecting type of cache test situation");
+//								
+//								parameters.remove( (CacheTestSituation)proc );
+//								parameters.add( proc0 );
+//								break Level0Searching;
+//							}
+//						}
+//					}
+//				}
 		}
 		
 		ecl.append( ")," ).append( eoln );
@@ -2514,70 +2880,70 @@ public class Solver
     private void load_store( 
     		  StringBuffer ecl
     		, Scheme scheme
-    		, ConstraintManager constraintManager
-    		, ArgumentsManager argManager
+//    		, ConstraintManager constraintManager
+//    		, ArgumentsManager argManager
     		, Set<Command> normalCommands
     		, VarsController versions
-    		, Map<Command, Map<Cache, String>> tagVars
-    		, Map<Command, Map<Cache, String>> setVars
-    		, Map<Command, String> indexVars
+//    		, Map< List<Command>, String > tagsetDiffs
+//    		, Map<Command, String> indexVars
     		, Map<Command, String> values
     		, int physicalAddressBitLen
     	)
     {
-    	Map<List<Command>, String> physDiffVars = new HashMap<List<Command>, String>();
+//    	Map<List<Command>, String> physDiffVars = new HashMap<List<Command>, String>();
     	List<Command> reverseMemoryCommands = buildReverse(scheme, normalCommands);
     	
-    	// 1. define difference flag for each pair of physical addresses
-    	ecl.append( "[ 0" );
-    	Set<Command> viewed = new HashSet<Command>();
-    	for( Command cmd1 : reverseMemoryCommands )
-    	{
-    		viewed.add(cmd1);
-    		for( Command cmd2 : reverseMemoryCommands )
-    		{
-    			if ( viewed.contains(cmd2) )
-    				continue;
-    			//create diff
-    			String diff = versions.newVar().toString();
-    			ecl.append( ", " ).append( diff );
-    			physDiffVars.put( Arrays.asList(cmd2, cmd1), diff );
-    			constraintManager.addDifferenceVar(
-    					  argManager.getArgument(cmd2.getPhysicalAddress())
-    					, argManager.getArgument(cmd1.getPhysicalAddress())
-    					, diff
-    				);
-    		}
-    		ecl.append( eoln );
-    	}
-    	ecl.append( "] #:: [ 0 .. 1 ]," ).append( eoln );
-    	
-    	// 2. build and write static constraints on these flags
-    	Map<String, Integer> staticConstraints = 
-    			constraintManager.getStaticConstraints();
-    	
-    	for( String name : staticConstraints.keySet() )
-    	{
-    		if ( physDiffVars.containsValue(name) )
-    			ecl.append( name + " = " + staticConstraints.get(name) + "," + eoln );
-    	}
-    	
-    	// 3. labeling of flags
-    	ecl.append( "labeling( [ 0" );
-    	for( String name : physDiffVars.values() )
-    	{
-    		ecl.append( ", " + name );
-    	}
-    	ecl.append( "] )," ).append( eoln );
-    	
-    	// 4. write dynamic constraints on physForMemoryDiff
-    	//TODO записать в это место ВСЕ динамические ограничения ??
-    	// или как-то выделить динам.ограничения на эти diff?
-    	// а если это завязано на другие переменные?..
-//TODO    	ecl.append( constraintManager.getDynamicConstraints() );
+//    	// 1. define difference flag for each pair of physical addresses
+//    	ecl.append( "[ 0" );
+//    	Set<Command> viewed = new HashSet<Command>();
+//    	for( Command cmd1 : reverseMemoryCommands )
+//    	{
+//    		viewed.add(cmd1);
+//    		for( Command cmd2 : reverseMemoryCommands )
+//    		{
+//    			if ( viewed.contains(cmd2) )
+//    				continue;
+//    			//create diff
+//    			String diff = versions.newVar().toString();
+//    			ecl.append( ", " ).append( diff );
+//    			physDiffVars.put( Arrays.asList(cmd2, cmd1), diff );
+//    			constraintManager.addDifferenceVar(
+//    					  argManager.getArgument(cmd2.getPhysicalAddress())
+//    					, argManager.getArgument(cmd1.getPhysicalAddress())
+//    					, diff
+//    				);
+//    		}
+//    		ecl.append( eoln );
+//    	}
+//    	ecl.append( "] #:: [ 0 .. 1 ]," ).append( eoln );
+//    	
+//    	// 2. build and write static constraints on these flags
+//    	Map<String, Integer> staticConstraints = 
+//    			constraintManager.getStaticConstraints();
+//    	
+//    	for( String name : staticConstraints.keySet() )
+//    	{
+//    		if ( physDiffVars.containsValue(name) )
+//    			ecl.append( name + " = " + staticConstraints.get(name) + "," + eoln );
+//    	}
+//    	
+//    	// 3. labeling of flags
+//    	ecl.append( "labeling( [ 0" );
+//    	for( String name : physDiffVars.values() )
+//    	{
+//    		ecl.append( ", " + name );
+//    	}
+//    	ecl.append( "] )," ).append( eoln );
+//    	
+//    	// 4. write dynamic constraints on physForMemoryDiff
+//    	//TTODO записать в это место ВСЕ динамические ограничения ??
+//    	// или как-то выделить динам.ограничения на эти diff?
+//    	// а если это завязано на другие переменные?..
+////TTODO    	ecl.append( constraintManager.getDynamicConstraints() );
     	
     	// 5. LOAD-STORE model on flags
-    	viewed.clear();
+//    	viewed.clear();
+    	Set<Command> viewed = new HashSet<Command>();
     	// phys +> all load-store diffs with it
     	for( Command cmd1 : reverseMemoryCommands )
     	{
@@ -2619,56 +2985,49 @@ public class Solver
     		}
     		ecl.append(",").append( eoln );
     	}
-    	
-    	// 6. translate flags to tags, sets, indexes difference
-    	for( List<Command> diffCmds : physDiffVars.keySet() )
-    	{
-    		String diffVar = physDiffVars.get( diffCmds );
-    		Command cmd1 = diffCmds.get(0);
-    		Command cmd2 = diffCmds.get(1);
-    		ecl.append( "( " ).append( diffVar ).append( " = 1 -> " );
-    		int tagPset = 0;
-    		for( Cache cache : tagVars.get(cmd1).keySet() )
-    		{
-	    		// определить теги
-	    		String tag1 = tagVars.get(cmd1).get(cache);
-	    		String tag2 = tagVars.get(cmd2).get(cache);
-	    		// определить сеты
-	    		String set1 = setVars.get(cmd1).get(cache);
-	    		String set2 = setVars.get(cmd2).get(cache);
-	    		ecl
-	    		.append( tag1 + " #= " + tag2 + ", " )
-	    		.append( set1 + " #= " + set2 + ", " );
-	    		tagPset = cache.getTagBitLength() + cache.getSetNumberBitLength();
-    		}
-    		// определить индексы
-    		ecl.append( "numbers:equal( " + 
-    				indexVars.get(cmd1) + ", " + 
-    				indexVars.get(cmd2) + ", " +
-    				( physicalAddressBitLen - tagPset )
-    				+ ") ;"
-    			);
-
-    		for( Cache cache : tagVars.get(cmd1).keySet() )
-    		{
-	    		// определить теги
-	    		String tag1 = tagVars.get(cmd1).get(cache);
-	    		String tag2 = tagVars.get(cmd2).get(cache);
-	    		// определить сеты
-	    		String set1 = setVars.get(cmd1).get(cache);
-	    		String set2 = setVars.get(cmd2).get(cache);
-	    		ecl
-	    		.append( tag1 + " #\\= " + tag2 + "; " )
-	    		.append( set1 + " #\\= " + set2 + "; " );
-    		}
-    		// определить индексы
-    		ecl.append( "numbers:notequal( " +
-    				indexVars.get(cmd1) + ", " + 
-    				indexVars.get(cmd2) + ", " +
-    				( physicalAddressBitLen - tagPset ) +
-    				" ) )," )
-    		.append( eoln );
-    	}
+//    	
+//    	// 6. translate flags to tags, sets, indexes difference
+//    	// перевод physDiffs в tagsetDiffs
+//    	for( List<Command> diffCmds : physDiffVars.keySet() )
+//    	{
+//    		String diffVar = physDiffVars.get( diffCmds );
+//    		Command cmd1 = diffCmds.get(0);
+//    		Command cmd2 = diffCmds.get(1);
+//    		ecl.append( "( " ).append( diffVar ).append( " = 1 -> " );
+//    		int tagPset = 0;
+//    		for( Cache cache : tagVars.get(cmd1).keySet() )
+//    		{
+//	    		// определить теги
+//	    		String ts1 = tagsetVars.get(cmd1).get(cache);
+//	    		String ts2 = tagsetVars.get(cmd2).get(cache);
+//	    		ecl
+//	    		.append( ts1 + " #= " + ts2 + ", " );
+//	    		tagPset = cache.getTagBitLength() + cache.getSetNumberBitLength();
+//    		}
+//    		// определить индексы
+//    		ecl.append( "numbers:equal( " + 
+//    				indexVars.get(cmd1) + ", " + 
+//    				indexVars.get(cmd2) + ", " +
+//    				( physicalAddressBitLen - tagPset )
+//    				+ ") ;"
+//    			);
+//
+//    		for( Cache cache : tagVars.get(cmd1).keySet() )
+//    		{
+//	    		// определить теги
+//	    		String ts1 = tagsetVars.get(cmd1).get(cache);
+//	    		String ts2 = tagsetVars.get(cmd2).get(cache);
+//	    		ecl
+//	    		.append( ts1 + " #\\= " + ts2 + "; " );
+//    		}
+//    		// определить индексы
+//    		ecl.append( "numbers:notequal( " +
+//    				indexVars.get(cmd1) + ", " + 
+//    				indexVars.get(cmd2) + ", " +
+//    				( physicalAddressBitLen - tagPset ) +
+//    				" ) )," )
+//    		.append( eoln );
+//    	}
     }
 
 	private void physAddrAndValuesIntersection(StringBuffer ecl,
@@ -2871,7 +3230,7 @@ public class Solver
 									return notnull( miss.getTagVar(), tagNames );
 								}}
     					);
-					// TODO вытесненный тег!!! constraint: vytesn = p
+					// TTODO вытесненный тег!!! constraint: vytesn = p
 				}
 				else if ( ts instanceof TLBHit )
 				{
@@ -2937,7 +3296,7 @@ public class Solver
     		{
     			Argument first = argManager.getArgument( a.getArgs().get(0) );
     			Argument second = argManager.getArgument( a.getArgs().get(1) );
-    			// TODO проверить, что эти аргументы одного динамического типа
+    			// TTODO проверить, что эти аргументы одного динамического типа
     			// что у них одинаковый битовый размер
     			// и если это теги, сеты, то что еще они относятся к одному уровню кэша
     			// Если что-нибудь из этого не выполнено, выдавать ошибку!
@@ -2948,7 +3307,7 @@ public class Solver
     					second );
     			constraintManager.add( c );
     		}
-    		//TODO else выдать ошибку, что в таком виде спец.ограничения не описывают!
+    		//TTODO else выдать ошибку, что в таком виде спец.ограничения не описывают!
     	}
     }
     

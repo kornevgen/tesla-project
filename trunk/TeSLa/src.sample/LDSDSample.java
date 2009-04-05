@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import ru.teslaprj.Cache;
@@ -28,6 +29,82 @@ public class LDSDSample
 {
 	public static void main( String[] args )
 	{
+		List<Cache> cacheLevels = new ArrayList<Cache>();
+		Random r = new Random();
+		final int[][] tags1 = new int[(int)Math.pow(2, 7)][4];
+		for( int i = 0; i < (int)Math.pow(2,7); i++ )
+		{
+			for( int j = 0; j < 4; j++ )
+			{
+				tags1[i][j] = r.nextInt( (int)Math.pow(2,24) );
+			}
+		}
+		final int[][] tags2 = new int[(int)Math.pow(2, 14)][4];
+		for( int i = 0; i < (int)Math.pow(2,14); i++ )
+		{
+			for( int j = 0; j < 4; j++ )
+			{
+				tags2[i][j] = r.nextInt( (int)Math.pow(2,17) );
+			}
+		}
+		// TODO initialize cache
+		cacheLevels.add( new Cache()
+		{
+			@Override
+			public int getSectionNumber()
+			{
+				return 4;
+			}
+
+			@Override
+			public int getAddressBitLength() {
+				return 36;
+			}
+
+			@Override
+			public int getTagBitLength() {
+				return 24;
+			}
+
+			@Override
+			public int getSetNumberBitLength() {
+				return 7;
+			}
+
+			@Override
+			public long getTag(int section, int row) {
+				return tags1[section][row];
+			}
+		} );
+		cacheLevels.add( new Cache()
+		{
+			@Override
+			public int getSectionNumber()
+			{
+				return 4;
+			}
+
+			@Override
+			public int getAddressBitLength() {
+				return 36;
+			}
+
+			@Override
+			public int getTagBitLength() {
+				return 17;
+			}
+
+			@Override
+			public int getSetNumberBitLength() {
+				return 14;
+			}
+
+			@Override
+			public long getTag(int section, int row) {
+				return tags2[section][row];
+			}
+		} );
+
 			// 1. сформировать схему
 			// перебор зависимостей:
 			/**
@@ -204,7 +281,7 @@ public class LDSDSample
 							ts.add( new TLBHit() {
 								@Override
 								public int getmoDify() {
-									return 0;
+									return 1;
 								}
 							
 								@Override
@@ -233,7 +310,7 @@ public class LDSDSample
 							
 								@Override
 								public int getmoDify() {
-									return 0;
+									return 1;
 								}
 							
 								@Override
@@ -273,7 +350,7 @@ public class LDSDSample
 					m2.put( "AddressTranslation", m11ts.get(1));
 
 					scheme.addCommand( new Command("LD", params1, "regular", m1));
-					scheme.addCommand( new Command("SD", params2, "regular", m2));
+					//scheme.addCommand( new Command("SD", params2, "regular", m2));
 
 					//TODO TLB build
 					TLB tlb = new TLB(){
@@ -340,55 +417,9 @@ public class LDSDSample
 					
 					//TODO solve!
 					Solver solver = new Solver( new File("src.sample" ), new File("clp") );
-					List<Cache> cacheLevels = new ArrayList<Cache>();
-					cacheLevels.add( new Cache()
-					{
-						@Override
-						public int getSectionNumber()
-						{
-							return 4;
-						}
-
-						@Override
-						public int getAddressBitLength() {
-							return 36;
-						}
-
-						@Override
-						public int getTagBitLength() {
-							return 24;
-						}
-
-						@Override
-						public int getSetNumberBitLength() {
-							return 7;
-						}
-					} );
-					cacheLevels.add( new Cache()
-					{
-						@Override
-						public int getSectionNumber()
-						{
-							return 4;
-						}
-
-						@Override
-						public int getAddressBitLength() {
-							return 36;
-						}
-
-						@Override
-						public int getTagBitLength() {
-							return 17;
-						}
-
-						@Override
-						public int getSetNumberBitLength() {
-							return 14;
-						}
-					} );
-
 					Verdict verdict = solver.solve(scheme, cacheLevels, tlb );
+					
+					//TODO check verdict and change cache
 
 					//TODO print answer, check answer
 					// 3. распечатать ответ
@@ -398,23 +429,23 @@ public class LDSDSample
 						System.out.println( def + " = " + values.get( def ) );	
 					}
 
-					List<Map<Long, List<Long>>> caches = verdict.getCacheInitialization();
-					for( Cache cache : cacheLevels )
-					{
-						int level = cacheLevels.indexOf( cache );
-						Map<Long, List<Long>> sets = caches.get( level );
-						for( long setNumber : sets.keySet() )
-						{
-							System.out.print( 
-									"level " + ( level + 1 ) + 
-									": set " + setNumber + ": _ " );
-							for( Long tag : sets.get( setNumber ) )
-							{
-								System.out.print( ", " + tag );
-							}
-							System.out.println();
-						}
-					}
+//					List<Map<Long, List<Long>>> caches = verdict.getCacheInitialization();
+//					for( Cache cache : cacheLevels )
+//					{
+//						int level = cacheLevels.indexOf( cache );
+//						Map<Long, List<Long>> sets = caches.get( level );
+//						for( long setNumber : sets.keySet() )
+//						{
+//							System.out.print( 
+//									"level " + ( level + 1 ) + 
+//									": set " + setNumber + ": _ " );
+//							for( Long tag : sets.get( setNumber ) )
+//							{
+//								System.out.print( ", " + tag );
+//							}
+//							System.out.println();
+//						}
+//					}
 					
 					Map<Integer, TLBRow> tlbrows = verdict.getTlbrows();
 					for( TLBRow row : tlbrows.values() )
@@ -446,10 +477,6 @@ public class LDSDSample
 						return;
 					}
 				}
-			}
-			
-			
-
-			
+			}			
 	}
 }

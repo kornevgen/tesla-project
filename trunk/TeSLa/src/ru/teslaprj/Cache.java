@@ -2,7 +2,7 @@ package ru.teslaprj;
 
 public interface Cache
 {
-    public static final long INVALID_TAG = 0xffffffffffffffffL;
+//    public static final long INVALID_TAG = 0xffffffffffffffffL;
 
     /** ассоциативность кэша == размер "сет"а */
     int getSectionNumber();
@@ -31,7 +31,7 @@ public interface Cache
 //    
 //    void write(long physicalAddress, byte data[]);
 //
-//    long getTag(int section, int row);
+    long getTag(int section, int row);
 //    
 //    void setTag(int section, int row, long tag);
 //    

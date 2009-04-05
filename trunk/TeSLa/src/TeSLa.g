@@ -371,10 +371,15 @@ procedure
 				',' ('DOUBLEWORD' {size=3;} | 'WORD' {size=2;} | 'HALFWORD' {size=1;} | 'BYTE' {size=0;} ) 
 				',' addr  = ID
 				',' vAddr = ID
-				',' ( 'DATA'{isDataCacheused=true;} | 'INSTRUCTION'{isDataCacheused=false;} )
+				',' ( 'DATA'{isDataCacheused=true;} ) // | 'INSTRUCTION'{isDataCacheused=false;} )
 			')'
 		{
-			if ( ! stopTranslation )
+			if ( stopTranslation )
+			{
+				physicalAddressForMemOperation = "_";
+				memValue = "_";
+			}
+			else
 			{
 				if ( mem )
 				{
@@ -441,6 +446,15 @@ procedure
 			
 			virtualAddress = varsc.getCurrent( virtual, virtual.getText() );
 			
+			if ( varsc.getVar( virtual, virtual.getText() ).size != tlb.getVirtualAddressBitLen() )
+			{
+				throw new SemanticException(
+					virtual,
+					"Size of virtual address variable '" +
+					varsc.getVar( virtual, virtual.getText() ).getCanonicalName() +
+					"' must be equal to " + tlb.getVirtualAddressBitLen() );
+			}
+			
 			// add new variable if needed
 			if ( ! varsc.isKnown( phys.getText() ) )
 			{
@@ -467,6 +481,7 @@ procedure
 				|| ( store && ((TLBExists)tlbSituation).getmoDify() == 0 ) )
 			{
 				stopTranslation = true;
+				physicalAddressAfterTranslation = "_";
 			}
 			else
 			{
