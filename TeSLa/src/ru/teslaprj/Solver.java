@@ -62,7 +62,11 @@ public class Solver
 	
 	private File sourcePath;
 	private File libPath;
-	
+
+    // Object representing the Eclipse process
+    private static EclipseEngine eclipse = null;
+
+
 	/**
 	 * @param sourcePath	директория с описаниями тестовых ситуаций
 	 * @param libPath		директория с clp-модулями (numbers.ecl, predicates.ecl)
@@ -81,6 +85,30 @@ public class Solver
 		{
 			throw new Error( "folder 'eclipse.directory' doesn't exist" );
 		}
+		
+	}
+	
+	static
+	{
+        // Create some default Eclipse options
+        EclipseEngineOptions eclipseEngineOptions = new EclipseEngineOptions();
+
+        // Connect the Eclipse's standard streams to the JVM's
+        eclipseEngineOptions.setUseQueues(false);
+
+        try
+        {
+	        // Initialise Eclipse
+	        eclipse = EmbeddedEclipse.getInstance(eclipseEngineOptions);
+        }
+        catch( IOException e )
+        {
+        	throw new Error(e);
+        }
+        catch( EclipseException e )
+        {
+        	throw new Error(e);
+        }
 	}
 	
 	public Verdict solve( Scheme scheme, List<Cache> cacheState, TLB tlb )
@@ -160,20 +188,8 @@ public class Solver
     	) 
     	throws EclipseException, IOException
 	{
-	    // Object representing the Eclipse process
-	    EclipseEngine eclipse = null;
-	
 		try
 		{
-	        // Create some default Eclipse options
-	        EclipseEngineOptions eclipseEngineOptions = new EclipseEngineOptions();
-	
-	        // Connect the Eclipse's standard streams to the JVM's
-	        eclipseEngineOptions.setUseQueues(false);
-	
-	        // Initialise Eclipse
-	        eclipse = EmbeddedEclipse.getInstance(eclipseEngineOptions);
-		
 	        // Compile the eclipse program.
 	        eclipse.compile( eclipseProgram );
 	
@@ -191,10 +207,10 @@ public class Solver
 		}
 		finally
 		{
-	        // Destroy the Eclipse process
-			try { ((EmbeddedEclipse) eclipse).destroy(); }
-			catch( IOException e ) {}
-			catch( NullPointerException e ){}
+//	        // Destroy the Eclipse process
+//			try { ((EmbeddedEclipse) eclipse).destroy(); }
+//			catch( IOException e ) {}
+//			catch( NullPointerException e ){}
 		}
 	}
 

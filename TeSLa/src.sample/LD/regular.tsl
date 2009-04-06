@@ -2,8 +2,10 @@ VAR RESULT rt : 64;
 VAR READONLY base : 64;
 VAR READONLY offset : 16;
 
-vAddr <- (40)offset + (40)base;
-ASSERT vAddr[2..0] = 0;
+v <- (64)offset + base;
+ASSERT v[2..0] = 0;
+ASSERT v[63..40] = 0;
+vAddr <- v[39..0];
 
 AddressTranslation( pAddr, vAddr, DATA, LOAD );
 LoadMemory( memdoubleword, DOUBLEWORD, pAddr, vAddr, DATA );

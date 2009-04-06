@@ -29,6 +29,8 @@ public class LDSDSample
 {
 	public static void main( String[] args )
 	{
+		Solver solver = new Solver( new File("src.sample" ), new File("clp") );
+		
 		List<Cache> cacheLevels = new ArrayList<Cache>();
 		Random r = new Random();
 		final int[][] tags1 = new int[(int)Math.pow(2, 7)][4];
@@ -129,6 +131,8 @@ public class LDSDSample
 			deps.add( Arrays.asList( "x", "y", "y", "y" ) );
 			deps.add( Arrays.asList( "x", "x", "s", "x" ) );
 			
+			final int iterationsCount = 4*4*3*3;
+			int iteratio = 0;
 			for( int ts1 = 0; ts1 < 3; ts1++ )
 			for( int ts2 = 0; ts2 < 3; ts2++ )
 			for( int at1 = 0; at1 < 2; at1++ )
@@ -350,7 +354,7 @@ public class LDSDSample
 					m2.put( "AddressTranslation", m11ts.get(1));
 
 					scheme.addCommand( new Command("LD", params1, "regular", m1));
-					//scheme.addCommand( new Command("SD", params2, "regular", m2));
+					scheme.addCommand( new Command("SD", params2, "regular", m2));
 
 					//TODO TLB build
 					TLB tlb = new TLB(){
@@ -416,13 +420,14 @@ public class LDSDSample
 					//TODO memory build
 					
 					//TODO solve!
-					Solver solver = new Solver( new File("src.sample" ), new File("clp") );
 					Verdict verdict = solver.solve(scheme, cacheLevels, tlb );
 					
 					//TODO check verdict and change cache
 
 					//TODO print answer, check answer
 					// 3. распечатать ответ
+					System.out.println( ++iteratio + " / " + iterationsCount + " :" );
+					
 					Map<Definition, BigInteger> values = verdict.getDefinitionValues();
 					for( Definition def : values.keySet() )
 					{
@@ -470,13 +475,14 @@ public class LDSDSample
 					{
 						System.out.println( "memory[ " + address + " ] = " + memory.get(address) );
 					}
-					}
-					catch( Exception e )
-					{
-						e.printStackTrace();
-						return;
-					}
+					System.out.println();
+					System.out.println();					
 				}
-			}			
+				catch( Exception e )
+				{
+					throw new Error(e);
+				}
+			}
+		}			
 	}
 }
