@@ -1,0 +1,110 @@
+\documentclass{article}
+\usepackage[cp1251]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{graphicx}
+\usepackage{amsthm}
+
+\newtheorem{lemma}{Лемма}
+
+\pagestyle{plain}
+
+%\title{\textsc{Генерация тестовых данных для системного функционального тестирования FIFO-кэш-памяти
+%микропроцессоров}}
+%\author{Е.В.~Корныхин}
+%\date{}
+
+\begin{document}
+
+\begin{flushleft}
+УДК 004.318
+\end{flushleft}
+\begin{center}
+ГЕНЕРАЦИЯ ТЕСТОВЫХ ДАННЫХ ДЛЯ СИСТЕМНОГО
+ФУНКЦИОНАЛЬНОГО ТЕСТИРОВАНИЯ FIFO-КЭШ-ПАМЯТИ МИКРОПРОЦЕССОРОВ\\
+Е.В.~Корныхин
+\end{center}
+
+
+\begin{abstract}
+В статье рассматривается задача генерации начального состояния
+кэш-памяти для тестовых шаблонов, использующихся в системном
+функциональном тестировании процессоров. В статье рассматривается
+генерация тестовых данных для базисных способов организации
+кэш-памяти: полностью ассоциативный кэш и кэш прямого отображения --
+а также для кэш-памяти общего вида, сочетающей в себе характеристики
+первых двух типов кэш-памяти. Генерация начального состояния
+кэш-памяти осуществляется путем решения ограничений, составленных
+для тестового шаблона.
+\end{abstract}
+
+Ключевые слова: FIFO, constraints, системное функциональное
+тестирование, тестовые шаблоны, тестовые программы
+
+
+\input{intro}
+
+\input{review}
+
+\input{full}
+
+\input{prm}
+
+\input{common}
+
+\section{Заключение}
+В статье рассматривалась задача генерации начального состояния
+кэш-памяти для тестовых шаблонов. В статье предложен алгоритм,
+строящий систему ограничений на конечные множества адресов.
+Результатом решения такой системы являются начальные значения
+регистров и ячеек кэш-памяти. В статье рассмотрено построение
+ограничений для полностью ассоциативной кэш-памяти, кэш-памяти
+прямого отображения и кэш-памяти общего вида.
+
+%\bibliographystyle{gost71s}
+%\bibliography{voevodin}
+\section*{Список литературы}
+
+\begin{enumerate}
+\item \textit{Семенов А.Л.} Методы распространения ограничений: основные
+концепции // PSI'03/ИМРО -- Интервальная математика и методы
+распространения ограничений. 2003.
+
+\item \textit{Камкин А.С.} Генерация тестовых программ для
+микропроцессоров // Тр. ИСП РАН. 2008. T.14, вып.2. 23--64.
+
+\item \textit{Fournier L., Marcus E., Rimon M., Vinov M., Ziv A., Adir A.,
+Almog E.} Genesys-Pro: Innovations in test program generation for
+functional processor verification // IEEE Design and Test of
+Computers. 2004. 21, N.2. 84--93.
+
+\item \textit{Reorda M.S., Squillero G., Corno F., Sanchez E.} Automatic
+test program generation -- a case study // IEEE Design and Test,
+Special issue on Functional Verification and Testbench Generation.
+2001. 21, N.2. 102--109.
+
+\item \textit{Takayama K., Fallah F.} A new functional test program generation
+methodology // Proc. 2001 IEEE International Conference on Computer
+Design: VLSI in Computers and Processors. 2001. 76--81.
+
+\item \textit{Matsumoto N., Kohno K.} A new verification methodology for complex
+pipeline behavior // Proc. of the 38st Design Automation Conference
+(DAC'01). 2001. 816 -- 821.
+
+\item \textit{Ferrandi F., Sciuto D., Beardo M., Bruschi F.} An approach to
+functional testing of VLIW architectures // Proc. of the IEEE
+International High-Level Validation and Test Workshop (HLDVT'00).
+2000. 29--33.
+
+\item \textit{Lichtenstein Y., Rimon M., Vinov M., Behm M., Ludden J.} Industrial
+experience with test generation languages for processor verification
+// Proc. of the 41st Design Automation Conference (DAC'04). 2004.
+36--40.
+
+\item \textit{Guo Y., Liu G., Li S., Li T., Zhu D.} MA2TG: A functional test program
+generator for microprocessor verification // Proc. of the 2005 8th
+Euromicro conference on Digital System Design (DSD'05). 2005.
+176--183.
+\end{enumerate}
+
+
+\end{document}

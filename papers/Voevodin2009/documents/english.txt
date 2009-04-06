@@ -1,0 +1,17 @@
+фамилия, имя и отчество каждого из авторов:
+Корныхин Евгений Валерьевич
+Kornikhin Evgeni Valerievich
+
+названия организаций, в которых работают авторы:
+факультет Вычислительной математики и кибернетики Московского государственного университета им.М.В.Ломоносова
+Faculty of Computational Mathematics and Cybernetics, Moscow State University
+
+название статьи:
+Генерация тестовых данных для системного функционального тестирования FIFO-кэш-памяти микропроцессоров
+Test data generation for core-level verification of FIFO cache memory
+
+текст аннотации (Abstract):
+The article is devoted to generation of cache initial state for microprocessor testing using test templates. This work considers fully associative cache, direct mapped cache and cache with general organization with FIFO replacement policy. Test data generates by special constraint solving.
+
+ключевые слова (Key words):
+FIFO, constraints, core-level verification, test templates
