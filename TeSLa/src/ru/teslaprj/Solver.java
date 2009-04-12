@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.MissingResourceException;
 import java.util.Random;
 import java.util.Set;
 
@@ -25,7 +26,6 @@ import ru.teslaprj.constraints.Constraint;
 import ru.teslaprj.constraints.ConstraintManager;
 import ru.teslaprj.constraints.Constraint.Relation;
 import ru.teslaprj.constraints.args.PhysicalAddressAfterTranslation;
-import ru.teslaprj.constraints.args.Tag;
 import ru.teslaprj.constraints.args.VirtualAddress;
 import ru.teslaprj.scheme.Assert;
 import ru.teslaprj.scheme.Command;
@@ -34,7 +34,6 @@ import ru.teslaprj.scheme.Scheme;
 import ru.teslaprj.scheme.SchemeDefinitionError;
 import ru.teslaprj.scheme.ts.CacheHit;
 import ru.teslaprj.scheme.ts.CacheMiss;
-import ru.teslaprj.scheme.ts.CacheTestSituation;
 import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 import ru.teslaprj.scheme.ts.TLBExists;
 import ru.teslaprj.scheme.ts.TLBHit;
@@ -48,7 +47,6 @@ import ru.teslaprj.syntax.TeSLaLexer;
 import ru.teslaprj.syntax.TeSLaParser;
 import ru.teslaprj.syntax.VarsController;
 import ru.teslaprj.syntax.LogicalVariable.Status;
-import ru.teslaprj.syntax.TeSLaParser.MemoryCommand;
 
 import com.parctechnologies.eclipse.CompoundTerm;
 import com.parctechnologies.eclipse.EclipseEngine;
@@ -76,20 +74,20 @@ public class Solver
 		this.sourcePath = sourcePath;
 		this.libPath = libPath;
 		
-		if ( ! System.getProperties().containsKey( "eclipse.directory" ) )
-		{
-			throw new Error("variable 'eclipse.directory' is not set");
-		}
-		
-		if ( ! new File(System.getProperty("eclipse.directory") ).exists() )
-		{
-			throw new Error( "folder 'eclipse.directory' doesn't exist" );
-		}
-		
 	}
 	
 	static
 	{
+		if ( ! System.getProperties().containsKey( "eclipse.directory" ) )
+		{
+			throw new MissingResourceException("variable 'eclipse.directory' is not set", "", "eclipse.directory");
+		}
+		
+		if ( ! new File(System.getProperty("eclipse.directory") ).exists() )
+		{
+			throw new MissingResourceException( "folder 'eclipse.directory' doesn't exist", "", "eclipse.directory" );
+		}
+		
         // Create some default Eclipse options
         EclipseEngineOptions eclipseEngineOptions = new EclipseEngineOptions();
 
