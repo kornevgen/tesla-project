@@ -17,12 +17,12 @@ LOAD reg1, reg2 @ l1Miss, l2Hit
 
 SUB reg2, reg1, reg2
 
-This template has 3 instructions -- ADD, LOAD è SUB. Template begins
-from variable definitions (it has name of variable and its bit
-length). Test situation is specified after "@": test situation of
-the second instruction is "l1Miss, l2Hit": "l1Miss" means cache miss
-in first-level cache and "l2Hit" means cache hit in second-level
-cache.
+This template has 3 instructions -- ADD, LOAD and SUB. Template
+begins from variable definitions (it has name of variable and its
+bit length). Test situation is specified after "@": test situation
+of the second instruction is "l1Miss, l2Hit": "l1Miss" means cache
+miss in first-level cache and "l2Hit" means cache hit in
+second-level cache.
 
 Model instruction set contains only 2 memory operation:
 \begin{itemize}
