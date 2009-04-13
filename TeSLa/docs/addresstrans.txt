@@ -1,0 +1,24 @@
+xkphys:
+VAR READONLY vAddr : 64;
+VAR RESULT pAddr : 64;
+VAR READONLY CCA : 1;  // CCA берется из тестовой ситуации (есть указание на CacheMiss/CacheHit, значит CCA=1, иначе CCA=0)
+ASSERT ... // vAddr in kphys
+ASSERT ... // vAddr in kphys without AddressError
+pAddr <- 0^(64-PABITS) || vAddr[PABITS-1..0];   // PABITS - это константа - этот .tsl будет сгенерирован перед работой ТЕСЛЫ
+ASSERT cca
+
+
+kseg0:
+VAR READONLY vAddr : 64;
+VAR RESULT pAddr : 64;
+VAR READONLY CCA : 1;  // CCA берется из тестовой ситуации (есть указание на CacheMiss/CacheHit, значит CCA=1, иначе CCA=0)
+ASSERT ... // vAddr in kseg0
+pAddr <- 
+ASSERT CCA 
+
+kseg1:
+VAR READONLY vAddr : 64;
+VAR READONLY pAddr : 64;
+VAR READONLY CCA : 1;  // CCA берется из тестовой ситуации (есть указание на CacheMiss/CacheHit, значит CCA=1, иначе CCA=0)
+ASSERT ... // vAddr in kseg1
+ASSERT CCA

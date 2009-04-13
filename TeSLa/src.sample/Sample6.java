@@ -175,7 +175,7 @@ public class Sample6
 				}
 
 				@Override
-				public int getVirtualAddressBitLen() {
+				public int getSEGBITS() {
 					return 64;
 				}
 
@@ -185,7 +185,7 @@ public class Sample6
 				}
 
 				@Override
-				public int getPhysicalAddressBitLen() {
+				public int getPABITS() {
 					return 32;
 				}
 
