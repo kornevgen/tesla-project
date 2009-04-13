@@ -9,10 +9,10 @@ public interface TLB
 	int getJTLBSize();
 	
 	/** битовый размер виртуального адреса */
-	int getVirtualAddressBitLen();
+	int getSEGBITS();
 	
 	/** битовый размер физического адреса */
-	int getPhysicalAddressBitLen();
+	int getPABITS();
 	
 	int getRangeEndBit();
 	

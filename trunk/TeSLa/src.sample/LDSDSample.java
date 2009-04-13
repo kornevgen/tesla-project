@@ -395,7 +395,7 @@ public class LDSDSample
 						}
 
 						@Override
-						public int getVirtualAddressBitLen() {
+						public int getSEGBITS() {
 							return 40;
 						}
 
@@ -405,7 +405,7 @@ public class LDSDSample
 						}
 
 						@Override
-						public int getPhysicalAddressBitLen() {
+						public int getPABITS() {
 							return 36;
 						}
 

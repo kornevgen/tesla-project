@@ -141,7 +141,7 @@ public class Solver
 		{
 			for( Cache cache : cacheState )
 			{
-				if ( cache.getAddressBitLength() != tlb.getPhysicalAddressBitLen() )
+				if ( cache.getAddressBitLength() != tlb.getPABITS() )
 				{
 					throw new SemanticException( null, "Size of physical address in tlb must be equal with one in caches" );
 				}
@@ -761,7 +761,7 @@ public class Solver
     		values.put( cmd, tagNames.newVar().toString() );
     		ecl.append( "numbers:sizeof( " + 
     				virtualAddress + ",  " + 
-    				tlb.getVirtualAddressBitLen() + " )," + eoln );
+    				tlb.getSEGBITS() + " )," + eoln );
     	}
     	
 //    	// 5a. simple constraints on virtual addresses from test template
@@ -796,7 +796,7 @@ public class Solver
     			"numbers:notequal( " +
     				vAddr_i + ", " + 
     				vAddr_j + ", " +
-    				tlb.getVirtualAddressBitLen() + 
+    				tlb.getSEGBITS() + 
     			" ); true )," + eoln );
     	}
     	ecl.append( eoln );
@@ -850,7 +850,7 @@ public class Solver
     		StringBuffer tlbtag = tagNames.newVar();
     		ecl.append( "tlb:key( " )
     			.append( virtualAddress ).append( ", " )
-    			.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+    			.append( tlb.getSEGBITS() ).append( ", " )
     			.append( tlbBufferIndexes.get( cmd ) ).append( ", " )
     			.append( globalFlagVars.get(cmd) ).append( ", " )
     			.append( asidVars.get(cmd ) ).append( ", " )
@@ -879,7 +879,7 @@ public class Solver
     			ecl.append( "tlb:refill( " )
     				.append( rows ).append( ", " )
     				.append( virtualAddresses.get(cmd) ).append( ", " )
-    				.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+    				.append( tlb.getSEGBITS() ).append( ", " )
     				.append( tlb.getRangeEndBit() ).append( ", " )
     				.append( tlb.getRangeStartBit() ).append( ", " )
     				.append( tlb.getVPNd2EndBit() ).append( ", " )
@@ -1601,7 +1601,7 @@ public class Solver
 //				, tagsetDiffs
 //				, indexVars
 				, values
-				, ( tlb != null ? tlb.getPhysicalAddressBitLen() : 
+				, ( tlb != null ? tlb.getPABITS() : 
 					( !cacheLevels.isEmpty() ? cacheLevels.get(0).getAddressBitLength() : 0 ) )
 			);
 		
@@ -1672,12 +1672,12 @@ public class Solver
     			.append( rows ).append( ", " )
     			.append( tlbBufferIndexes.get(cmd) ).append( ", " )
     			.append( virtualAddresses.get(cmd) ).append( ", " )
-    			.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+    			.append( tlb.getSEGBITS() ).append( ", " )
     			.append( tlb.getVPNd2StartBit() ).append( ", " )
     			.append( physicalAddressesAfterTrans.get(cmd) ).append( ", " )
-    			.append( tlb.getPhysicalAddressBitLen() ).append( ", " )
-    			.append( tlb.getPhysicalAddressBitLen() - 1 ).append( ", " )
-    			.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() ).append( ", " )
+    			.append( tlb.getPABITS() ).append( ", " )
+    			.append( tlb.getPABITS() - 1 ).append( ", " )
+    			.append( tlb.getPABITS() - tlb.getPFNBitLen() ).append( ", " )
     			.append( ((TLBExists)cmd.getTLBSituation()).getValid() ).append( ", " )
     			.append( ((TLBExists)cmd.getTLBSituation()).getmoDify() )
     		.append( " )," ).append( eoln );
@@ -1859,7 +1859,7 @@ public class Solver
 						.append( oddbit1 ).append( ", " )
 						.append( tlbBufferIndexes.get(cmd1) ).append( ", " )
 						.append( virtualAddress1 ).append( ", " )
-						.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+						.append( tlb.getSEGBITS() ).append( ", " )
 						.append( tlb.getVPNd2StartBit() ).append( ", " )
 						.append( tlb.getMaximumOfMask() ).append( ", " )
 						.append( rows )
@@ -1868,7 +1868,7 @@ public class Solver
 						.append( oddbit2 ).append( ", " )
 						.append( tlbBufferIndexes.get(cmd2) ).append( ", " )
 						.append( virtualAddress2 ).append( ", " )
-						.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+						.append( tlb.getSEGBITS() ).append( ", " )
 						.append( tlb.getVPNd2StartBit() ).append( ", " )
 						.append( tlb.getMaximumOfMask() ).append( ", " )
 						.append( rows )
@@ -1876,16 +1876,16 @@ public class Solver
 					.append( "numbers:getbits( " )
 						.append( pfn1 ).append( ", " )
 						.append( physical1 ).append( ", " )
-						.append( tlb.getPhysicalAddressBitLen() ).append( ", " )
-						.append( tlb.getPhysicalAddressBitLen() - 1 ).append( ", " )
-						.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() )
+						.append( tlb.getPABITS() ).append( ", " )
+						.append( tlb.getPABITS() - 1 ).append( ", " )
+						.append( tlb.getPABITS() - tlb.getPFNBitLen() )
 					.append( " ), " ).append( eoln )
 					.append( "numbers:getbits( " )
 						.append( pfn2 ).append( ", " )
 						.append( physical2 ).append( ", " )
-						.append( tlb.getPhysicalAddressBitLen() ).append( ", " )
-						.append( tlb.getPhysicalAddressBitLen() - 1 ).append( ", " )
-						.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() )
+						.append( tlb.getPABITS() ).append( ", " )
+						.append( tlb.getPABITS() - 1 ).append( ", " )
+						.append( tlb.getPABITS() - tlb.getPFNBitLen() )
 					.append( " ), " ).append( eoln );
 					
 				TLBExists situation1 = (TLBExists)cmd1.getTLBSituation();
@@ -1982,7 +1982,7 @@ public class Solver
     		String index = tagNames.newVar().toString();
     		indexVars.put(cmd, index);
     		ecl.append( "numbers:sizeof( " + index + ", " + 
-    				(tlb.getPhysicalAddressBitLen() 
+    				(tlb.getPABITS() 
     						- cacheLevels.get(0).getTagBitLength()
     						- cacheLevels.get(0).getSetNumberBitLength()
     				) + " )," + eoln );
@@ -2257,7 +2257,7 @@ public class Solver
 				, cacheLevels
 				, tlb
 				, command.getTLBSituation()
-				, ( tlb != null ? tlb.getPhysicalAddressBitLen() : ( !cacheLevels.isEmpty() ? cacheLevels.get(0).getAddressBitLength() : 0 ))
+				, ( tlb != null ? tlb.getPABITS() : ( !cacheLevels.isEmpty() ? cacheLevels.get(0).getAddressBitLength() : 0 ))
 			);
 
 		ecl.append( "'" + prefix + "::main'( _" );
@@ -2808,7 +2808,7 @@ public class Solver
 				, cacheLevels
 				, tlb
 				, command.getTLBSituation()
-				, ( tlb != null ? tlb.getPhysicalAddressBitLen() : ( ! cacheLevels.isEmpty() ? cacheLevels.get(0).getAddressBitLength() : 0 ))
+				, ( tlb != null ? tlb.getPABITS() : ( ! cacheLevels.isEmpty() ? cacheLevels.get(0).getAddressBitLength() : 0 ))
 			);
 
 		// call test situation predicate
