@@ -140,7 +140,7 @@ public class Sample6
 			Verdict verdict = solver.solve(scheme, cacheLevels, new TLB(){
 
 				@Override
-				public int getBufferSize() {
+				public int getMicroTLBSize() {
 					return 3;
 				}
 
@@ -192,6 +192,24 @@ public class Sample6
 				@Override
 				public int getASIDBitLen() {
 					return 3;
+				}
+
+				@Override
+				public List<Integer> getDTLB() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public List<Integer> getITLB() {
+					// TODO Auto-generated method stub
+					return null;
+				}
+
+				@Override
+				public TLBRow getRow(int index) {
+					// TODO Auto-generated method stub
+					return null;
 				}} );
 			
 			// 3. распечатать ответ

@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,20 +21,19 @@ import org.antlr.runtime.CharStream;
 import org.antlr.runtime.CommonTokenStream;
 import org.antlr.runtime.RecognitionException;
 
-import ru.teslaprj.constraints.Argument;
-import ru.teslaprj.constraints.ArgumentsManager;
-import ru.teslaprj.constraints.Constraint;
-import ru.teslaprj.constraints.ConstraintManager;
-import ru.teslaprj.constraints.Constraint.Relation;
-import ru.teslaprj.constraints.args.PhysicalAddressAfterTranslation;
-import ru.teslaprj.constraints.args.VirtualAddress;
-import ru.teslaprj.scheme.Assert;
+import ru.teslaprj.constraints.pfn.Argument;
+import ru.teslaprj.constraints.pfn.Constant;
+import ru.teslaprj.constraints.pfn.PFNConstraint;
+import ru.teslaprj.constraints.pfn.PFNsAreDifferent;
+import ru.teslaprj.constraints.pfn.SetConstraint;
+import ru.teslaprj.constraints.pfn.Variable;
 import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.Definition;
 import ru.teslaprj.scheme.Scheme;
 import ru.teslaprj.scheme.SchemeDefinitionError;
 import ru.teslaprj.scheme.ts.CacheHit;
 import ru.teslaprj.scheme.ts.CacheMiss;
+import ru.teslaprj.scheme.ts.CacheTestSituation;
 import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 import ru.teslaprj.scheme.ts.TLBExists;
 import ru.teslaprj.scheme.ts.TLBHit;
@@ -53,6 +53,7 @@ import com.parctechnologies.eclipse.EclipseEngine;
 import com.parctechnologies.eclipse.EclipseEngineOptions;
 import com.parctechnologies.eclipse.EclipseException;
 import com.parctechnologies.eclipse.EmbeddedEclipse;
+import com.parctechnologies.eclipse.Fail;
 
 public class Solver
 {
@@ -109,6 +110,29 @@ public class Solver
         }
 	}
 	
+	class RegistersProblem
+	{
+		RegistersProblem( Scheme scheme )
+		{
+			//TODO from Solver.translate
+		}
+
+		public Map<Command, StringBuffer> getVirtualAddresses() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		public Map<Command, StringBuffer> getPFNVariables() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+	}
+	
+	public class Unsuccessful extends Exception
+	{
+		private static final long serialVersionUID = 2483583682716798422L;		
+	}
+	
 	public Verdict solve( Scheme scheme, List<Cache> cacheState, TLB tlb )
 		throws SchemeDefinitionError, IOException, EclipseException, RecognitionException
 	{
@@ -126,12 +150,6 @@ public class Solver
 			}
 		}
 		
-		// 1. translate `scheme` to .clp
-		String moduleName = createTempModuleName();
-		File tmp = File.createTempFile( moduleName, ".ecl", libPath );
-		moduleName = tmp.getName();
-		moduleName = moduleName.substring(0, moduleName.length() - 4 );
-		
 		if ( cacheState == null )
 		{
 			cacheState = new ArrayList<Cache>();
@@ -148,22 +166,398 @@ public class Solver
 			}
 		}
 
-		try
+		RegistersProblem registersProblem = new RegistersProblem( scheme );
+		
+		CompoundTerm result = null;
+		
+		Map<Command, StringBuffer> virtualAddresses = registersProblem.getVirtualAddresses();
+		Map<Command, StringBuffer> pfns = registersProblem.getPFNVariables();
+		int pfnsCount = pfns.values().size();
+		
+		//посчитать PFN \inter кэш
+		Map<Cache, Set<Integer>> pfnInterCache = getPfnInterCache(cacheState, tlb);
+		
+		//минимальные "подсказки" значений pfn, следующие из задачи на кэш (есть TODO)
+		Map<String, Set<Argument>> pfnProblem = createPfnProblem(scheme, cacheState,
+				pfns, pfnInterCache);
+		
+		//ограничения _только_ на pfn, следующие из задачи на micro-TLB
+		// ограничение на начальное состояние 
+		Set<PFNsAreDifferent> microProblem = addMicroTLBProblem(scheme, tlb, pfns);
+		
+		int max = pfnsCount - getMinimumOfNew( pfnProblem );
+		int newCountR = max;
+		int newCountL = 0; //количество элементов, где кроме new ничего другого невозможно
+		CompoundTerm previousResult = null;
+		
+		// looking for minimum applicable newCount
+		while (newCountL != newCountR)
 		{
-	    	writeFile( tmp, translate( scheme, moduleName, cacheState, tlb ) );
-//	    	translate( scheme, moduleName, cacheState, tlb );
-			
-			// 2. run ECLiPSe and get results
-			CompoundTerm result = callECLiPSe( tmp, moduleName, scheme.getDefinedNames(), cacheState );
-			
-			// 3. analyze results
-			return generateValues( result, scheme, cacheState ) ;
+			int newCount = (newCountR + newCountL) / 2;
+			List<List<Boolean>> allNewFlags = createNewFlags(newCount, max );
+
+			boolean looking = false;
+
+			FlagsLooking: for (List<Boolean> newFlags : allNewFlags)
+			{
+				Map<String, Set<Argument>> finalPfnProblem =
+					getNewProjection( scheme.getCommands(), pfns, pfnProblem, newFlags);
+
+				// TODO выделение из задачи на pfn задачи на сеты
+				Set<SetConstraint> setConstraints = getSetConstraints(finalPfnProblem);
+
+				// TODO labeling сетов (с проверкой совместности задачи на pfn)
+				Set<Map<Command, Integer>> allSetsValues = heuristicLabelingSetConstraints(setConstraints);
+
+				for (Map<Command, Integer> setsValues : allSetsValues)
+				{
+					// TODO формулирование доп.задачи к задаче на регистры
+					Map<Command, PFNConstraint> constPfnProblem = addSetValues(
+							finalPfnProblem, setsValues);
+
+					if (inconsistent(constPfnProblem))
+						continue;
+
+					StringBuffer wholeProblem = createWholeProblem(
+							constPfnProblem, registersProblem);
+
+					File tmp;
+					try
+					{
+						String moduleName = createTempModuleName();
+						tmp = File.createTempFile(moduleName, ".ecl", libPath);
+						moduleName = tmp.getName();
+						moduleName = moduleName.substring(0, moduleName
+								.length() - 4);
+
+						// TODO объединение задач
+						writeFile(tmp, join(scheme, moduleName, cacheState, tlb, wholeProblem, registersProblem));
+
+						// run ECLiPSe and get results
+						result = callECLiPSe(tmp, moduleName, scheme
+								.getDefinedNames(), cacheState);
+
+						// TODO print current result with current newCount
+
+						looking = true;
+						break FlagsLooking;
+					}
+					catch (Fail f) {}
+					finally
+					{
+						if (tmp != null) tmp.delete();
+					}
+				}
+			}
+
+			if (looking)
+			{
+				if (newCount == newCountL)
+					break;// решение найдено, оно минимальное, дальше искать нет
+							// смысла
+
+				newCountR = newCount;
+				previousResult = result;
+			} else
+			{
+				if (newCount == newCountR)
+					throw new Unsuccessful();// нет решения, дальше искать нет
+												// смысла
+				if (newCount == newCountL) // i.e. newCountR == newCountL + 1
+				{
+					result = previousResult;
+					break Dihotomy;
+				}
+				newCountL = newCount;
+			}
+		}
+		
+		if ( result != null )
+		{
+			// analyze results
+			return generateValues( result, scheme, cacheState ) ;				
+		}
+				
+		// analyze results
+		return generateValues( result, scheme, cacheState ) ;
 //			return new Verdict(new HashMap<Definition, BigInteger>(), null );
-		}
-		finally
+	}
+
+	private Map<String, Set<Argument>> getNewProjection(
+			List<Command> commands,
+			Map<Command, StringBuffer> pfns,
+			Map<String, Set<Argument>> pfnProblem,
+			List<Boolean> newFlags)
+	{
+		// get list of pfns from commands >< pfns
+		// foreach pfn: if set from pfnproblem is empty then put(pfn,empty)
+		//				else if next newFlags is true then put(pfn, empty)
+		//				else put(pfn, from pfnProblem)
+
+		Map<String, Set<Argument>> result = new HashMap<String, Set<Argument>>(); 
+		Iterator<Boolean> newFlagsIterator = newFlags.iterator();
+		for( int i = 0; i < commands.size(); i++ )
 		{
-			tmp.delete();
+			String pfn = pfns.get(commands.get(i)).toString();
+			Set<Argument> args = pfnProblem.get(pfn); //TODO may be null because of toString() new instance!!!!!
+			if ( args == null )
+				throw new IllegalStateException();
+			
+			if ( args.isEmpty() || ! newFlagsIterator.next() )
+			{
+				result.put( pfn, args );
+			}
+			else
+			{
+				result.put( pfn, new HashSet<Argument>() );
+			}
 		}
+		return result;
+	}
+
+	private static List<List<Boolean>> createNewFlags( int sum, int size )
+	{
+		if ( sum > size )
+			throw new IllegalArgumentException();
+		
+		List<List<Boolean>> result = new ArrayList<List<Boolean>>();
+		// распределить sum единичек по списку из size элементов всеми способами
+		int[] indexes = new int[sum];
+		for( int i = 1; i <= sum; i++ )
+		{
+			indexes[i-1] = i;
+		}
+		
+		result.add( indexes2flags(indexes, size) );
+		int last;
+		while( (last = lastNotMaximum(indexes, sum, size)) >= 0 )
+		{
+			indexes[last]++;
+			int v = indexes[last];
+			while( ++last < sum )
+				indexes[last] = ++v;
+			result.add( indexes2flags(indexes, size) );
+		}
+		
+		return result;
+	}
+	
+	private static List<Boolean> indexes2flags( int[] indexes, int size )
+	{
+		List<Boolean> result = new ArrayList<Boolean>();
+		int prev = 0;
+		for( int i : indexes )
+		{
+			while( ++prev < i )
+			{
+				result.add( false );
+			}
+			result.add( true );			
+		}
+		while( ++ prev <= size )
+		{
+			result.add( false );
+		}
+		return result;
+	}
+
+	private static int lastNotMaximum( int[] indexes, int sum, int size )
+	{
+		int result = sum;
+		while( --result >= 0 )
+		{
+			if ( indexes[result] < size - sum + result + 1 )
+				return result;
+		}
+		return result;
+	}
+	
+	private static int getMinimumOfNew(Map<String, Set<Argument>> pfnProblem)
+	{
+		int result = 0;
+		for( Set<Argument> c : pfnProblem.values() )
+		{
+			if ( c == null || c.isEmpty() )
+				result++;
+		}
+		return result;
+	}
+
+	private Set<PFNsAreDifferent> addMicroTLBProblem(Scheme scheme, TLB tlb,
+			Map<Command, StringBuffer> pfns	)
+	{
+		Set<PFNsAreDifferent> result = new HashSet<PFNsAreDifferent>();
+		for( int i = 0; i < scheme.getCommands().size(); i++ )
+		{
+			Command cmd1 = scheme.getCommands().get(i);
+			TLBSituation ts1 = cmd1.getTLBSituation();
+			if ( ts1 == null )
+				continue;
+			
+			final String pfn1 = pfns.get(cmd1).toString();
+			
+			int missCount = 1;
+			for( int j = i+1; j < scheme.getCommands().size(); j++ )
+			{
+				Command cmd2 = scheme.getCommands().get(j);
+				TLBSituation ts2 = cmd2.getTLBSituation();
+				if ( ts2 == null )
+					continue;
+				if ( ! ( ts2 instanceof TLBMiss ) )
+					continue;
+				
+				final String pfn2 = pfns.get(cmd2).toString();
+				
+				result.add( new PFNsAreDifferent(){
+					@Override
+					public Set<String> getPfns() {
+						return new HashSet<String>( Arrays.asList( pfn1, pfn2 ) );
+					}} );
+				
+				if ( ++missCount == tlb.getMicroTLBSize() )
+					break;
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * @return [pfn +> set of arguments (other pfns, constants)]
+	 */
+	private Map<String, Set<Argument>> createPfnProblem(Scheme scheme,
+			List<Cache> cacheState, Map<Command, StringBuffer> pfns,
+			Map<Cache, Set<Integer>> pfnInterCache)
+	{
+		Map<String, Set<Argument>> result = new HashMap<String, Set<Argument>>();
+		
+		Map<Cache, Set<String>> evicting = new HashMap<Cache, Set<String>>();
+		Map<Cache, Set<String>> firstHits = new HashMap<Cache, Set<String>>();
+		for( Command cmd : scheme.getCommands() )
+		{
+			if ( ! cmd.hasCacheSituation() )
+				continue;
+			String pfn = pfns.get(cmd).toString();
+			
+			//collect set for 'pfn' (constraint "pfn isin set")
+			int level = 0;
+			Set<Argument> args = new HashSet<Argument>();
+			for( Cache cache : cacheState )
+			{
+				level++;
+				CacheTestSituation ts = cmd.getCacheSituation(level);
+				if ( ts != null )
+				{
+					args.addAll( toIArguments( pfnInterCache.get(cache) ) );
+					args.addAll( toSArguments( evicting.get(cache) ) );
+					args.addAll( toSArguments( firstHits.get(cache) ) );
+					if ( ts instanceof CacheHit )
+					{
+						//if pfnInterCache is empty and this is first hits then add to the set
+						if ( pfnInterCache.get(cache).isEmpty() )
+						{
+							if ( evicting.get(cache) == null )
+							{
+								Set<String> fh = firstHits.get(cache);
+								if ( fh == null )
+									fh = new HashSet<String>();
+								fh.add( pfn );
+								firstHits.put(cache, fh);
+							}
+						}
+					}
+					else if ( ts instanceof CacheMiss )
+					{
+						Set<String> ev = evicting.get(cache);
+						if ( ev == null )
+							ev = new HashSet<String>();
+						ev.add( pfn );
+						evicting.put( cache, ev );
+					}
+				}
+			}
+
+			//TODO add extra checking for l1Miss&l2Hit case
+			//TODO add whole PFN without intersection with caches for l1Miss&l2Miss
+			
+			result.put( pfn, args );
+		}
+		return result;
+	}
+	
+	private static Set<Argument> toIArguments( Set<Integer> s )
+	{
+		Set<Argument> result = new HashSet<Argument>();
+		for( final Integer i : s )
+		{
+			result.add( new Constant(){
+
+				@Override
+				public int getValue() {
+					return i;
+				}} );
+		}
+		return result;
+	}
+
+	private static Set<Argument> toSArguments( Set<String> s )
+	{
+		Set<Argument> result = new HashSet<Argument>();
+		for( final String i : s )
+		{
+			result.add( new Variable(){
+				@Override
+				public String getVar() {
+					return i;
+				}
+				} );
+		}
+		return result;
+	}
+
+	private Map<Cache, Set<Integer>> getPfnInterCache(List<Cache> cacheState,
+			TLB tlb) {
+		Map<Cache, Set<Integer>> pfnInterCache;
+		pfnInterCache = new HashMap<Cache, Set<Integer>>();
+		for( Cache cache : cacheState )
+		{
+			Set<Integer> pfn_s = new HashSet<Integer>();
+			
+			//просмотреть все pfn, беря битовую часть
+			for( int i = 0; i < tlb.getJTLBSize(); i++ )
+			{
+				for( BigInteger pfn : Arrays.asList(tlb.getRow(i).getPFN0(),tlb.getRow(i).getPFN1()))
+				{
+					int tag = Integer.parseInt(
+							BitLen.bitrange(
+									null,
+									new StringBuffer( pfn.toString() ),
+									tlb.getPFNBitLen() - 1,
+									tlb.getPFNBitLen() - cache.getTagBitLength()
+								).toString()
+						);
+					int lowersC = cache.getSetNumberBitLength() + cache.getTagBitLength() - tlb.getPFNBitLen();
+					int set_greatestbits =
+						tlb.getPFNBitLen() == cache.getTagBitLength() ? 0 :
+							Integer.parseInt(
+								BitLen.bitrange(
+										null,
+										new StringBuffer( pfn.toString() ),
+										tlb.getPFNBitLen() - cache.getTagBitLength() - 1,
+										0
+									).toString()
+							) << lowersC;
+					for( int set_lowerbits = 0; set_lowerbits < (int)Math.pow(2, lowersC); set_lowerbits++ )
+					{
+						for( int row = 0; row < cache.getSectionNumber(); row++ )
+							if ( cache.getTag(row, set_greatestbits + set_lowerbits) == tag )
+								pfn_s.add(pfn.intValue());
+					}
+				}
+			}
+			
+			pfnInterCache.put( cache, pfn_s );
+		}
+		return pfnInterCache;
 	}
 	
 	private synchronized static String createTempModuleName()
@@ -577,7 +971,7 @@ public class Solver
         if ( tlb != null )
         {
 	        ecl.append( tlb_latestSetVar_DATA ).append( " = [] ");
-	        for( int i = 1; i <= tlb.getBufferSize(); i++ )
+	        for( int i = 1; i <= tlb.getMicroTLBSize(); i++ )
 	        {
 	        	ecl.append( " \\/ [" + i + "] " );
 	        }
@@ -588,7 +982,7 @@ public class Solver
         if ( tlb != null )
         {
 	        ecl.append( tlb_latestSetVar_INSTRUCTION ).append( " = [] ");
-	        for( int i = 1; i <= tlb.getBufferSize(); i++ )
+	        for( int i = 1; i <= tlb.getMicroTLBSize(); i++ )
 	        {
 	        	ecl.append( " \\/ [" + i + "] " );
 	        }
@@ -701,7 +1095,7 @@ public class Solver
 	    		.append( vytesnStructure_DATA ).append( " )," ).append( eoln );
 			ecl.append( "lru:vytesnTagsLRU( [ " )
 				.append( tmpset_DATA ).append( " ], ")
-				.append( tlb.getBufferSize() )
+				.append( tlb.getMicroTLBSize() )
 			.append( ")," ).append( eoln );
 	    	ecl.append( eoln );
 	
@@ -712,7 +1106,7 @@ public class Solver
 	    		.append( vytesnStructure_INSTRUCTION ).append( " )," ).append( eoln );
 			ecl.append( "lru:vytesnTagsLRU( [ " )
 				.append( tmpset_INSTRUCTION ).append( " ], ")
-				.append( tlb.getBufferSize() )
+				.append( tlb.getMicroTLBSize() )
 			.append( ")," ).append( eoln );
 	    	ecl.append( eoln );
 	
@@ -1917,283 +2311,283 @@ public class Solver
     	}
 	}
 
-	private void createSetsAndTagsNames(
-			final List<Cache> cacheLevels,
-			final TLB tlb,
-			StringBuffer ecl, 
-			VarsController tagNames,
-			Set<Command> normalCommands,
-			Map<Command, Map<Cache, String>> setVars,
-			Map<Command, Map<Cache, String>> tagVars,
-			Map<Command, String> indexVars,
-			Map<Command, Map<Cache, String>> fakeSetVars,
-			Map<Command, Map<Cache, String>> vytesntagVars)
-	{
-		for( Command cmd : normalCommands )
-    	{
-    		Map<Cache, String> sets = new HashMap<Cache, String>();
-    		Map<Cache, String> tags = new HashMap<Cache, String>();
-    		Map<Cache, String> vytesntags = new HashMap<Cache, String>();
-    		Map<Cache, String> fakeSets = new HashMap<Cache, String>();
-    		
-    		// TODO а если не все уровни кэш-памяти нужны команде (не участвуют в тестовой ситуации?)
-    		for( Cache cache : cacheLevels )
-    		{
-    			String set = tagNames.newVar().toString();
-    			String tag = tagNames.newVar().toString();
-    			String fakeSet = tagNames.newVar().toString();
-    			
-    			ecl.append( set ).append( " #:: [ 0 .. " )
-    			.append((int)Math.pow(2, cache.getSetNumberBitLength()) - 1 ).append( " ]," ).append( eoln );
-    			
-    			ecl.append( tag ).append( " #:: [ 0 .. " )
-    			.append((int)Math.pow(2, cache.getTagBitLength() ) - 1 ).append( " ]," ).append( eoln );
-    			
-    			sets.put(cache, set);
-    			tags.put(cache, tag);
-    			Set<ProcedureTestSituation> ts = null;
-    			if (  cmd.isLOAD() )
-    				ts = cmd.getTestSituationParameters().get( "LoadMemory" );
-    			else if ( cmd.isSTORE() )
-    				ts = cmd.getTestSituationParameters().get( "StoreMemory" );
-    			if ( ts != null )
-    			{
-    				for( ProcedureTestSituation pts : ts )
-    				{
-    					if ( pts instanceof CacheMiss 
-    							&& cacheLevels.get( ((CacheMiss)pts).getLevel() ).equals( cache ) )
-    					{
-    						String vyt = tagNames.newVar().toString();
-    	    				vytesntags.put(cache, vyt);
-    						break;
-    					}
-    				}
-    			}
-    			fakeSets.put(cache, fakeSet);
-    			ecl.append( fakeSet + " #:: [ 1 .. " + 
-    					Math.min( (int)Math.pow(2, cache.getSetNumberBitLength() ), normalCommands.size() ) 
-    				+ " ]," + eoln );
-    		}
-    		setVars.put(cmd, sets);
-    		tagVars.put(cmd, tags);
-    		vytesntagVars.put(cmd, vytesntags);
-    		fakeSetVars.put(cmd, fakeSets);
-    		
-    		String index = tagNames.newVar().toString();
-    		indexVars.put(cmd, index);
-    		ecl.append( "numbers:sizeof( " + index + ", " + 
-    				(tlb.getPABITS() 
-    						- cacheLevels.get(0).getTagBitLength()
-    						- cacheLevels.get(0).getSetNumberBitLength()
-    				) + " )," + eoln );
-    	}
-	}
-
-	private void settagvaIntersections(
-			final List<Cache> cacheLevels,
-			final TLB tlb,
-			StringBuffer ecl,
-			VarsController tagNames,
-			Set<Command> normalCommands,
-			Map<Command, Map<Cache, String>> setVars,
-			Map<Command, Map<Cache, String>> tagVars)
-	{
-		for( Command cmd : normalCommands )
-		{
-			Collection<Cache> viewed = new HashSet<Cache>();
-			for( Cache cache1 : cacheLevels )
-			{
-				viewed.add(cache1);
-				for( Cache cache2 : cacheLevels )
-				{
-					if ( viewed.contains(cache2) )
-						continue;
-					
-					String tag1 = tagVars.get(cmd).get(cache1);
-					String set1 = setVars.get(cmd).get(cache1);
-					String tag2 = tagVars.get(cmd).get(cache2);
-					String set2 = setVars.get(cmd).get(cache2);
-					
-					int tag1BitLength = cache1.getTagBitLength();
-					int set1BitLength = cache1.getSetNumberBitLength();
-					int tag2BitLength = cache2.getTagBitLength();
-					int set2BitLength = cache2.getSetNumberBitLength();
-
-					if ( tag1BitLength == tag2BitLength
-							&&
-						set1BitLength == set2BitLength )
-					{
-						ecl.append( tag1 + " #= " + tag2 + "," + eoln );
-						ecl.append( set1 + " #= " + set2 + "," + eoln );
-					}
-					
-					if ( tag1BitLength < tag2BitLength )
-					{
-						tagSetInterConstraints(ecl, tagNames, tag1, set1, tag2,
-								set2, tag1BitLength, set1BitLength,
-								tag2BitLength, set2BitLength);
-					}
-					else if ( tag1BitLength > tag2BitLength )
-					{
-						tagSetInterConstraints(ecl, tagNames, tag2, set2, tag1,
-								set1, tag2BitLength, set2BitLength,
-								tag1BitLength, set1BitLength);						
-					}
-				}
-			}
-		}
-		
-//		for( Command cmd : virtualAddresses.keySet() )
+//	private void createSetsAndTagsNames(
+//			final List<Cache> cacheLevels,
+//			final TLB tlb,
+//			StringBuffer ecl, 
+//			VarsController tagNames,
+//			Set<Command> normalCommands,
+//			Map<Command, Map<Cache, String>> setVars,
+//			Map<Command, Map<Cache, String>> tagVars,
+//			Map<Command, String> indexVars,
+//			Map<Command, Map<Cache, String>> fakeSetVars,
+//			Map<Command, Map<Cache, String>> vytesntagVars)
+//	{
+//		for( Command cmd : normalCommands )
 //    	{
-//    		// пересечь границы виртуального адреса и границы сета
-//    		// если что останется - сгенерировать numbers:getbits...
-//			String virtualAddress = virtualAddresses.get(cmd);
+//    		Map<Cache, String> sets = new HashMap<Cache, String>();
+//    		Map<Cache, String> tags = new HashMap<Cache, String>();
+//    		Map<Cache, String> vytesntags = new HashMap<Cache, String>();
+//    		Map<Cache, String> fakeSets = new HashMap<Cache, String>();
+//    		
+//    		// TODO а если не все уровни кэш-памяти нужны команде (не участвуют в тестовой ситуации?)
 //    		for( Cache cache : cacheLevels )
 //    		{
-//    			if ( cache.getTagBitLength() + cache.getSetNumberBitLength() 
-//    					> tlb.getPFNBitLen() )
-//    			{
-//    				String set = "[ " + setVars.get(cmd).get(cache) + " ]";
-//    				String n1 = tagNames.newVar().toString();
-//    				String n2 = tagNames.newVar().toString();
-//    				if ( cache.getTagBitLength() > tlb.getPFNBitLen() )
-//    				{
-//	    				// set влезает целиком
-//	    				ecl.append( "numbers:getbits( " )
-//	    				.append( n1 ).append( ", " )
-//	    				.append( virtualAddress ).append( ", " )
-//	    				.append( tlb.getVirtualAddressBitLen() ).append( ", " )
-//	    				.append( (tlb.getPhysicalAddressBitLen() 
-//	    						- cache.getTagBitLength() - 1) ).append( ", " )
-//	    	    		.append( (tlb.getPhysicalAddressBitLen() 
-//	    	    				- cache.getTagBitLength() 
-//	    	    				- cache.getSetNumberBitLength()) ).append( " )," )
-//	    	    		.append( eoln )
-//	    	    		.append( "numbers:equal( " )
-//	    	    		.append( n1 ).append( ", " )
-//	    	    		.append( set ).append( ", " )
-//	    	    		.append( cache.getSetNumberBitLength() )
-//	    	    		.append( " )," )
-//	    	    		.append( eoln ).append( eoln );	    				
-//    				}
-//    				else
-//    				{
-//    					// только кусок set'a
-//	    				ecl.append( "numbers:getbits( " )
-//	    				.append( n1 ).append( ", " )
-//	    				.append( virtualAddress ).append( ", " )
-//	    				.append( tlb.getVirtualAddressBitLen() ).append( ", " )
-//	    				.append( (tlb.getPhysicalAddressBitLen() 
-//	    						- tlb.getPFNBitLen() - 1) ).append( ", " )
-//	    	    		.append( (tlb.getPhysicalAddressBitLen() 
-//	    	    				- cache.getTagBitLength() 
-//	    	    				- cache.getSetNumberBitLength()) ).append( " )," )
-//	    	    		.append( eoln )
-//	    	    		.append( "numbers:getbits( " )
-//	    	    		.append( n2 ).append( ", " )
-//	    	    		.append( set ).append( ", " )
-//	    	    		.append( cache.getSetNumberBitLength() ).append( ", " )
-//	    	    		.append( (cache.getTagBitLength() 
-//	    	    				+ cache.getSetNumberBitLength()
-//	    	    				- tlb.getPFNBitLen() - 1
-//	    	    				) ).append( ", " )
-//	    	    		.append( 0 ).append( " ),")
-//	    	    		.append( eoln )
-//	    	    		.append( "numbers:equal( " )
-//	    	    		.append( n1 ).append( ", " )
-//	    	    		.append( n2 ).append( ", " )
-//	    	    		.append( (cache.getTagBitLength() 
-//	    	    				+ cache.getSetNumberBitLength()
-//	    	    				- tlb.getPFNBitLen() ) )
-//	    	    		.append( " )," )
-//	    	    		.append( eoln ).append( eoln );    					
-//    				}
-//    			}
+//    			String set = tagNames.newVar().toString();
+//    			String tag = tagNames.newVar().toString();
+//    			String fakeSet = tagNames.newVar().toString();
 //    			
-//    			if ( cache.getTagBitLength() > tlb.getPFNBitLen() )
+//    			ecl.append( set ).append( " #:: [ 0 .. " )
+//    			.append((int)Math.pow(2, cache.getSetNumberBitLength()) - 1 ).append( " ]," ).append( eoln );
+//    			
+//    			ecl.append( tag ).append( " #:: [ 0 .. " )
+//    			.append((int)Math.pow(2, cache.getTagBitLength() ) - 1 ).append( " ]," ).append( eoln );
+//    			
+//    			sets.put(cache, set);
+//    			tags.put(cache, tag);
+//    			Set<ProcedureTestSituation> ts = null;
+//    			if (  cmd.isLOAD() )
+//    				ts = cmd.getTestSituationParameters().get( "LoadMemory" );
+//    			else if ( cmd.isSTORE() )
+//    				ts = cmd.getTestSituationParameters().get( "StoreMemory" );
+//    			if ( ts != null )
 //    			{
-//    				String tag = "[ " + tagVars.get(cmd).get(cache) + " ]";
-//    				String n1 = tagNames.newVar().toString();
-//    				String n2 = tagNames.newVar().toString();
-//    				
-//    				ecl.append( "numbers:getbits( " )
-//    				.append( n1 ).append( ", " )
-//    				.append( virtualAddress ).append( ", " )
-//    				.append( tlb.getVirtualAddressBitLen() ).append( ", " )
-//    				.append( (tlb.getPhysicalAddressBitLen() 
-//    						- tlb.getPFNBitLen() - 1) ).append( ", " )
-//    	    		.append( (tlb.getPhysicalAddressBitLen() 
-//    	    				- cache.getTagBitLength() ) ).append( " )," )
-//    	    		.append( eoln )
-//    	    		.append( "numbers:getbits( " )
-//    	    		.append( n2 ).append( ", " )
-//    	    		.append( tag ).append( ", " )
-//    	    		.append( cache.getTagBitLength() ).append( ", " )
-//    	    		.append( (cache.getTagBitLength() 
-//    	    				- tlb.getPFNBitLen() - 1
-//    	    				) ).append( ", " )
-//    	    		.append( 0 ).append( " ),")
-//    	    		.append( eoln )
-//    	    		.append( "numbers:equal( " )
-//    	    		.append( n1 ).append( ", " )
-//    	    		.append( n2 ).append( ", " )
-//    	    		.append( (cache.getTagBitLength() 
-//    	    				- tlb.getPFNBitLen() ) )
-//    	    		.append( " )," )
-//    	    		.append( eoln ).append( eoln );    					
+//    				for( ProcedureTestSituation pts : ts )
+//    				{
+//    					if ( pts instanceof CacheMiss 
+//    							&& cacheLevels.get( ((CacheMiss)pts).getLevel() ).equals( cache ) )
+//    					{
+//    						String vyt = tagNames.newVar().toString();
+//    	    				vytesntags.put(cache, vyt);
+//    						break;
+//    					}
+//    				}
 //    			}
+//    			fakeSets.put(cache, fakeSet);
+//    			ecl.append( fakeSet + " #:: [ 1 .. " + 
+//    					Math.min( (int)Math.pow(2, cache.getSetNumberBitLength() ), normalCommands.size() ) 
+//    				+ " ]," + eoln );
 //    		}
+//    		setVars.put(cmd, sets);
+//    		tagVars.put(cmd, tags);
+//    		vytesntagVars.put(cmd, vytesntags);
+//    		fakeSetVars.put(cmd, fakeSets);
+//    		
+//    		String index = tagNames.newVar().toString();
+//    		indexVars.put(cmd, index);
+//    		ecl.append( "numbers:sizeof( " + index + ", " + 
+//    				(tlb.getPABITS() 
+//    						- cacheLevels.get(0).getTagBitLength()
+//    						- cacheLevels.get(0).getSetNumberBitLength()
+//    				) + " )," + eoln );
 //    	}
-	}
-
-	private void tagSetInterConstraints(StringBuffer ecl,
-			VarsController tagNames, String tag1, String set1, String tag2,
-			String set2, int tag1BitLength, int set1BitLength,
-			int tag2BitLength, int set2BitLength)
-	{
-		// t1 = t2[..]
-		ecl.append( "numbers:getbits( " )
-			.append( "[ " + tag1 + " ], " )
-			.append( "[ " + tag2 + " ], " )
-			.append( tag2BitLength ).append( ", " )
-			.append( tag2BitLength - 1 ).append( ", " )
-			.append( tag2BitLength - tag1BitLength )
-		.append( " ),").append( eoln );
-
-		// s2 = s1[..]
-		ecl.append( "numbers:getbits( " )
-			.append( "[ " + set2 + " ], " )
-			.append( "[ " + set1 + " ], " )
-			.append( set1BitLength ).append( ", " )
-			.append( set2BitLength - 1 ).append( ", " )
-			.append( 0 )
-		.append( " ),").append( eoln );
-		
-		// s1[..] = t2[..]
-		StringBuffer tmp = tagNames.newVar();
-		ecl.append( "numbers:getbits( ")
-			.append( tmp ).append( " , " )
-			.append( "[ " + set1 + " ], " )
-			.append( set1BitLength ).append( ", " )
-			.append( set1BitLength - 1 ).append( ", " )
-			.append( set1BitLength - tag2BitLength + tag1BitLength )
-			.append( " )," ).append( eoln );
-		ecl.append( "numbers:getbits( ")
-			.append( tmp ).append( " , " )
-			.append( "[ " + tag2 + " ], " )
-			.append( tag2BitLength ).append( ", " )
-			.append( tag2BitLength - tag1BitLength - 1 ).append( ", " )
-			.append( 0 )
-		.append( " )," ).append( eoln );
-	}
-    
-    private String notnull( String name, VarsController tagNames )
-    {
-    	if ( name != null )
-    		return name;
-    	else
-    		return tagNames.newVar().toString();
-    }    
+//	}
+//
+//	private void settagvaIntersections(
+//			final List<Cache> cacheLevels,
+//			final TLB tlb,
+//			StringBuffer ecl,
+//			VarsController tagNames,
+//			Set<Command> normalCommands,
+//			Map<Command, Map<Cache, String>> setVars,
+//			Map<Command, Map<Cache, String>> tagVars)
+//	{
+//		for( Command cmd : normalCommands )
+//		{
+//			Collection<Cache> viewed = new HashSet<Cache>();
+//			for( Cache cache1 : cacheLevels )
+//			{
+//				viewed.add(cache1);
+//				for( Cache cache2 : cacheLevels )
+//				{
+//					if ( viewed.contains(cache2) )
+//						continue;
+//					
+//					String tag1 = tagVars.get(cmd).get(cache1);
+//					String set1 = setVars.get(cmd).get(cache1);
+//					String tag2 = tagVars.get(cmd).get(cache2);
+//					String set2 = setVars.get(cmd).get(cache2);
+//					
+//					int tag1BitLength = cache1.getTagBitLength();
+//					int set1BitLength = cache1.getSetNumberBitLength();
+//					int tag2BitLength = cache2.getTagBitLength();
+//					int set2BitLength = cache2.getSetNumberBitLength();
+//
+//					if ( tag1BitLength == tag2BitLength
+//							&&
+//						set1BitLength == set2BitLength )
+//					{
+//						ecl.append( tag1 + " #= " + tag2 + "," + eoln );
+//						ecl.append( set1 + " #= " + set2 + "," + eoln );
+//					}
+//					
+//					if ( tag1BitLength < tag2BitLength )
+//					{
+//						tagSetInterConstraints(ecl, tagNames, tag1, set1, tag2,
+//								set2, tag1BitLength, set1BitLength,
+//								tag2BitLength, set2BitLength);
+//					}
+//					else if ( tag1BitLength > tag2BitLength )
+//					{
+//						tagSetInterConstraints(ecl, tagNames, tag2, set2, tag1,
+//								set1, tag2BitLength, set2BitLength,
+//								tag1BitLength, set1BitLength);						
+//					}
+//				}
+//			}
+//		}
+//		
+////		for( Command cmd : virtualAddresses.keySet() )
+////    	{
+////    		// пересечь границы виртуального адреса и границы сета
+////    		// если что останется - сгенерировать numbers:getbits...
+////			String virtualAddress = virtualAddresses.get(cmd);
+////    		for( Cache cache : cacheLevels )
+////    		{
+////    			if ( cache.getTagBitLength() + cache.getSetNumberBitLength() 
+////    					> tlb.getPFNBitLen() )
+////    			{
+////    				String set = "[ " + setVars.get(cmd).get(cache) + " ]";
+////    				String n1 = tagNames.newVar().toString();
+////    				String n2 = tagNames.newVar().toString();
+////    				if ( cache.getTagBitLength() > tlb.getPFNBitLen() )
+////    				{
+////	    				// set влезает целиком
+////	    				ecl.append( "numbers:getbits( " )
+////	    				.append( n1 ).append( ", " )
+////	    				.append( virtualAddress ).append( ", " )
+////	    				.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+////	    				.append( (tlb.getPhysicalAddressBitLen() 
+////	    						- cache.getTagBitLength() - 1) ).append( ", " )
+////	    	    		.append( (tlb.getPhysicalAddressBitLen() 
+////	    	    				- cache.getTagBitLength() 
+////	    	    				- cache.getSetNumberBitLength()) ).append( " )," )
+////	    	    		.append( eoln )
+////	    	    		.append( "numbers:equal( " )
+////	    	    		.append( n1 ).append( ", " )
+////	    	    		.append( set ).append( ", " )
+////	    	    		.append( cache.getSetNumberBitLength() )
+////	    	    		.append( " )," )
+////	    	    		.append( eoln ).append( eoln );	    				
+////    				}
+////    				else
+////    				{
+////    					// только кусок set'a
+////	    				ecl.append( "numbers:getbits( " )
+////	    				.append( n1 ).append( ", " )
+////	    				.append( virtualAddress ).append( ", " )
+////	    				.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+////	    				.append( (tlb.getPhysicalAddressBitLen() 
+////	    						- tlb.getPFNBitLen() - 1) ).append( ", " )
+////	    	    		.append( (tlb.getPhysicalAddressBitLen() 
+////	    	    				- cache.getTagBitLength() 
+////	    	    				- cache.getSetNumberBitLength()) ).append( " )," )
+////	    	    		.append( eoln )
+////	    	    		.append( "numbers:getbits( " )
+////	    	    		.append( n2 ).append( ", " )
+////	    	    		.append( set ).append( ", " )
+////	    	    		.append( cache.getSetNumberBitLength() ).append( ", " )
+////	    	    		.append( (cache.getTagBitLength() 
+////	    	    				+ cache.getSetNumberBitLength()
+////	    	    				- tlb.getPFNBitLen() - 1
+////	    	    				) ).append( ", " )
+////	    	    		.append( 0 ).append( " ),")
+////	    	    		.append( eoln )
+////	    	    		.append( "numbers:equal( " )
+////	    	    		.append( n1 ).append( ", " )
+////	    	    		.append( n2 ).append( ", " )
+////	    	    		.append( (cache.getTagBitLength() 
+////	    	    				+ cache.getSetNumberBitLength()
+////	    	    				- tlb.getPFNBitLen() ) )
+////	    	    		.append( " )," )
+////	    	    		.append( eoln ).append( eoln );    					
+////    				}
+////    			}
+////    			
+////    			if ( cache.getTagBitLength() > tlb.getPFNBitLen() )
+////    			{
+////    				String tag = "[ " + tagVars.get(cmd).get(cache) + " ]";
+////    				String n1 = tagNames.newVar().toString();
+////    				String n2 = tagNames.newVar().toString();
+////    				
+////    				ecl.append( "numbers:getbits( " )
+////    				.append( n1 ).append( ", " )
+////    				.append( virtualAddress ).append( ", " )
+////    				.append( tlb.getVirtualAddressBitLen() ).append( ", " )
+////    				.append( (tlb.getPhysicalAddressBitLen() 
+////    						- tlb.getPFNBitLen() - 1) ).append( ", " )
+////    	    		.append( (tlb.getPhysicalAddressBitLen() 
+////    	    				- cache.getTagBitLength() ) ).append( " )," )
+////    	    		.append( eoln )
+////    	    		.append( "numbers:getbits( " )
+////    	    		.append( n2 ).append( ", " )
+////    	    		.append( tag ).append( ", " )
+////    	    		.append( cache.getTagBitLength() ).append( ", " )
+////    	    		.append( (cache.getTagBitLength() 
+////    	    				- tlb.getPFNBitLen() - 1
+////    	    				) ).append( ", " )
+////    	    		.append( 0 ).append( " ),")
+////    	    		.append( eoln )
+////    	    		.append( "numbers:equal( " )
+////    	    		.append( n1 ).append( ", " )
+////    	    		.append( n2 ).append( ", " )
+////    	    		.append( (cache.getTagBitLength() 
+////    	    				- tlb.getPFNBitLen() ) )
+////    	    		.append( " )," )
+////    	    		.append( eoln ).append( eoln );    					
+////    			}
+////    		}
+////    	}
+//	}
+//
+//	private void tagSetInterConstraints(StringBuffer ecl,
+//			VarsController tagNames, String tag1, String set1, String tag2,
+//			String set2, int tag1BitLength, int set1BitLength,
+//			int tag2BitLength, int set2BitLength)
+//	{
+//		// t1 = t2[..]
+//		ecl.append( "numbers:getbits( " )
+//			.append( "[ " + tag1 + " ], " )
+//			.append( "[ " + tag2 + " ], " )
+//			.append( tag2BitLength ).append( ", " )
+//			.append( tag2BitLength - 1 ).append( ", " )
+//			.append( tag2BitLength - tag1BitLength )
+//		.append( " ),").append( eoln );
+//
+//		// s2 = s1[..]
+//		ecl.append( "numbers:getbits( " )
+//			.append( "[ " + set2 + " ], " )
+//			.append( "[ " + set1 + " ], " )
+//			.append( set1BitLength ).append( ", " )
+//			.append( set2BitLength - 1 ).append( ", " )
+//			.append( 0 )
+//		.append( " ),").append( eoln );
+//		
+//		// s1[..] = t2[..]
+//		StringBuffer tmp = tagNames.newVar();
+//		ecl.append( "numbers:getbits( ")
+//			.append( tmp ).append( " , " )
+//			.append( "[ " + set1 + " ], " )
+//			.append( set1BitLength ).append( ", " )
+//			.append( set1BitLength - 1 ).append( ", " )
+//			.append( set1BitLength - tag2BitLength + tag1BitLength )
+//			.append( " )," ).append( eoln );
+//		ecl.append( "numbers:getbits( ")
+//			.append( tmp ).append( " , " )
+//			.append( "[ " + tag2 + " ], " )
+//			.append( tag2BitLength ).append( ", " )
+//			.append( tag2BitLength - tag1BitLength - 1 ).append( ", " )
+//			.append( 0 )
+//		.append( " )," ).append( eoln );
+//	}
+//    
+//    private String notnull( String name, VarsController tagNames )
+//    {
+//    	if ( name != null )
+//    		return name;
+//    	else
+//    		return tagNames.newVar().toString();
+//    }    
 
 	private void writeFile( File file, StringBuffer text )
     	throws IOException
@@ -2427,219 +2821,219 @@ public class Solver
 		return prog.eclipseProgram;
     }
     
-    private void cacheOperationTranslate(
-    		  Command command
-    		, List<Cache> cacheLevels
-    		, VarsController tagsVersions
-    		, StringBuffer ecl
-    		, Map<Cache, String> setVars
-    		, Map<Cache, String> tagVars
-    		, Map<Cache, String> vytesntagVars
-    		, final List<String> hitTags
-    	    , final List<String> vytesnTags
-    		, final List<String> missTags
-    	)
-    {
-		Map<String, Set<ProcedureTestSituation>> testSituation = command.getTestSituationParameters();
-		for( String procedure : testSituation.keySet() )
-		{
-			Set<ProcedureTestSituation> params = testSituation.get( procedure );
-
-			if ( procedure.equals( "LoadMemory" )
-				|| procedure.equals( "StoreMemory" )
-				)
-			{
-				for( ProcedureTestSituation ts : params )
-				{
-					if ( ts instanceof CacheHit )
-					{
-						if ( cacheLevels.isEmpty() )
-						{
-							throw new Error("Define caches for using cache test situations");
-						}
-						
-						CacheHit hit = (CacheHit)ts;
-						Cache cache = cacheLevels.get( hit.getLevel() );
-						String tag = tagVars.get( cache );
-						String tagset = tag + "set";
-						
-						// HIT for 'tag' in 'cache'
-						
-						StringBuffer setVar = tagsVersions.newVar();
-						String setVarsStructure = "CurrentSetsOfLevel" + hit.getLevel();
-//							String hitsStructure = "HitsOfLevel" + hit.getLevel();
-						StringBuffer hitSetsStructure = tagsVersions.newVar();
-//							String setVersionsStructure = "SetVersionsOfLevel" + hit.getLevel();
-						String setNumber = setVars.get( cache );
-						
-						ecl.append( "lru:latestSetVar( " )
-						.append( hitSetsStructure ).append( ", " )
-							.append( setVar ).append( ", " )
-							.append( "_, " )
-							.append( setVarsStructure ).append( ", " )
-							.append( setNumber )
-						.append( " )," ).append( eoln )
-						.append( tag ).append( " in " ).append( setVar ).append( "," ).append( eoln )
-						.append( "intset( " ).append( tagset ).append( ", 0, " ).append( (int)Math.pow(2, cache.getTagBitLength() ) - 1 ).append( " ), " )
-						.append( "#( " ).append( tagset ).append( ", 1 ), " )
-						.append( tag ).append( " in " ).append( tagset ).append( "," ).append( eoln )
-						
-						.append( "lru:addHit( ")
-							.append( tag ).append( ", " )
-							.append( tag ).append( "set, " )
-							.append( setVar ).append( ", " )
-							.append( hitSetsStructure )
-						.append( " )," ).append( eoln )
-						
-//							.append( "lru:addSet( ").append( setVar ).append( ", " ).append( setVersionsStructure ).append( ", " ).append( setNumber ).append( " )," ).append( eoln )
-						.append( eoln );
-
-					    hitTags.add( tag );
-					}
-					else if ( ts instanceof CacheMiss )
-					{
-						if ( cacheLevels.isEmpty() )
-						{
-							throw new Error("Define caches for using cache test situations");
-						}
-						
-						CacheMiss miss = (CacheMiss)ts;
-						Cache cache = cacheLevels.get( miss.getLevel() );
-						String tag = tagVars.get( cache );
-						String tagset = tag + "set";
-
-						// MISS for 'tag' in 'cache
-						String vytesnTag = miss.getVTagVar();
-						if ( vytesnTag == null )
-						{
-							vytesnTag = vytesntagVars.get( cache );
-						}
-						String vytesnTagSet = vytesnTag + "set";
-
-						/*	X2 = vytesnTag, X3 = tag
-						 *  X2 in S1,
-							intset( TX2, 1, 5 ), #( TX2, 1 ), X2 in TX2,
-							
-							X3 #:: [ 1 .. 6 ], X3 notin S1,
-							intset( TX3, 1, 6 ), #( TX3, 1 ), X3 in TX3,
-							
-							S2 = (( S1 \ TX2 ) \/ TX3),
-						 */
-						
-						StringBuffer latestSetVar = tagsVersions.newVar();
-						String setNumber = setVars.get( cache );
-						String setVarsStructure = "CurrentSetsOfLevel" + miss.getLevel();
-						StringBuffer hitSetsStructure = tagsVersions.newVar();
-						StringBuffer vytesnStructure = tagsVersions.newVar();
-						
-						int maxTag = (int)Math.pow(2, cache.getTagBitLength() ) - 1;
-						ecl
-						.append( "lru:latestSetVar( " )
-							.append( latestSetVar ).append( ", " )
-							.append( hitSetsStructure ).append( ", " )
-							.append( vytesnStructure ).append( ", " )
-							.append( setVarsStructure ).append ( ", " )
-							.append( setNumber )
-						.append( " )," ).append( eoln )
-						
-						.append( "% вытесняемый тег").append( eoln )
-						.append( vytesnTag ).append( " in " ).append( latestSetVar ).append( "," ).append( eoln );
-						
-						StringBuffer latestNHits = tagsVersions.newVar();
-						
-						ecl.append( "lru:latestNHits( ")
-							.append( latestNHits ).append( ", " )
-							.append( cache.getSectionNumber() - 1 ).append( ", " )
-							.append( hitSetsStructure )
-						.append( ")," ).append( eoln )
-						.append( "( foreach( NH, " ).append( latestNHits ).append( " ),").append( eoln )
-							.append( "  param( " ).append( vytesnTag ).append( " )").append( eoln )
-							.append( "do" ).append( eoln )
-							.append( vytesnTag ).append( " #\\= NH" ).append( eoln )
-						.append( ")," ).append( eoln );
-						
-//							ecl
-//							.append( "intset( " )
-//								.append( vytesnTagSet )
-//								.append( ", 0, ")
-//								.append( maxTag )
-//								.append( " ), " )
-//							.append( "#( " ).append( vytesnTagSet ).append( ", 1 ), ")
-//							.append( vytesnTag ).append( " in " ).append( vytesnTagSet ).append( "," ).append( eoln );
-						
-//							String vytesnTagsStructure = "VytesnTagsOfLevel" + miss.getLevel();
-//							String vytesnTagSetsStructure = "VytesnTagSetsOfLevel" + miss.getLevel();
-//							String vytesnTagIdxsStructure = "VytesnTagIdxsOfLevel" + miss.getLevel();
-
-						ecl
-						.append( "lru:addVytesnTag( ")
-							.append( vytesnTag ).append( ", " )
-							.append( latestSetVar ).append( ", " )
-							.append( hitSetsStructure ).append( ", " )
-							.append( vytesnStructure )
-						.append( ")," ).append( eoln )
-						
-						.append( "intset( " ).append( vytesnTag ).append( "set, 0, " ).append( maxTag ).append( " )," )
-						.append( "#( " ).append( vytesnTag ).append( "set, 1 )," )
-						.append( vytesnTag ).append( " in " ).append( vytesnTag ).append( "set," ).append( eoln )
-						
-//							.append( "lru:addVytesnTagSet( ")
-//								.append( vytesnTagSet ).append( ", " )
-//								.append( vytesnTagSetsStructure ).append( ", " )
-//								.append( setNumber )
-//							.append( ")," ).append( eoln );
-//							
-//							StringBuffer hitsCount = tagsVersions.newVar();
-//							ecl.append( "lru:hitsCount( " )
-//								.append( hitsCount ).append( ", " )
-//								.append( hitsStructure ).append( ", " )
-//								.append( setNumber )
-//							.append( ")," ).append( eoln )
+//    private void cacheOperationTranslate(
+//    		  Command command
+//    		, List<Cache> cacheLevels
+//    		, VarsController tagsVersions
+//    		, StringBuffer ecl
+//    		, Map<Cache, String> setVars
+//    		, Map<Cache, String> tagVars
+//    		, Map<Cache, String> vytesntagVars
+//    		, final List<String> hitTags
+//    	    , final List<String> vytesnTags
+//    		, final List<String> missTags
+//    	)
+//    {
+//		Map<String, Set<ProcedureTestSituation>> testSituation = command.getTestSituationParameters();
+//		for( String procedure : testSituation.keySet() )
+//		{
+//			Set<ProcedureTestSituation> params = testSituation.get( procedure );
 //
-//							.append( "lru:addVytesnTagIdx( ")
-//								.append( hitsCount ).append( ", " )
-//								.append( vytesnTagIdxsStructure ).append( ", " )
-//								.append( setNumber )
-//							.append( ")," ).append( eoln )
-
-						.append( eoln )
-						
-						.append( "% тег - причина промаха").append( eoln )
-						.append( tag ).append( " #:: [ 0 .. ").append( maxTag ).append(" ], " )
-						.append( tag ).append( " notin " ).append( latestSetVar ).append( "," ).append( eoln )
-						.append( "intset( " ).append( tagset ).append( ", 0, ").append( maxTag ).append( " ), " )
-						.append( "#( " ).append( tagset ).append( ", 1 ), ")
-						.append( tag ).append( " in " ).append( tagset ).append( "," ).append( eoln )
-						.append( eoln );
-
-						StringBuffer nextSetVar = tagsVersions.newVar();
-						ecl.append( nextSetVar ).append( " = (( " )
-							.append( latestSetVar ).append( " \\ " ).append( vytesnTagSet )
-							.append(" ) \\/ ").append( tagset )
-						.append( ")," ).append( eoln )
-						.append( "lru:addSetVar( " )
-							.append( nextSetVar ).append( ", " )
-							.append( setVarsStructure ).append( ", " )
-							.append( setNumber )
-						.append( ")," ).append( eoln )
-						.append( "lru:addHit( " )
-							.append( tag ).append( ", " )
-							.append( tag ).append( "set, " )
-							.append( nextSetVar ).append( ", " )
-							.append( hitSetsStructure )
-						.append( ")," ).append( eoln )
-						.append( eoln );
-
-						vytesnTags.add( vytesnTag );
-					    missTags.add( tag );
-					}
-					else
-						continue;
-				}
-			}
-		}
-
-    }
+//			if ( procedure.equals( "LoadMemory" )
+//				|| procedure.equals( "StoreMemory" )
+//				)
+//			{
+//				for( ProcedureTestSituation ts : params )
+//				{
+//					if ( ts instanceof CacheHit )
+//					{
+//						if ( cacheLevels.isEmpty() )
+//						{
+//							throw new Error("Define caches for using cache test situations");
+//						}
+//						
+//						CacheHit hit = (CacheHit)ts;
+//						Cache cache = cacheLevels.get( hit.getLevel() );
+//						String tag = tagVars.get( cache );
+//						String tagset = tag + "set";
+//						
+//						// HIT for 'tag' in 'cache'
+//						
+//						StringBuffer setVar = tagsVersions.newVar();
+//						String setVarsStructure = "CurrentSetsOfLevel" + hit.getLevel();
+////							String hitsStructure = "HitsOfLevel" + hit.getLevel();
+//						StringBuffer hitSetsStructure = tagsVersions.newVar();
+////							String setVersionsStructure = "SetVersionsOfLevel" + hit.getLevel();
+//						String setNumber = setVars.get( cache );
+//						
+//						ecl.append( "lru:latestSetVar( " )
+//						.append( hitSetsStructure ).append( ", " )
+//							.append( setVar ).append( ", " )
+//							.append( "_, " )
+//							.append( setVarsStructure ).append( ", " )
+//							.append( setNumber )
+//						.append( " )," ).append( eoln )
+//						.append( tag ).append( " in " ).append( setVar ).append( "," ).append( eoln )
+//						.append( "intset( " ).append( tagset ).append( ", 0, " ).append( (int)Math.pow(2, cache.getTagBitLength() ) - 1 ).append( " ), " )
+//						.append( "#( " ).append( tagset ).append( ", 1 ), " )
+//						.append( tag ).append( " in " ).append( tagset ).append( "," ).append( eoln )
+//						
+//						.append( "lru:addHit( ")
+//							.append( tag ).append( ", " )
+//							.append( tag ).append( "set, " )
+//							.append( setVar ).append( ", " )
+//							.append( hitSetsStructure )
+//						.append( " )," ).append( eoln )
+//						
+////							.append( "lru:addSet( ").append( setVar ).append( ", " ).append( setVersionsStructure ).append( ", " ).append( setNumber ).append( " )," ).append( eoln )
+//						.append( eoln );
+//
+//					    hitTags.add( tag );
+//					}
+//					else if ( ts instanceof CacheMiss )
+//					{
+//						if ( cacheLevels.isEmpty() )
+//						{
+//							throw new Error("Define caches for using cache test situations");
+//						}
+//						
+//						CacheMiss miss = (CacheMiss)ts;
+//						Cache cache = cacheLevels.get( miss.getLevel() );
+//						String tag = tagVars.get( cache );
+//						String tagset = tag + "set";
+//
+//						// MISS for 'tag' in 'cache
+//						String vytesnTag = miss.getVTagVar();
+//						if ( vytesnTag == null )
+//						{
+//							vytesnTag = vytesntagVars.get( cache );
+//						}
+//						String vytesnTagSet = vytesnTag + "set";
+//
+//						/*	X2 = vytesnTag, X3 = tag
+//						 *  X2 in S1,
+//							intset( TX2, 1, 5 ), #( TX2, 1 ), X2 in TX2,
+//							
+//							X3 #:: [ 1 .. 6 ], X3 notin S1,
+//							intset( TX3, 1, 6 ), #( TX3, 1 ), X3 in TX3,
+//							
+//							S2 = (( S1 \ TX2 ) \/ TX3),
+//						 */
+//						
+//						StringBuffer latestSetVar = tagsVersions.newVar();
+//						String setNumber = setVars.get( cache );
+//						String setVarsStructure = "CurrentSetsOfLevel" + miss.getLevel();
+//						StringBuffer hitSetsStructure = tagsVersions.newVar();
+//						StringBuffer vytesnStructure = tagsVersions.newVar();
+//						
+//						int maxTag = (int)Math.pow(2, cache.getTagBitLength() ) - 1;
+//						ecl
+//						.append( "lru:latestSetVar( " )
+//							.append( latestSetVar ).append( ", " )
+//							.append( hitSetsStructure ).append( ", " )
+//							.append( vytesnStructure ).append( ", " )
+//							.append( setVarsStructure ).append ( ", " )
+//							.append( setNumber )
+//						.append( " )," ).append( eoln )
+//						
+//						.append( "% вытесняемый тег").append( eoln )
+//						.append( vytesnTag ).append( " in " ).append( latestSetVar ).append( "," ).append( eoln );
+//						
+//						StringBuffer latestNHits = tagsVersions.newVar();
+//						
+//						ecl.append( "lru:latestNHits( ")
+//							.append( latestNHits ).append( ", " )
+//							.append( cache.getSectionNumber() - 1 ).append( ", " )
+//							.append( hitSetsStructure )
+//						.append( ")," ).append( eoln )
+//						.append( "( foreach( NH, " ).append( latestNHits ).append( " ),").append( eoln )
+//							.append( "  param( " ).append( vytesnTag ).append( " )").append( eoln )
+//							.append( "do" ).append( eoln )
+//							.append( vytesnTag ).append( " #\\= NH" ).append( eoln )
+//						.append( ")," ).append( eoln );
+//						
+////							ecl
+////							.append( "intset( " )
+////								.append( vytesnTagSet )
+////								.append( ", 0, ")
+////								.append( maxTag )
+////								.append( " ), " )
+////							.append( "#( " ).append( vytesnTagSet ).append( ", 1 ), ")
+////							.append( vytesnTag ).append( " in " ).append( vytesnTagSet ).append( "," ).append( eoln );
+//						
+////							String vytesnTagsStructure = "VytesnTagsOfLevel" + miss.getLevel();
+////							String vytesnTagSetsStructure = "VytesnTagSetsOfLevel" + miss.getLevel();
+////							String vytesnTagIdxsStructure = "VytesnTagIdxsOfLevel" + miss.getLevel();
+//
+//						ecl
+//						.append( "lru:addVytesnTag( ")
+//							.append( vytesnTag ).append( ", " )
+//							.append( latestSetVar ).append( ", " )
+//							.append( hitSetsStructure ).append( ", " )
+//							.append( vytesnStructure )
+//						.append( ")," ).append( eoln )
+//						
+//						.append( "intset( " ).append( vytesnTag ).append( "set, 0, " ).append( maxTag ).append( " )," )
+//						.append( "#( " ).append( vytesnTag ).append( "set, 1 )," )
+//						.append( vytesnTag ).append( " in " ).append( vytesnTag ).append( "set," ).append( eoln )
+//						
+////							.append( "lru:addVytesnTagSet( ")
+////								.append( vytesnTagSet ).append( ", " )
+////								.append( vytesnTagSetsStructure ).append( ", " )
+////								.append( setNumber )
+////							.append( ")," ).append( eoln );
+////							
+////							StringBuffer hitsCount = tagsVersions.newVar();
+////							ecl.append( "lru:hitsCount( " )
+////								.append( hitsCount ).append( ", " )
+////								.append( hitsStructure ).append( ", " )
+////								.append( setNumber )
+////							.append( ")," ).append( eoln )
+////
+////							.append( "lru:addVytesnTagIdx( ")
+////								.append( hitsCount ).append( ", " )
+////								.append( vytesnTagIdxsStructure ).append( ", " )
+////								.append( setNumber )
+////							.append( ")," ).append( eoln )
+//
+//						.append( eoln )
+//						
+//						.append( "% тег - причина промаха").append( eoln )
+//						.append( tag ).append( " #:: [ 0 .. ").append( maxTag ).append(" ], " )
+//						.append( tag ).append( " notin " ).append( latestSetVar ).append( "," ).append( eoln )
+//						.append( "intset( " ).append( tagset ).append( ", 0, ").append( maxTag ).append( " ), " )
+//						.append( "#( " ).append( tagset ).append( ", 1 ), ")
+//						.append( tag ).append( " in " ).append( tagset ).append( "," ).append( eoln )
+//						.append( eoln );
+//
+//						StringBuffer nextSetVar = tagsVersions.newVar();
+//						ecl.append( nextSetVar ).append( " = (( " )
+//							.append( latestSetVar ).append( " \\ " ).append( vytesnTagSet )
+//							.append(" ) \\/ ").append( tagset )
+//						.append( ")," ).append( eoln )
+//						.append( "lru:addSetVar( " )
+//							.append( nextSetVar ).append( ", " )
+//							.append( setVarsStructure ).append( ", " )
+//							.append( setNumber )
+//						.append( ")," ).append( eoln )
+//						.append( "lru:addHit( " )
+//							.append( tag ).append( ", " )
+//							.append( tag ).append( "set, " )
+//							.append( nextSetVar ).append( ", " )
+//							.append( hitSetsStructure )
+//						.append( ")," ).append( eoln )
+//						.append( eoln );
+//
+//						vytesnTags.add( vytesnTag );
+//					    missTags.add( tag );
+//					}
+//					else
+//						continue;
+//				}
+//			}
+//		}
+//
+//    }
 
 //    private String tlb_latestSetVar;
     private String tlbOperationTranslate(
@@ -2709,7 +3103,7 @@ public class Solver
 			
 			ecl.append( "lru:latestNHits( ")
 				.append( latestNHits ).append( ", " )
-				.append( tlb.getBufferSize() - 1 ).append( ", " )
+				.append( tlb.getMicroTLBSize() - 1 ).append( ", " )
 				.append( hitSetsStructure )
 			.append( ")," ).append( eoln )
 			.append( "( foreach( NH, " ).append( latestNHits ).append( " ),").append( eoln )
@@ -3140,190 +3534,190 @@ public class Solver
     	return result;
     }
     
-    private void readConstraintsFromTemplate(
-    			Scheme scheme,
-    			ConstraintManager constraintManager,
-    			ArgumentsManager argManager,
-    			final VarsController tagNames,
-    			final List<Cache> cacheLevels
-    		)
-    {
-    	for( final Command c : scheme.getCommands() )
-    	{
-    		Map<String, Set<ProcedureTestSituation>> tsParams = c.getTestSituationParameters();
-    		Set<ProcedureTestSituation> memts = new HashSet<ProcedureTestSituation>();
-    		if ( c.isLOAD() )
-    		{
-    			memts.addAll( tsParams.get( "LoadMemory" ) );
-    		}
-    		if ( c.isSTORE() )
-    		{
-    			memts.addAll( tsParams.get( "StoreMemory" ) );
-    		}
-    		if ( tsParams.containsKey( "AddressTranslation" ) )
-    		{
-    			memts.addAll( tsParams.get( "AddressTranslation" ) );
-    		}
-    			
-			for( final ProcedureTestSituation ts : memts )
-			{
-				if ( ts instanceof CacheHit )
-				{
-					final CacheHit hit = (CacheHit)ts;
-					argManager.addArgument( 
-							new ru.teslaprj.constraints.args.Set(){
-
-								@Override
-								public Cache getCache() {
-									return cacheLevels.get( hit.getLevel() );
-								}
-
-								@Override
-								public Command getCommand() {
-									return c;
-								}
-
-								@Override
-								public String getName() {
-									return notnull( hit.getSetVar(), tagNames );
-								}} 
-						);
-					argManager.addArgument( 
-							new ru.teslaprj.constraints.args.Tag(){
-								@Override
-								public Command getCommand() {
-									return c;
-								}
-
-								@Override
-								public int getLevel() {
-									return hit.getLevel();
-								}
-
-								@Override
-								public String getName() {
-									return notnull( hit.getTagVar(), tagNames );
-								}}
-						);
-				}
-				else if ( ts instanceof CacheMiss )
-				{
-					final CacheMiss miss = (CacheMiss)ts;
-					argManager.addArgument(
-							new ru.teslaprj.constraints.args.Set(){
-
-								@Override
-								public Cache getCache() {
-									return cacheLevels.get( miss.getLevel() );
-								}
-
-								@Override
-								public Command getCommand() {
-									return c;
-								}
-
-								@Override
-								public String getName() {
-									return notnull( miss.getSetVar(), tagNames );
-								}}
-						);
-					argManager.addArgument(
-							new ru.teslaprj.constraints.args.Tag(){
-								@Override
-								public Command getCommand() {
-									return c;
-								}
-
-								@Override
-								public int getLevel() {
-									return miss.getLevel();
-								}
-
-								@Override
-								public String getName() {
-									return notnull( miss.getTagVar(), tagNames );
-								}}
-    					);
-					// TTODO вытесненный тег!!! constraint: vytesn = p
-				}
-				else if ( ts instanceof TLBHit )
-				{
-					argManager.addArgument(
-							new VirtualAddress(){
-								@Override
-								public Command getCommand() {
-									return c;
-								}
-
-								@Override
-								public String getName() {
-									return notnull( ((TLBHit)ts).getVirtualAddressVar(), tagNames );
-								}}
-						);
-					argManager.addArgument(
-							new PhysicalAddressAfterTranslation(){
-								@Override
-								public Command getCommand() {
-									return c;
-								}
-
-								@Override
-								public String getName() {
-									return notnull( ((TLBHit)ts).getPhysicalAddressVar(), tagNames );
-								}}
-						);
-				}
-				else if ( ts instanceof TLBMiss )
-				{
-					argManager.addArgument(
-							new VirtualAddress(){
-								@Override
-								public Command getCommand() {
-									return c;
-								}
-
-								@Override
-								public String getName() {
-									return notnull( ((TLBMiss)ts).getVirtualAddressVar(), tagNames );
-								}}
-						);
-					argManager.addArgument(
-							new PhysicalAddressAfterTranslation(){
-								@Override
-								public Command getCommand() {
-									return c;
-								}
-
-								@Override
-								public String getName() {
-									return notnull( ((TLBMiss)ts).getPhysicalAddressVar(), tagNames );
-								}}
-							);
-				}
-			}
-    	}
-    	
-    	for( Assert a : scheme.getAsserts() )
-    	{
-    		if ( (a.getTestSituation().equals("=") || a.getTestSituation().equals("#"))
-    				&& a.getArgs().size() == 2 )
-    		{
-    			Argument first = argManager.getArgument( a.getArgs().get(0) );
-    			Argument second = argManager.getArgument( a.getArgs().get(1) );
-    			// TTODO проверить, что эти аргументы одного динамического типа
-    			// что у них одинаковый битовый размер
-    			// и если это теги, сеты, то что еще они относятся к одному уровню кэша
-    			// Если что-нибудь из этого не выполнено, выдавать ошибку!
-    			// проверить, возможен ли тут уровень0 для тегов-сетов!
-    			Constraint c = new Constraint (
-    					( a.getTestSituation().equals( "=" ) ? Relation.EQ : Relation.NEQ ),
-    					first, 
-    					second );
-    			constraintManager.add( c );
-    		}
-    		//TTODO else выдать ошибку, что в таком виде спец.ограничения не описывают!
-    	}
-    }
+//    private void readConstraintsFromTemplate(
+//    			Scheme scheme,
+//    			ConstraintManager constraintManager,
+//    			ArgumentsManager argManager,
+//    			final VarsController tagNames,
+//    			final List<Cache> cacheLevels
+//    		)
+//    {
+//    	for( final Command c : scheme.getCommands() )
+//    	{
+//    		Map<String, Set<ProcedureTestSituation>> tsParams = c.getTestSituationParameters();
+//    		Set<ProcedureTestSituation> memts = new HashSet<ProcedureTestSituation>();
+//    		if ( c.isLOAD() )
+//    		{
+//    			memts.addAll( tsParams.get( "LoadMemory" ) );
+//    		}
+//    		if ( c.isSTORE() )
+//    		{
+//    			memts.addAll( tsParams.get( "StoreMemory" ) );
+//    		}
+//    		if ( tsParams.containsKey( "AddressTranslation" ) )
+//    		{
+//    			memts.addAll( tsParams.get( "AddressTranslation" ) );
+//    		}
+//    			
+//			for( final ProcedureTestSituation ts : memts )
+//			{
+//				if ( ts instanceof CacheHit )
+//				{
+//					final CacheHit hit = (CacheHit)ts;
+//					argManager.addArgument( 
+//							new ru.teslaprj.constraints.args.Set(){
+//
+//								@Override
+//								public Cache getCache() {
+//									return cacheLevels.get( hit.getLevel() );
+//								}
+//
+//								@Override
+//								public Command getCommand() {
+//									return c;
+//								}
+//
+//								@Override
+//								public String getName() {
+//									return notnull( hit.getSetVar(), tagNames );
+//								}} 
+//						);
+//					argManager.addArgument( 
+//							new ru.teslaprj.constraints.args.Tag(){
+//								@Override
+//								public Command getCommand() {
+//									return c;
+//								}
+//
+//								@Override
+//								public int getLevel() {
+//									return hit.getLevel();
+//								}
+//
+//								@Override
+//								public String getName() {
+//									return notnull( hit.getTagVar(), tagNames );
+//								}}
+//						);
+//				}
+//				else if ( ts instanceof CacheMiss )
+//				{
+//					final CacheMiss miss = (CacheMiss)ts;
+//					argManager.addArgument(
+//							new ru.teslaprj.constraints.args.Set(){
+//
+//								@Override
+//								public Cache getCache() {
+//									return cacheLevels.get( miss.getLevel() );
+//								}
+//
+//								@Override
+//								public Command getCommand() {
+//									return c;
+//								}
+//
+//								@Override
+//								public String getName() {
+//									return notnull( miss.getSetVar(), tagNames );
+//								}}
+//						);
+//					argManager.addArgument(
+//							new ru.teslaprj.constraints.args.Tag(){
+//								@Override
+//								public Command getCommand() {
+//									return c;
+//								}
+//
+//								@Override
+//								public int getLevel() {
+//									return miss.getLevel();
+//								}
+//
+//								@Override
+//								public String getName() {
+//									return notnull( miss.getTagVar(), tagNames );
+//								}}
+//    					);
+//					// TTODO вытесненный тег!!! constraint: vytesn = p
+//				}
+//				else if ( ts instanceof TLBHit )
+//				{
+//					argManager.addArgument(
+//							new VirtualAddress(){
+//								@Override
+//								public Command getCommand() {
+//									return c;
+//								}
+//
+//								@Override
+//								public String getName() {
+//									return notnull( ((TLBHit)ts).getVirtualAddressVar(), tagNames );
+//								}}
+//						);
+//					argManager.addArgument(
+//							new PhysicalAddressAfterTranslation(){
+//								@Override
+//								public Command getCommand() {
+//									return c;
+//								}
+//
+//								@Override
+//								public String getName() {
+//									return notnull( ((TLBHit)ts).getPhysicalAddressVar(), tagNames );
+//								}}
+//						);
+//				}
+//				else if ( ts instanceof TLBMiss )
+//				{
+//					argManager.addArgument(
+//							new VirtualAddress(){
+//								@Override
+//								public Command getCommand() {
+//									return c;
+//								}
+//
+//								@Override
+//								public String getName() {
+//									return notnull( ((TLBMiss)ts).getVirtualAddressVar(), tagNames );
+//								}}
+//						);
+//					argManager.addArgument(
+//							new PhysicalAddressAfterTranslation(){
+//								@Override
+//								public Command getCommand() {
+//									return c;
+//								}
+//
+//								@Override
+//								public String getName() {
+//									return notnull( ((TLBMiss)ts).getPhysicalAddressVar(), tagNames );
+//								}}
+//							);
+//				}
+//			}
+//    	}
+//    	
+//    	for( Assert a : scheme.getAsserts() )
+//    	{
+//    		if ( (a.getTestSituation().equals("=") || a.getTestSituation().equals("#"))
+//    				&& a.getArgs().size() == 2 )
+//    		{
+//    			Argument first = argManager.getArgument( a.getArgs().get(0) );
+//    			Argument second = argManager.getArgument( a.getArgs().get(1) );
+//    			// TTODO проверить, что эти аргументы одного динамического типа
+//    			// что у них одинаковый битовый размер
+//    			// и если это теги, сеты, то что еще они относятся к одному уровню кэша
+//    			// Если что-нибудь из этого не выполнено, выдавать ошибку!
+//    			// проверить, возможен ли тут уровень0 для тегов-сетов!
+//    			Constraint c = new Constraint (
+//    					( a.getTestSituation().equals( "=" ) ? Relation.EQ : Relation.NEQ ),
+//    					first, 
+//    					second );
+//    			constraintManager.add( c );
+//    		}
+//    		//TTODO else выдать ошибку, что в таком виде спец.ограничения не описывают!
+//    	}
+//    }
     
 //    private static String getSetVar( int cacheLevel, int setNumber )
 //    {

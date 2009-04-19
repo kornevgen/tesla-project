@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ru.teslaprj.scheme.ts.CacheTestSituation;
 import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 import ru.teslaprj.scheme.ts.TLBHit;
 import ru.teslaprj.scheme.ts.TLBMiss;
@@ -105,6 +106,33 @@ public class Command
 	private String testSituation;
 	private Map<String, Set<ProcedureTestSituation> > testSituationParameters;
 	private int memValueSize = -1;
+	
+	public boolean hasCacheSituation()
+	{
+		return testSituationParameters.containsKey( "LoadMemory" ) ||
+		testSituationParameters.containsKey("StoreMemory");
+	}
+	
+	public CacheTestSituation getCacheSituation( int cacheLevel )
+	{
+		if ( ! hasCacheSituation() )
+			return null;
+		Set<ProcedureTestSituation> pts;
+		if ( testSituationParameters.containsKey("LoadMemory") )
+			pts = testSituationParameters.get("LoadMemory");
+		else
+			pts = testSituationParameters.get("StoreMemory");
+		
+		for( ProcedureTestSituation ts : pts )
+		{
+			if ( ts instanceof CacheTestSituation )
+			{
+				if ( ((CacheTestSituation) ts).getLevel() == cacheLevel )
+					return (CacheTestSituation)ts;
+			}
+		}
+		return null;
+	}
 
 	/**
 	 * @return 3 +> DOUBLEWORD (64bits), 

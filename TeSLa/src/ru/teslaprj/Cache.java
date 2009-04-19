@@ -31,7 +31,7 @@ public interface Cache
 //    
 //    void write(long physicalAddress, byte data[]);
 //
-    long getTag(int section, int row);
+    long getTag(int section, int set);
 //    
 //    void setTag(int section, int row, long tag);
 //    
