@@ -27,11 +27,14 @@ import ru.teslaprj.scheme.ts.TLBMiss;
 
 public class LDSDSample
 {
+	private static final int PFN_BITLEN = 24;
+
 	public static void main( String[] args )
 	{
 		Solver solver = new Solver( new File("src.sample" ), new File("clp") );
 		
 		List<Cache> cacheLevels = new ArrayList<Cache>();
+		
 		Random r = new Random();
 		final int[][] tags1 = new int[(int)Math.pow(2, 7)][4];
 		for( int i = 0; i < (int)Math.pow(2,7); i++ )
@@ -49,7 +52,6 @@ public class LDSDSample
 				tags2[i][j] = r.nextInt( (int)Math.pow(2,17) );
 			}
 		}
-		// TODO initialize cache
 		cacheLevels.add( new Cache()
 		{
 			@Override
@@ -106,7 +108,118 @@ public class LDSDSample
 				return tags2[section][row];
 			}
 		} );
+		
+		// initialize TLB
+		final int[] pfn0 = new int[48];
+		final int[] pfn1 = new int[48];
+		final int[] ranges = new int[48];
+		for( int i = 0; i < 48; i++ )
+		{
+			pfn0[i] = r.nextInt( (int)Math.pow(2, PFN_BITLEN) );
+			pfn1[i] = r.nextInt( (int)Math.pow(2, PFN_BITLEN) );
+			ranges[i] = r.nextInt( 4 );
+		}
+		
+		final int[] masks = new int[48];
+		final int[] vpnd2s = new int[48]; 
+		// генерируем так, чтобы не нарушилась консистентность TLB
+		for( int range = 0; range < 4; range++ )
+		{
+			// индексы строк TLB, у которых поле r равно range
+			List<Integer> indexes = new ArrayList<Integer>();
+			for( int i = 0; i < 48; i++  )
+			{
+				if ( ranges[i] == range )
+					indexes.add(i);
+			}
+			List<Integer> vs = new ArrayList<Integer>();
+			for( int i = 0; i < indexes.size(); i++ )
+			{
+				// выбираем маску
+				masks[indexes.get(i)] = r.nextInt(9); //maxmask = 8
+				
+				// выбираем vpn/2
+				int v;
+				do
+				{
+					v = r.nextInt((int)Math.pow(2, 40-28));//segbits - (2*maxmask+vpnd2start-1)
+				} while( vs.contains(v) );
+				
+				vs.add(v);
+				vpnd2s[indexes.get(i)] = v << 2*masks[indexes.get(i)];
+			}
+		}
+		
+		final TLBRow[] tlbRows = new TLBRow[48];
+		for( int i = 0; i < 48; i++ )
+		{
+			final BigInteger p0 = new BigInteger( new Integer(pfn0[i]).toString() );
+			final BigInteger p1 = new BigInteger( new Integer(pfn1[i]).toString() );
+			final int range = ranges[i];
+			final int mask = masks[i];
+			final BigInteger v = new BigInteger( new Integer(vpnd2s[i]).toString() );
+			
+			tlbRows[i] = new TLBRow(){
+				@Override
+				public Integer getAsid() {
+					return 0;
+				}
 
+				@Override
+				public Integer getGlobal() {
+					return 0;
+				}
+
+				@Override
+				public Integer getMask() {
+					return mask;
+				}
+
+				@Override
+				public BigInteger getPFN0() {
+					return p0;
+				}
+
+				@Override
+				public BigInteger getPFN1() {
+					return p1;
+				}
+
+				@Override
+				public Integer getRange() {
+					return range;
+				}
+
+				@Override
+				public BigInteger getVPNd2() {
+					return v;
+				}
+
+				@Override
+				public int getValid0() {
+					return 1;
+				}
+
+				@Override
+				public int getValid1() {
+					return 1;
+				}
+
+				@Override
+				public int getmoDify0() {
+					return 1;
+				}
+
+				@Override
+				public int getmoDify1() {
+					return 1;
+				}};
+		}
+		
+		final List<Integer> dtlb = Arrays.asList( 1, 2, 3, 0 );
+		final List<Integer> itlb = Arrays.asList( 11, 21, 31, 10 );
+
+		
 			// 1. сформировать схему
 			// перебор зависимостей:
 			/**
@@ -356,11 +469,12 @@ public class LDSDSample
 					scheme.addCommand( new Command("LD", params1, "regular", m1));
 					scheme.addCommand( new Command("SD", params2, "regular", m2));
 
-					//TODO TLB build
+					//TLB build
+					//TODO представленное тут вычисление границ vpn/2 работает только в Mapped сегменте!
 					TLB tlb = new TLB(){
 
 						@Override
-						public int getBufferSize() {
+						public int getMicroTLBSize() {
 							return 4;
 						}
 
@@ -371,27 +485,27 @@ public class LDSDSample
 
 						@Override
 						public int getMaximumOfMask() {
-							return 2;
+							return 8;
 						}
 
 						@Override
 						public int getRangeEndBit() {
-							return 39;
+							return 63;
 						}
 
 						@Override
 						public int getRangeStartBit() {
-							return 38;
+							return 62;
 						}
 
 						@Override
 						public int getVPNd2EndBit() {
-							return 37;
+							return getSEGBITS() - 1;
 						}
 
 						@Override
 						public int getVPNd2StartBit() {
-							return 12;
+							return 13;
 						}
 
 						@Override
@@ -401,7 +515,7 @@ public class LDSDSample
 
 						@Override
 						public int getPFNBitLen() {
-							return 24;
+							return PFN_BITLEN;
 						}
 
 						@Override
@@ -412,17 +526,27 @@ public class LDSDSample
 						@Override
 						public int getASIDBitLen() {
 							return 8;
+						}
+
+						@Override
+						public List<Integer> getDTLB() {
+							return dtlb;
+						}
+
+						@Override
+						public List<Integer> getITLB() {
+							return itlb;
+						}
+
+						@Override
+						public TLBRow getRow(int index) {
+							return tlbRows[index];
 						}};
 
 					
-					//TODO cache build
-					
-					//TODO memory build
-					
-					//TODO solve!
 					Verdict verdict = solver.solve(scheme, cacheLevels, tlb );
 					
-					//TODO check verdict and change cache
+					//TODO check verdict and change cache and TLB
 
 					//TODO print answer, check answer
 					// 3. распечатать ответ

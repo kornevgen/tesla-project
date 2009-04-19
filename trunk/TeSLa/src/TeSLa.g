@@ -446,13 +446,13 @@ procedure
 			
 			virtualAddress = varsc.getCurrent( virtual, virtual.getText() );
 			
-			if ( varsc.getVar( virtual, virtual.getText() ).size != tlb.getVirtualAddressBitLen() )
+			if ( varsc.getVar( virtual, virtual.getText() ).size != tlb.getSEGBITS() )
 			{
 				throw new SemanticException(
 					virtual,
 					"Size of virtual address variable '" +
 					varsc.getVar( virtual, virtual.getText() ).getCanonicalName() +
-					"' must be equal to " + tlb.getVirtualAddressBitLen() );
+					"' must be equal to " + tlb.getSEGBITS() );
 			}
 			
 			// add new variable if needed
@@ -460,19 +460,19 @@ procedure
 			{
 				varsc.addVar( 
 					  phys.getText()
-					, tlb.getPhysicalAddressBitLen()
+					, tlb.getPABITS()
 					, LogicalVariable.Status.LOCAL
 					, false );
 			}
 			else
 			{
-				if ( varsc.getVar( phys, phys.getText() ).size != tlb.getPhysicalAddressBitLen() )
+				if ( varsc.getVar( phys, phys.getText() ).size != tlb.getPABITS() )
 				{
 					throw new SemanticException( 
 						phys, 
 						"Size of physical address variable '" + 
 						varsc.getVar( phys, phys.getText() ).getCanonicalName() +
-						"' must be equal to " +  tlb.getPhysicalAddressBitLen() );
+						"' must be equal to " +  tlb.getPABITS() );
 				}
 			}
 			
@@ -492,22 +492,22 @@ procedure
 				ecl.append( "numbers:getbits( " )
 					.append( tmp ).append( ", " )
 					.append( virtualAddress ).append( ", " )
-					.append( tlb.getVirtualAddressBitLen() ).append( ", " )
-					.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 ).append( ", " )
+					.append( tlb.getSEGBITS() ).append( ", " )
+					.append( tlb.getPABITS() - tlb.getPFNBitLen() - 1 ).append( ", " )
 					.append( "0 )," ).append( eoln );
 					
 				StringBuffer tmp2 = varsc.newVar(); 
 				ecl.append( "numbers:getbits( " )
 					.append( tmp2 ).append( ", " )
 					.append( physicalAddressAfterTranslation ).append( ", " )
-					.append( tlb.getPhysicalAddressBitLen() ).append( ", " )
-					.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 ).append( ", " )
+					.append( tlb.getPABITS() ).append( ", " )
+					.append( tlb.getPABITS() - tlb.getPFNBitLen() - 1 ).append( ", " )
 					.append( "0 )," ).append( eoln );
 				
 				ecl.append( "numbers:equal( " )
 					.append( tmp ).append( ", " )
 					.append( tmp2 ).append( ", " )
-					.append( tlb.getPhysicalAddressBitLen() - tlb.getPFNBitLen() - 1 )
+					.append( tlb.getPABITS() - tlb.getPFNBitLen() - 1 )
 				.append( ")," ).append( eoln );	
 				
 				

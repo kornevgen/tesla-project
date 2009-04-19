@@ -140,7 +140,7 @@ public class ConstraintManager
 	
 	public void add( Constraint c )
 	{
-		StaticConstraint cc;
+//		StaticConstraint cc;
 		//TODO convert c to static constraint form using diffVars
 		
 //		staticConstraints.add(cc);
