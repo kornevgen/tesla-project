@@ -1,10 +1,10 @@
-247 Patch Control
+275 Patch Control
 
 0
 0
 1
 elektron.tex
-1
+8
 1
 0
 
@@ -15,6 +15,27 @@ elektron.tex
 
 elektron.tex
 TeX
-403714043 0 91 11 91 49 0 0 854 522 0 406 341 -1 -1 0 0 43 0 0 43 1 0 49 91   0
+403714043 0 -1 656 -1 657 0 0 854 522 0 30 374 -1 -1 0 0 42 -1 -1 42 1 0 657 -1   0
+C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\Programmirovanie\review.tex
+TeX
+1060859 1 -1 86 -1 14128 22 29 854 600 0 22 799 -1 -1 0 0 63 -1 -1 63 1 0 14128 -1   0
+C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\Programmirovanie\programmirovanie.bib
+BibTeX
+1049586 1 54 2 46 1 110 145 942 716 0 22 17 -1 -1 0 0 -1 -1 -1 -1 1 0 1 46   0
+C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\Programmirovanie\programmirovanie.tex
+TeX
+269496315 0 -1 0 -1 0 88 116 920 687 0 22 -273 -1 -1 0 0 -1 -1 -1 -1 1 0 0 -1   0
+C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\Programmirovanie\tlb.tex
+TeX
+269496315 0 -1 0 -1 0 66 87 898 658 0 22 -51 -1 -1 0 0 -1 -1 -1 -1 1 0 0 -1   0
+C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\Programmirovanie\intro.tex
+TeX
+269496315 1 -1 969 -1 1810 44 58 876 629 0 22 544 -1 -1 0 0 18 -1 -1 18 1 0 1810 -1   0
+C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\Voevodin2009\intro.tex
+TeX
+269496315 0 -1 0 -1 0 22 29 854 600 0 22 0 -1 -1 0 0 -1 -1 -1 -1 1 0 0 -1   0
+C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\Voevodin2009\review.tex
+TeX
+1060859 1 -1 131 -1 152 22 29 898 504 0 318 85 -1 -1 0 0 -1 -1 -1 -1 1 0 152 -1   0
 
 *elektron.tex
