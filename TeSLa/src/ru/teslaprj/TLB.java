@@ -1,6 +1,7 @@
 package ru.teslaprj;
 
 import java.util.List;
+import java.util.Set;
 
 public interface TLB
 {
@@ -47,4 +48,6 @@ public interface TLB
 	 * индексы строк, входящих в ITLB, в порядке омоложения lru
 	 */
 	List<Integer> getITLB();
+
+	Set<Long> getMicroPfns();
 }

@@ -100,6 +100,11 @@ public class Command
 		}
 		return null;
 	}
+	
+	public boolean hasTLBSituation()
+	{
+		return testSituationParameters.containsKey("AddressTranslation");
+	}
 
 	private String cop;
 	private List<String> args;

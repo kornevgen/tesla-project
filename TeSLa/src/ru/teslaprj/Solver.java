@@ -23,9 +23,7 @@ import org.antlr.runtime.RecognitionException;
 
 import ru.teslaprj.constraints.pfn.Argument;
 import ru.teslaprj.constraints.pfn.Constant;
-import ru.teslaprj.constraints.pfn.PFNConstraint;
 import ru.teslaprj.constraints.pfn.PFNsAreDifferent;
-import ru.teslaprj.constraints.pfn.SetConstraint;
 import ru.teslaprj.constraints.pfn.Variable;
 import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.Definition;
@@ -47,6 +45,8 @@ import ru.teslaprj.syntax.TeSLaLexer;
 import ru.teslaprj.syntax.TeSLaParser;
 import ru.teslaprj.syntax.VarsController;
 import ru.teslaprj.syntax.LogicalVariable.Status;
+import ru.teslaprj.tagsets.EmptyDomain;
+import ru.teslaprj.tagsets.Tagset;
 
 import com.parctechnologies.eclipse.CompoundTerm;
 import com.parctechnologies.eclipse.EclipseEngine;
@@ -166,398 +166,70 @@ public class Solver
 			}
 		}
 
-		RegistersProblem registersProblem = new RegistersProblem( scheme );
+		// create tagsets
+		List<Tagset> tagsets = new ArrayList<Tagset>();
+		for( Command cmd : scheme.getCommands() )
+		{
+			if ( cmd.hasCacheSituation() && cmd.hasTLBSituation() )
+			{
+				try
+				{
+					Tagset tagset = new Tagset( 
+							cmd.getTLBSituation(), 
+							cmd.getCacheSituation(1), 
+							cmd.getCacheSituation(2),
+							tagsets,
+							tlb,
+							cacheState.get(0),
+							cacheState.get(1)
+						);
+					tagsets.add( tagset );
+				}
+				catch( EmptyDomain e )
+				{
+					return null; // решения не существует
+				}
+			}
+		}
 		
+		// add evicted constraints
+		
+		// check tagsets consistency
+		if (! isConsistent( tagsets ) ) // + уравнения вытеснения
+			return null; // решения не существует
+		
+		// если система имеет обозримое количество решений, 
+		// то прямо их и надо запихнуть в прологовскую программу
+		// и не решать ограничения на тегсеты повторно!
+		
+		File tmp;
 		CompoundTerm result = null;
-		
-		Map<Command, StringBuffer> virtualAddresses = registersProblem.getVirtualAddresses();
-		Map<Command, StringBuffer> pfns = registersProblem.getPFNVariables();
-		int pfnsCount = pfns.values().size();
-		
-		//посчитать PFN \inter кэш
-		Map<Cache, Set<Integer>> pfnInterCache = getPfnInterCache(cacheState, tlb);
-		
-		//минимальные "подсказки" значений pfn, следующие из задачи на кэш (есть TODO)
-		Map<String, Set<Argument>> pfnProblem = createPfnProblem(scheme, cacheState,
-				pfns, pfnInterCache);
-		
-		//ограничения _только_ на pfn, следующие из задачи на micro-TLB
-		// ограничение на начальное состояние 
-		Set<PFNsAreDifferent> microProblem = addMicroTLBProblem(scheme, tlb, pfns);
-		
-		int max = pfnsCount - getMinimumOfNew( pfnProblem );
-		int newCountR = max;
-		int newCountL = 0; //количество элементов, где кроме new ничего другого невозможно
-		CompoundTerm previousResult = null;
-		
-		// looking for minimum applicable newCount
-		while (newCountL != newCountR)
+		try
 		{
-			int newCount = (newCountR + newCountL) / 2;
-			List<List<Boolean>> allNewFlags = createNewFlags(newCount, max );
+			String moduleName = createTempModuleName();
+			tmp = File.createTempFile(moduleName, ".ecl", libPath);
+			moduleName = tmp.getName();
+			moduleName = moduleName.substring(0, moduleName
+					.length() - 4);
 
-			boolean looking = false;
+			// TODO построение прологовской программы
+			// из каждого тегсета транслируется его ограничение
+			writeFile(tmp, newTranslate(scheme, moduleName, cacheState, tlb, tagsets) );
 
-			FlagsLooking: for (List<Boolean> newFlags : allNewFlags)
-			{
-				Map<String, Set<Argument>> finalPfnProblem =
-					getNewProjection( scheme.getCommands(), pfns, pfnProblem, newFlags);
+			// run ECLiPSe and get results
+			result = callECLiPSe(tmp, moduleName, scheme
+					.getDefinedNames(), cacheState);
 
-				// TODO выделение из задачи на pfn задачи на сеты
-				Set<SetConstraint> setConstraints = getSetConstraints(finalPfnProblem);
-
-				// TODO labeling сетов (с проверкой совместности задачи на pfn)
-				Set<Map<Command, Integer>> allSetsValues = heuristicLabelingSetConstraints(setConstraints);
-
-				for (Map<Command, Integer> setsValues : allSetsValues)
-				{
-					// TODO формулирование доп.задачи к задаче на регистры
-					Map<Command, PFNConstraint> constPfnProblem = addSetValues(
-							finalPfnProblem, setsValues);
-
-					if (inconsistent(constPfnProblem))
-						continue;
-
-					StringBuffer wholeProblem = createWholeProblem(
-							constPfnProblem, registersProblem);
-
-					File tmp;
-					try
-					{
-						String moduleName = createTempModuleName();
-						tmp = File.createTempFile(moduleName, ".ecl", libPath);
-						moduleName = tmp.getName();
-						moduleName = moduleName.substring(0, moduleName
-								.length() - 4);
-
-						// TODO объединение задач
-						writeFile(tmp, join(scheme, moduleName, cacheState, tlb, wholeProblem, registersProblem));
-
-						// run ECLiPSe and get results
-						result = callECLiPSe(tmp, moduleName, scheme
-								.getDefinedNames(), cacheState);
-
-						// TODO print current result with current newCount
-
-						looking = true;
-						break FlagsLooking;
-					}
-					catch (Fail f) {}
-					finally
-					{
-						if (tmp != null) tmp.delete();
-					}
-				}
-			}
-
-			if (looking)
-			{
-				if (newCount == newCountL)
-					break;// решение найдено, оно минимальное, дальше искать нет
-							// смысла
-
-				newCountR = newCount;
-				previousResult = result;
-			} else
-			{
-				if (newCount == newCountR)
-					throw new Unsuccessful();// нет решения, дальше искать нет
-												// смысла
-				if (newCount == newCountL) // i.e. newCountR == newCountL + 1
-				{
-					result = previousResult;
-					break Dihotomy;
-				}
-				newCountL = newCount;
-			}
+			// TODO print current result with current newCount
 		}
-		
-		if ( result != null )
+		finally
 		{
-			// analyze results
-			return generateValues( result, scheme, cacheState ) ;				
+			if (tmp != null) tmp.delete();
 		}
-				
+
 		// analyze results
 		return generateValues( result, scheme, cacheState ) ;
 //			return new Verdict(new HashMap<Definition, BigInteger>(), null );
-	}
-
-	private Map<String, Set<Argument>> getNewProjection(
-			List<Command> commands,
-			Map<Command, StringBuffer> pfns,
-			Map<String, Set<Argument>> pfnProblem,
-			List<Boolean> newFlags)
-	{
-		// get list of pfns from commands >< pfns
-		// foreach pfn: if set from pfnproblem is empty then put(pfn,empty)
-		//				else if next newFlags is true then put(pfn, empty)
-		//				else put(pfn, from pfnProblem)
-
-		Map<String, Set<Argument>> result = new HashMap<String, Set<Argument>>(); 
-		Iterator<Boolean> newFlagsIterator = newFlags.iterator();
-		for( int i = 0; i < commands.size(); i++ )
-		{
-			String pfn = pfns.get(commands.get(i)).toString();
-			Set<Argument> args = pfnProblem.get(pfn); //TODO may be null because of toString() new instance!!!!!
-			if ( args == null )
-				throw new IllegalStateException();
-			
-			if ( args.isEmpty() || ! newFlagsIterator.next() )
-			{
-				result.put( pfn, args );
-			}
-			else
-			{
-				result.put( pfn, new HashSet<Argument>() );
-			}
-		}
-		return result;
-	}
-
-	private static List<List<Boolean>> createNewFlags( int sum, int size )
-	{
-		if ( sum > size )
-			throw new IllegalArgumentException();
-		
-		List<List<Boolean>> result = new ArrayList<List<Boolean>>();
-		// распределить sum единичек по списку из size элементов всеми способами
-		int[] indexes = new int[sum];
-		for( int i = 1; i <= sum; i++ )
-		{
-			indexes[i-1] = i;
-		}
-		
-		result.add( indexes2flags(indexes, size) );
-		int last;
-		while( (last = lastNotMaximum(indexes, sum, size)) >= 0 )
-		{
-			indexes[last]++;
-			int v = indexes[last];
-			while( ++last < sum )
-				indexes[last] = ++v;
-			result.add( indexes2flags(indexes, size) );
-		}
-		
-		return result;
-	}
-	
-	private static List<Boolean> indexes2flags( int[] indexes, int size )
-	{
-		List<Boolean> result = new ArrayList<Boolean>();
-		int prev = 0;
-		for( int i : indexes )
-		{
-			while( ++prev < i )
-			{
-				result.add( false );
-			}
-			result.add( true );			
-		}
-		while( ++ prev <= size )
-		{
-			result.add( false );
-		}
-		return result;
-	}
-
-	private static int lastNotMaximum( int[] indexes, int sum, int size )
-	{
-		int result = sum;
-		while( --result >= 0 )
-		{
-			if ( indexes[result] < size - sum + result + 1 )
-				return result;
-		}
-		return result;
-	}
-	
-	private static int getMinimumOfNew(Map<String, Set<Argument>> pfnProblem)
-	{
-		int result = 0;
-		for( Set<Argument> c : pfnProblem.values() )
-		{
-			if ( c == null || c.isEmpty() )
-				result++;
-		}
-		return result;
-	}
-
-	private Set<PFNsAreDifferent> addMicroTLBProblem(Scheme scheme, TLB tlb,
-			Map<Command, StringBuffer> pfns	)
-	{
-		Set<PFNsAreDifferent> result = new HashSet<PFNsAreDifferent>();
-		for( int i = 0; i < scheme.getCommands().size(); i++ )
-		{
-			Command cmd1 = scheme.getCommands().get(i);
-			TLBSituation ts1 = cmd1.getTLBSituation();
-			if ( ts1 == null )
-				continue;
-			
-			final String pfn1 = pfns.get(cmd1).toString();
-			
-			int missCount = 1;
-			for( int j = i+1; j < scheme.getCommands().size(); j++ )
-			{
-				Command cmd2 = scheme.getCommands().get(j);
-				TLBSituation ts2 = cmd2.getTLBSituation();
-				if ( ts2 == null )
-					continue;
-				if ( ! ( ts2 instanceof TLBMiss ) )
-					continue;
-				
-				final String pfn2 = pfns.get(cmd2).toString();
-				
-				result.add( new PFNsAreDifferent(){
-					@Override
-					public Set<String> getPfns() {
-						return new HashSet<String>( Arrays.asList( pfn1, pfn2 ) );
-					}} );
-				
-				if ( ++missCount == tlb.getMicroTLBSize() )
-					break;
-			}
-		}
-		return result;
-	}
-
-	/**
-	 * @return [pfn +> set of arguments (other pfns, constants)]
-	 */
-	private Map<String, Set<Argument>> createPfnProblem(Scheme scheme,
-			List<Cache> cacheState, Map<Command, StringBuffer> pfns,
-			Map<Cache, Set<Integer>> pfnInterCache)
-	{
-		Map<String, Set<Argument>> result = new HashMap<String, Set<Argument>>();
-		
-		Map<Cache, Set<String>> evicting = new HashMap<Cache, Set<String>>();
-		Map<Cache, Set<String>> firstHits = new HashMap<Cache, Set<String>>();
-		for( Command cmd : scheme.getCommands() )
-		{
-			if ( ! cmd.hasCacheSituation() )
-				continue;
-			String pfn = pfns.get(cmd).toString();
-			
-			//collect set for 'pfn' (constraint "pfn isin set")
-			int level = 0;
-			Set<Argument> args = new HashSet<Argument>();
-			for( Cache cache : cacheState )
-			{
-				level++;
-				CacheTestSituation ts = cmd.getCacheSituation(level);
-				if ( ts != null )
-				{
-					args.addAll( toIArguments( pfnInterCache.get(cache) ) );
-					args.addAll( toSArguments( evicting.get(cache) ) );
-					args.addAll( toSArguments( firstHits.get(cache) ) );
-					if ( ts instanceof CacheHit )
-					{
-						//if pfnInterCache is empty and this is first hits then add to the set
-						if ( pfnInterCache.get(cache).isEmpty() )
-						{
-							if ( evicting.get(cache) == null )
-							{
-								Set<String> fh = firstHits.get(cache);
-								if ( fh == null )
-									fh = new HashSet<String>();
-								fh.add( pfn );
-								firstHits.put(cache, fh);
-							}
-						}
-					}
-					else if ( ts instanceof CacheMiss )
-					{
-						Set<String> ev = evicting.get(cache);
-						if ( ev == null )
-							ev = new HashSet<String>();
-						ev.add( pfn );
-						evicting.put( cache, ev );
-					}
-				}
-			}
-
-			//TODO add extra checking for l1Miss&l2Hit case
-			//TODO add whole PFN without intersection with caches for l1Miss&l2Miss
-			
-			result.put( pfn, args );
-		}
-		return result;
-	}
-	
-	private static Set<Argument> toIArguments( Set<Integer> s )
-	{
-		Set<Argument> result = new HashSet<Argument>();
-		for( final Integer i : s )
-		{
-			result.add( new Constant(){
-
-				@Override
-				public int getValue() {
-					return i;
-				}} );
-		}
-		return result;
-	}
-
-	private static Set<Argument> toSArguments( Set<String> s )
-	{
-		Set<Argument> result = new HashSet<Argument>();
-		for( final String i : s )
-		{
-			result.add( new Variable(){
-				@Override
-				public String getVar() {
-					return i;
-				}
-				} );
-		}
-		return result;
-	}
-
-	private Map<Cache, Set<Integer>> getPfnInterCache(List<Cache> cacheState,
-			TLB tlb) {
-		Map<Cache, Set<Integer>> pfnInterCache;
-		pfnInterCache = new HashMap<Cache, Set<Integer>>();
-		for( Cache cache : cacheState )
-		{
-			Set<Integer> pfn_s = new HashSet<Integer>();
-			
-			//просмотреть все pfn, беря битовую часть
-			for( int i = 0; i < tlb.getJTLBSize(); i++ )
-			{
-				for( BigInteger pfn : Arrays.asList(tlb.getRow(i).getPFN0(),tlb.getRow(i).getPFN1()))
-				{
-					int tag = Integer.parseInt(
-							BitLen.bitrange(
-									null,
-									new StringBuffer( pfn.toString() ),
-									tlb.getPFNBitLen() - 1,
-									tlb.getPFNBitLen() - cache.getTagBitLength()
-								).toString()
-						);
-					int lowersC = cache.getSetNumberBitLength() + cache.getTagBitLength() - tlb.getPFNBitLen();
-					int set_greatestbits =
-						tlb.getPFNBitLen() == cache.getTagBitLength() ? 0 :
-							Integer.parseInt(
-								BitLen.bitrange(
-										null,
-										new StringBuffer( pfn.toString() ),
-										tlb.getPFNBitLen() - cache.getTagBitLength() - 1,
-										0
-									).toString()
-							) << lowersC;
-					for( int set_lowerbits = 0; set_lowerbits < (int)Math.pow(2, lowersC); set_lowerbits++ )
-					{
-						for( int row = 0; row < cache.getSectionNumber(); row++ )
-							if ( cache.getTag(row, set_greatestbits + set_lowerbits) == tag )
-								pfn_s.add(pfn.intValue());
-					}
-				}
-			}
-			
-			pfnInterCache.put( cache, pfn_s );
-		}
-		return pfnInterCache;
 	}
 	
 	private synchronized static String createTempModuleName()
