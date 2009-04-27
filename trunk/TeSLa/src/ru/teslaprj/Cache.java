@@ -1,5 +1,7 @@
 package ru.teslaprj;
 
+import java.util.Set;
+
 public interface Cache
 {
 //    public static final long INVALID_TAG = 0xffffffffffffffffL;
@@ -38,4 +40,6 @@ public interface Cache
 //    byte[] getData(int section, int row);
 //    
 //    void setData(int section, int row, byte data[]);
+
+	Set<Long> getTagsets();
 }
