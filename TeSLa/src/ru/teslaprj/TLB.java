@@ -50,4 +50,6 @@ public interface TLB
 	List<Integer> getITLB();
 
 	Set<Long> getMicroPfns();
+
+	Set<Long> getNotMicroPfns();
 }
