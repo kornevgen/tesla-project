@@ -33,15 +33,20 @@ public class TlbHitL1Hit implements DomainConstraint
 	{
 		forbidden = Tagset.getCacheEvictedTagsets(previousTagsets);
 		forbiddenPfns = Tagset.getMicroTLBEvictedPfns(previousTagsets);
-		constants = Tagset.getMinterL1(tlb, l1);
+		constants = new Domain( l1.getTagsets() ).getIntersectWith(
+				new Domain( tlb.getMicroPfns(), new HashSet<Long>() )
+			).tagsetConstants;
 		
 		//allowed = {x +> M \inter values(x[..])}
+		// allowed ==> (ts1) ts = ts1 /\ ts[...] \in allowed(ts1) << M
 		Set<Tagset> evicting = Tagset.getCacheEvictingTagsets(previousTagsets);
 		allowed = new HashMap<Tagset, Set<Long>>();
 		for( Tagset ts : evicting )
 		{
 			Domain dts = ts.constraint.getDomain();
-			allowed.put( ts, dts.intersectWithPfns(tlb.getMicroPfns()) );
+			Domain dtsInterM = dts.getIntersectWith( new Domain( tlb.getMicroPfns(), new HashSet<Long>() ) );
+			//if ( ! dtsInterM.isEmpty() ) -- put always for possibility to get evicting from TlbHitL1Hit
+				allowed.put( ts, dtsInterM.getPfns() );
 		}
 		
 		//equalityPfn = {x +> L1 \inter values(x[..])}
@@ -50,7 +55,11 @@ public class TlbHitL1Hit implements DomainConstraint
 		for( Tagset ts : tlbEvicting )
 		{
 			Domain dts = ts.constraint.getDomain();
-			equalityPfn.put( ts, dts.getPfnDomain().intersectWithTagsets(l1.getTagsets()));
+			Domain dtsPfnInterL1 = 
+				new Domain( dts.getPfns(), new HashSet<Long>() )
+				.getIntersectWith( new Domain( l1.getTagsets() ) ); 
+			//if ( ! dtsPfnInterL1.isEmpty() )-- put always for possibility to get evicting from TlbHitL1Hit
+				equalityPfn.put( ts, dtsPfnInterL1.getTagsetConstants() );
 		}
 		
 		//calculate this.domain
@@ -78,7 +87,9 @@ public class TlbHitL1Hit implements DomainConstraint
 		Domain d2 = new Domain();
 		for( Tagset ts : tlbEvicting )
 		{
-			d2 = d2.getUnionWith( ts.constraint.getDomain().getPfnDomain() );
+			d2 = d2.getUnionWith( 
+					new Domain( ts.constraint.getDomain().getPfns(), new HashSet<Long>() )
+				);
 		}
 		
 		domain = c.getUnionWith( d1.getIntersectWith(d2) );
@@ -86,8 +97,9 @@ public class TlbHitL1Hit implements DomainConstraint
 
 	@Override
 	public Domain getDomain() {
-		// TODO Auto-generated method stub
-		return null;
+		return domain;
 	}
+	
+	//TODO public ??? getConstraint() { } returns SAT or CSP representation of this constraint on tagset
 
 }

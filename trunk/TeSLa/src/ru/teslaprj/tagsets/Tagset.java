@@ -88,8 +88,4 @@ public class Tagset
 		
 	}
 	
-	static Set<Long> getMinterL1( TLB tlb, Cache L1 )
-	{
-		
-	}
 }

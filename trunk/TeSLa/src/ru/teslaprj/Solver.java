@@ -45,6 +45,7 @@ import ru.teslaprj.syntax.TeSLaLexer;
 import ru.teslaprj.syntax.TeSLaParser;
 import ru.teslaprj.syntax.VarsController;
 import ru.teslaprj.syntax.LogicalVariable.Status;
+import ru.teslaprj.tagsets.Domain;
 import ru.teslaprj.tagsets.EmptyDomain;
 import ru.teslaprj.tagsets.Tagset;
 
@@ -165,6 +166,11 @@ public class Solver
 				}
 			}
 		}
+		
+		Domain.TagsetLengthMinusPfnLength = 
+			cacheState.get(0).getTagBitLength() 
+			+ cacheState.get(0).getSetNumberBitLength()
+			- tlb.getPFNBitLen();
 
 		// create tagsets
 		List<Tagset> tagsets = new ArrayList<Tagset>();
@@ -192,9 +198,9 @@ public class Solver
 			}
 		}
 		
-		// add evicted constraints
+		// generate tagsets problem
 		
-		// check tagsets consistency
+		// and check its consistency
 		if (! isConsistent( tagsets ) ) // + уравнения вытеснения
 			return null; // решения не существует
 		
