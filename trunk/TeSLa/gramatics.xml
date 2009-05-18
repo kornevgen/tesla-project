@@ -9,7 +9,7 @@
 
 	<taskdef
 		classname="net.bluecow.googlecode.ant.GoogleCodeUploadTask"
-		classpath="tools/ant-googlecode-0.0.1.jar"
+		classpath="tools/ant-googlecode-0.0.2.jar"
 		name="gcupload"/>
 		
 	<property file="${tools}/user.properties" />
