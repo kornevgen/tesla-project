@@ -1,0 +1,164 @@
+
+%
+%  $Description: Author guidelines and sample document in LaTeX 2.09$
+%
+%  $Author: ienne $
+%  $Date: 1995/09/15 15:20:59 $
+%  $Revision: 1.4 $
+%
+
+\documentclass[times, 10pt,twocolumn]{article}
+\usepackage{latex8}
+\usepackage{times}
+\usepackage{graphicx}
+
+
+%%% убрать в результате!
+\usepackage[russian]{babel}
+
+%\documentstyle[times,art10,twocolumn,latex8]{article}
+
+%-------------------------------------------------------------------------
+% take the % away on next line to produce the final camera-ready version
+\pagestyle{empty}
+
+%-------------------------------------------------------------------------
+\begin{document}
+
+\title{SMT-based test program generation for cache-memory testing}
+
+\author{Evgeni Kornikhin\\
+Institute for System Programming of RAS\\ Solzhenitsyn St., 25, Moscow, Russia\\ kornevgen@ispras.ru\\
+}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+Для проведения системного тестирования микропроцессора необходимо
+сгенерировать много ассемблерных программ (тестовых программ). Это
+может быть осуществлено с помощью тестовых шаблонов. Рассматривается
+поведение таких подсистем микропроцессора, как кэш и TLB. В
+частности, для шаблона и начального состояния кэш-памяти и TLB нужно
+построить начальное значение регистров, при которых будет требуемое
+поведение на шаблоне. В статье предложен метод решения этой задачи с
+использованием SMT-инструментов.
+\end{abstract}
+
+
+
+\section{Introduction}
+
+System functional testing of microprocessors uses many assembly
+programs (\emph{test programs}). Such programs are loaded to the
+memory, executed, execution process is logged and analyzed. But
+modern processors testing requires a lot of test programs. Technical
+way of test program generation was proposed in~\cite{kamkin}. This
+way based on the microprocessor's model. Its first stage is
+systematic generation abstract test programs (\emph{test
+templates}). This abstract form contains a sequence of instructions
+with arguments (registers) and \emph{test situations} (behavior of
+this instruction; these can be overflow, cache hits, cache misses).
+The second stage is generation of initial microprocessor state for
+given test template, i.e. initial values of registers. Technical way
+from~\cite{kamkin} is useful for aimed testing when aim is expressed
+by instruction sequence with specific behavior. Based on registers
+values the third, final, stage is generation the sequence of
+instructions to reach initial microprocessor state. This sequence of
+instructions with test template get ready assembly program. This
+paper devoted to the second stage, i.e. initial state generation.
+
+Known researches about test data generation problem contain the
+following methods of its solving:
+\begin{enumerate}
+\item combinatorial methods;
+\item ATPG-based methods;
+\item constraint-based methods.
+\end{enumerate}
+
+Combinatorial methods are useful for simple test templates (each
+variable has explicit directive of its domain, each value in domain
+is possess)~\cite{combinatorial}. ATPG-based methods are useful for
+structural but not functional testing~\cite{ATPG}. Constraint-based
+methods are the most promising methods. Test template is translated
+to the set of constraints (predicates) with variables which
+represented test data. Then special solver generates values for
+variables to satisfy all constraints. This paper contains
+constraint-based method also. IBM uses constraint-based method in
+Genesys-Pro~\cite{GenesysPro}. But it works inefficiently on test
+templates from~\cite{kamkin}. Authors of another constraint-based
+methods restrict on registers only and don't consider cache-memory.
+
+\section{Test templates description}
+
+Test template defines requirements to the future test program. Test
+template contains sequence of instructions. Each element of this
+sequence has instruction name, arguments (registers, addresses,
+values) and test situation (relation between values of arguments and
+microprocessor state before execution of instruction). Example of
+test template description for model instruction set:
+
+REGISTER reg1 : 32;
+
+REGISTER reg2 : 32;
+
+ADD reg1, reg2, reg2
+
+LOAD reg1, reg2 @ l1Miss
+
+SUB reg2, reg1, reg2
+
+This template has 3 instructions -- ADD, LOAD and SUB. Template
+begins from variable definitions (it has name of variable and its
+bit length). Test situation is specified after "@": test situation
+of the second instruction is "l1Miss" which means miss in
+first-level cache.
+
+Consider simple instruction set with only 2 memory operations:
+\begin{itemize}
+\item "LOAD reg, address" loads value from memory by \emph{virtual} address
+"address" to the register "reg";
+\item "STORE reg, address" stores value from register "reg" to the
+memory by \emph{virtual} address "address".
+\end{itemize}
+
+\section{Tagsets}
+Behavior of "LOAD/STORE x, y" is the following: the first step is
+physical address building (\emph{address translation}) and the
+second step is memory access through cache (see pic.~\ref{LOAD}).
+"y" is virtual address. It's divided into 2 bit-fields.
+\begin{figure}[h]\label{LOAD}
+\includegraphics[width=0.4\textwidth]{load}
+\caption{Model of LOAD instruction.}
+\end{figure} \\ \noindent
+
+
+поведение Load\\
+формирование виртуальных и физических адресов\\
+деление физических адресов\\
+что такое тэгсет, что такое pfn (модель кэш-памяти, модель TLB)
+
+\section{Satisfiability Modulo Theories}
+битвектора
+
+\section{Algorithm}
+
+\subsection{Tagsets problem}
+"constraints" on tagsets and pfns according to the initial state of
+cache and TLB.
+
+плюсы алгоритма (быстрый, корректный и полный, практичный)
+
+\subsection{Values problem}
+ограничения на физические адреса и считываемые значения
+
+%\begin{figure}[h]
+%   \caption{Example of caption.}
+%\end{figure} \\ \noindent
+
+
+
+\bibliographystyle{latex8}
+\bibliography{ksmt}
+
+\end{document}
