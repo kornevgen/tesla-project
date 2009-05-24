@@ -1,5 +1,5 @@
 package ru.teslaprj.scheme.ts;
 
-public interface TLBRefill extends TLBSituation {
+public abstract class TLBRefill extends TLBSituation {
 
 }

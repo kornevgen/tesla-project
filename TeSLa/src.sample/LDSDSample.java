@@ -275,109 +275,15 @@ public class LDSDSample
 						switch( p )
 						{
 						case 0: // l1Hit
-							ts.add( new CacheHit() {
-								@Override
-								public String getTagVar() {
-									return null;
-								}
-							
-								@Override
-								public String getSetVar() {
-									return null;
-								}
-							
-								@Override
-								public int getLevel() {
-									return 1;
-								}
-							});
+							ts.add( new CacheHit(1) );
 							break;
 						case 1: // l1Miss, l2Hit
-							ts.add( new CacheMiss() {
-							
-								@Override
-								public String getTagVar() {
-									return null;
-								}
-							
-								@Override
-								public String getSetVar() {
-									return null;
-								}
-							
-								@Override
-								public int getLevel() {
-									return 1;
-								}
-							
-								@Override
-								public String getVTagVar() {
-									return null;
-								}
-							});
-							ts.add( new CacheHit() {
-							
-								@Override
-								public String getTagVar() {
-									return null;
-								}
-							
-								@Override
-								public String getSetVar() {
-									return null;
-								}
-							
-								@Override
-								public int getLevel() {
-									return 2;
-								}
-							});
+							ts.add( new CacheMiss(1, cacheLevels.get(0).getSectionNumber() ));
+							ts.add( new CacheHit(2));
 							break;
 						case 2: // l1Miss, l2Miss
-							ts.add( new CacheMiss() {
-								
-								@Override
-								public String getTagVar() {
-									return null;
-								}
-							
-								@Override
-								public String getSetVar() {
-									return null;
-								}
-							
-								@Override
-								public int getLevel() {
-									return 1;
-								}
-							
-								@Override
-								public String getVTagVar() {
-									return null;
-								}
-							});
-							ts.add( new CacheMiss() {
-							
-								@Override
-								public String getTagVar() {
-									return null;
-								}
-							
-								@Override
-								public String getSetVar() {
-									return null;
-								}
-							
-								@Override
-								public int getLevel() {
-									return 2;
-								}
-
-								@Override
-								public String getVTagVar() {
-									return null;
-								}
-							});
+							ts.add( new CacheMiss(1, cacheLevels.get(0).getSectionNumber()));
+							ts.add( new CacheMiss(2, cacheLevels.get(1).getSectionNumber()));
 							break;
 						default:
 							continue;
@@ -395,61 +301,10 @@ public class LDSDSample
 						switch( p )
 						{
 						case 0: //TLBHit
-							ts.add( new TLBHit() {
-								@Override
-								public int getmoDify() {
-									return 1;
-								}
-							
-								@Override
-								public int getValid() {
-									return 1;
-								}
-							
-								@Override
-								public Integer getG() {
-									return null;
-								}
-							
-								@Override
-								public String getVirtualAddressVar() {
-									return null;
-								}
-							
-								@Override
-								public String getPhysicalAddressVar() {
-									return null;
-								}
-							});
+							ts.add( new TLBHit() );
 							break;
 						case 1: //TLBMiss
-							ts.add( new TLBMiss() {
-							
-								@Override
-								public int getmoDify() {
-									return 1;
-								}
-							
-								@Override
-								public int getValid() {
-									return 1;
-								}
-							
-								@Override
-								public Integer getG() {
-									return null;
-								}
-							
-								@Override
-								public String getVirtualAddressVar() {
-									return null;
-								}
-							
-								@Override
-								public String getPhysicalAddressVar() {
-									return null;
-								}
-							});
+							ts.add( new TLBMiss(dtlb.size()) );
 							break;
 						default:
 							continue;
@@ -466,8 +321,8 @@ public class LDSDSample
 					m2.put( "StoreMemory", m1ts.get(1) );
 					m2.put( "AddressTranslation", m11ts.get(1));
 
-					scheme.addCommand( new Command("LD", params1, "regular", m1));
-					scheme.addCommand( new Command("SD", params2, "regular", m2));
+					scheme.addCommand( new Command(scheme, "LD", params1, "regular", m1));
+					scheme.addCommand( new Command(scheme, "SD", params2, "regular", m2));
 
 					//TLB build
 					//TODO представленное тут вычисление границ vpn/2 работает только в Mapped сегменте!

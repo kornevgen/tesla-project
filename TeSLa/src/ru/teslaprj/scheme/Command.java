@@ -15,12 +15,15 @@ import ru.teslaprj.scheme.ts.TLBSituation;
 public class Command
 {
 	public Command(
+			Scheme scheme,
 			String cop,
 			List<String> args,
 			String testSituation,
 			Map<String, Set<ProcedureTestSituation>> testSituationParameters )
 		throws CommandDefinitionError
 	{
+		this.scheme = scheme;
+		
 		if ( args == null )
 			this.args = new ArrayList<String>();
 		else
@@ -48,6 +51,11 @@ public class Command
 					throw new CommandDefinitionError( "unknown test situation parameter: " + paramName );
 			}
 			this.testSituationParameters = testSituationParameters;
+			for( Set<ProcedureTestSituation> tss : this.testSituationParameters.values() )
+			{
+				for( ProcedureTestSituation ts : tss )
+					ts.setCommand(this);
+			}
 		}
 	}
 	public String getCop() {
@@ -63,21 +71,21 @@ public class Command
 		return testSituationParameters;
 	}
 	
-	public String getPhysicalAddress()
-	{
-		if ( ! testSituationParameters.containsKey("AddressTranslation") )
-			throw new Error( "uncompleted templates are not supported yet" );
-
-		for( ProcedureTestSituation ts : testSituationParameters.get("AddressTranslation") )
-		{
-			if ( ts instanceof TLBHit )
-				return ((TLBHit) ts).getPhysicalAddressVar();
-			else if ( ts instanceof TLBMiss )
-				return ((TLBMiss) ts).getPhysicalAddressVar();
-		}
-		
-		throw new Error( "uncompleted templates are not supported yet" );
-	}
+//	public String getPhysicalAddress()
+//	{
+//		if ( ! testSituationParameters.containsKey("AddressTranslation") )
+//			throw new Error( "uncompleted templates are not supported yet" );
+//
+//		for( ProcedureTestSituation ts : testSituationParameters.get("AddressTranslation") )
+//		{
+//			if ( ts instanceof TLBHit )
+//				return ((TLBHit) ts).getPhysicalAddressVar();
+//			else if ( ts instanceof TLBMiss )
+//				return ((TLBMiss) ts).getPhysicalAddressVar();
+//		}
+//		
+//		throw new Error( "uncompleted templates are not supported yet" );
+//	}
 	
 	public boolean isLOAD()
 	{
@@ -106,6 +114,7 @@ public class Command
 		return testSituationParameters.containsKey("AddressTranslation");
 	}
 
+	private Scheme scheme;
 	private String cop;
 	private List<String> args;
 	private String testSituation;
@@ -191,5 +200,10 @@ public class Command
 		output.append( " )" );
 		
 		return output.toString();
+	}
+	
+	public Scheme getScheme()
+	{
+		return scheme;
 	}
 }

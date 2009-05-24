@@ -1,7 +1,12 @@
 package ru.teslaprj.scheme.ts;
 
-public interface TLBHit extends TLBExists
+import ru.teslaprj.ranges.tsiterators.CommonIterator;
+import ru.teslaprj.ranges.tsiterators.TlbHitIterator;
+
+public class TLBHit extends TLBExists
 {
-	String getVirtualAddressVar();
-	String getPhysicalAddressVar();
+	@Override
+	public CommonIterator iterator() {
+		return new TlbHitIterator(this);
+	}
 }

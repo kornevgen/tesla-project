@@ -25,6 +25,8 @@ import ru.teslaprj.constraints.pfn.Argument;
 import ru.teslaprj.constraints.pfn.Constant;
 import ru.teslaprj.constraints.pfn.PFNsAreDifferent;
 import ru.teslaprj.constraints.pfn.Variable;
+import ru.teslaprj.ranges.RangeIterator;
+import ru.teslaprj.ranges.Ranges;
 import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.Definition;
 import ru.teslaprj.scheme.Scheme;
@@ -167,75 +169,49 @@ public class Solver
 			}
 		}
 		
-		Domain.TagsetLengthMinusPfnLength = 
-			cacheState.get(0).getTagBitLength() 
-			+ cacheState.get(0).getSetNumberBitLength()
-			- tlb.getPFNBitLen();
-
-		// create tagsets
-		List<Tagset> tagsets = new ArrayList<Tagset>();
-		for( Command cmd : scheme.getCommands() )
+		RangeIterator it = new RangeIterator( //tlb, cacheState,
+				scheme );
+		while( it.hasNext() )
 		{
-			if ( cmd.hasCacheSituation() && cmd.hasTLBSituation() )
-			{
-				try
-				{
-					Tagset tagset = new Tagset( 
-							cmd.getTLBSituation(), 
-							cmd.getCacheSituation(1), 
-							cmd.getCacheSituation(2),
-							tagsets,
-							tlb,
-							cacheState.get(0),
-							cacheState.get(1)
-						);
-					tagsets.add( tagset );
-				}
-				catch( EmptyDomain e )
-				{
-					return null; // решения не существует
-				}
-			}
+			Ranges ranges = it.next();
+			
+			if ( ! ranges.isConsistency() )
+				continue;
+			
+			System.out.println("consistent!");
+			
+//			File tmp;
+//			CompoundTerm result = null;
+//			try
+//			{
+//				String moduleName = createTempModuleName();
+//				tmp = File.createTempFile(moduleName, ".ecl", libPath);
+//				moduleName = tmp.getName();
+//				moduleName = moduleName.substring(0, moduleName
+//						.length() - 4);
+//
+//				// TODO построение прологовской программы
+//				// из каждого тегсета транслируется его ограничение
+//				writeFile(tmp, newTranslate(scheme, moduleName, cacheState, tlb) );
+//
+//				// run ECLiPSe and get results
+//				result = callECLiPSe(tmp, moduleName, scheme
+//						.getDefinedNames(), cacheState);
+//
+//				// TODO print current result with current newCount
+//
+//				// analyze results
+//				return generateValues( result, scheme, cacheState ) ;
+////					return new Verdict(new HashMap<Definition, BigInteger>(), null );
+//
+//			}
+//			finally
+//			{
+//				if (tmp != null) tmp.delete();
+//			}
 		}
 		
-		// generate tagsets problem
-		
-		// and check its consistency
-		if (! isConsistent( tagsets ) ) // + уравнения вытеснения
-			return null; // решения не существует
-		
-		// если система имеет обозримое количество решений, 
-		// то прямо их и надо запихнуть в прологовскую программу
-		// и не решать ограничения на тегсеты повторно!
-		
-		File tmp;
-		CompoundTerm result = null;
-		try
-		{
-			String moduleName = createTempModuleName();
-			tmp = File.createTempFile(moduleName, ".ecl", libPath);
-			moduleName = tmp.getName();
-			moduleName = moduleName.substring(0, moduleName
-					.length() - 4);
-
-			// TODO построение прологовской программы
-			// из каждого тегсета транслируется его ограничение
-			writeFile(tmp, newTranslate(scheme, moduleName, cacheState, tlb, tagsets) );
-
-			// run ECLiPSe and get results
-			result = callECLiPSe(tmp, moduleName, scheme
-					.getDefinedNames(), cacheState);
-
-			// TODO print current result with current newCount
-		}
-		finally
-		{
-			if (tmp != null) tmp.delete();
-		}
-
-		// analyze results
-		return generateValues( result, scheme, cacheState ) ;
-//			return new Verdict(new HashMap<Definition, BigInteger>(), null );
+		return null;
 	}
 	
 	private synchronized static String createTempModuleName()

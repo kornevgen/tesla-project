@@ -1,8 +1,8 @@
 package ru.teslaprj.scheme.ts;
 
-public interface TLBExists extends TLBSituation
+public abstract class TLBExists extends TLBSituation
 {
-	Integer getG();
-	int getValid();
-	int getmoDify();
+//	Integer getG();
+//	int getValid();
+//	int getmoDify();
 }
