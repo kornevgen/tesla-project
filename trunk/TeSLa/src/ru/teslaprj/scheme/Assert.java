@@ -9,12 +9,13 @@ import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 public class Assert extends Command
 {
 	public Assert(
+			Scheme scheme,
 			List<String> args,
 			String testSituation,
 			Map<String, Set<ProcedureTestSituation>> testSituationParameters
 		)
 		throws CommandDefinitionError
 	{
-		super("", args, testSituation, testSituationParameters );
+		super(scheme,"", args, testSituation, testSituationParameters );
 	}
 }

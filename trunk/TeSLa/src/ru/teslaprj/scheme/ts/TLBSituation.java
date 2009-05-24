@@ -1,5 +1,6 @@
 package ru.teslaprj.scheme.ts;
 
-public interface TLBSituation extends ProcedureTestSituation
+public abstract class TLBSituation extends ProcedureTestSituation
 {
+
 }

@@ -1,5 +1,20 @@
 package ru.teslaprj.scheme.ts;
 
-public interface ProcedureTestSituation {
+import ru.teslaprj.ranges.tsiterators.CommonIterator;
+import ru.teslaprj.scheme.Command;
 
+public abstract class ProcedureTestSituation 
+{
+	public abstract CommonIterator iterator();
+
+	Command cmd = null;
+	public void setCommand( Command cmd )
+	{
+		this.cmd = cmd;
+	}
+	
+	public Command getCommand()
+	{
+		return cmd;
+	}
 }
