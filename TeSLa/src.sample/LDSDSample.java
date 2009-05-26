@@ -79,6 +79,11 @@ public class LDSDSample
 			public long getTag(int section, int row) {
 				return tags1[section][row];
 			}
+
+			@Override
+			public Set<Long> getTagsets() {
+				throw new Error();
+			}
 		} );
 		cacheLevels.add( new Cache()
 		{
@@ -106,6 +111,11 @@ public class LDSDSample
 			@Override
 			public long getTag(int section, int row) {
 				return tags2[section][row];
+			}
+
+			@Override
+			public Set<Long> getTagsets() {
+				throw new Error();
 			}
 		} );
 		
@@ -396,6 +406,16 @@ public class LDSDSample
 						@Override
 						public TLBRow getRow(int index) {
 							return tlbRows[index];
+						}
+
+						@Override
+						public Set<Long> getMicroPfns() {
+							throw new Error();
+						}
+
+						@Override
+						public Set<Long> getNotMicroPfns() {
+							throw new Error();
 						}};
 
 					
