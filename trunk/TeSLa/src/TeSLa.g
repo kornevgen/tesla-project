@@ -476,14 +476,14 @@ procedure
 				}
 			}
 			
-			if ( refill 
-				|| ((TLBExists)tlbSituation).getValid() == 0 
-				|| ( store && ((TLBExists)tlbSituation).getmoDify() == 0 ) )
-			{
-				stopTranslation = true;
-				physicalAddressAfterTranslation = "_";
-			}
-			else
+//			if ( refill 
+//				|| ((TLBExists)tlbSituation).getValid() == 0 
+//				|| ( store && ((TLBExists)tlbSituation).getmoDify() == 0 ) )
+//			{
+//				stopTranslation = true;
+//				physicalAddressAfterTranslation = "_";
+//			}
+//			else
 			{
 				physicalAddressAfterTranslation = varsc.nextVersion( phys, phys.getText() );
 				

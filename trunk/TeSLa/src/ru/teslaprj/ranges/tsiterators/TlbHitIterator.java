@@ -20,7 +20,7 @@ public class TlbHitIterator extends CommonIterator {
 	
 	@Override
 	public boolean hasNext() {
-		return number > 1;
+		return number < 2;
 	}
 
 	@Override

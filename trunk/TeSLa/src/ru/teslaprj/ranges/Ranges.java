@@ -4,11 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import ru.teslaprj.scheme.Command;
+import yices.YicesLite;
 
 public class Ranges
 {
 	final Map<Command, Range> l1Ranges;
 	final Map<Command, Range> tlbRanges;
+	YicesLite yl = new YicesLite();
 	
 	public Ranges(Range[] l1values, Range[] tlbvalues)
 	{
@@ -24,7 +26,12 @@ public class Ranges
 		}		
 	}
 
-	public boolean isConsistency() {
+	public boolean isConsistency()
+	{
+		int ctx = yl.yicesl_mk_context();
+		try
+		{
+
 		// проходимся по каждой команде и формируем ограничение для ее тегсета
 //		for( Command cmd : l1Ranges.keySet() )
 //		{
@@ -33,9 +40,8 @@ public class Ranges
 //			// write to the yices
 //		}
 		
-		YicesLite yl=new YicesLite();
-		int ctx=yl.yicesl_mk_context();
 	//definig some bools
+//			System.out.println(yl.yicesl_version());
 		yl.yicesl_read(ctx, "(define a::bool)");
 		yl.yicesl_read(ctx, "(define b::bool)");
 		yl.yicesl_read(ctx, "(define c::bool)");
@@ -55,10 +61,18 @@ public class Ranges
 		yl.yicesl_read(ctx, "(define x6::int (if (e) (= x6 1)(= x6 0)))");
 
 	        yl.yicesl_read(ctx, "(define x::bool (/=(+ x1 x2 x3 x4 x5 x6) 3)");
-	        yl.yicesl_read(ctx, "(check)");
+	        //yl.yicesl_read(ctx, "(check)");
+	        
+	    boolean result = yl.yicesl_inconsistent(ctx) == 0; 
 
+	        return result;
+		}
+		finally
+		{
+	        yl.yicesl_del_context(ctx);
+		}
 		
-		return false;
+//		return false;
 	}
 
 }

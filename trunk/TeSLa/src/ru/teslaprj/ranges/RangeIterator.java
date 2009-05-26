@@ -93,7 +93,7 @@ public class RangeIterator implements Iterator<Ranges>
 		}
 		
 		l1Iterators = l1its.toArray(new CommonIterator[]{});
-		tlbIterators = tlbits.toArray(l1Iterators);
+		tlbIterators = tlbits.toArray(new CommonIterator[]{});
 		
 		l1values = new Range[l1Iterators.length];
 		for( int i = 0; i < l1Iterators.length; i++ )

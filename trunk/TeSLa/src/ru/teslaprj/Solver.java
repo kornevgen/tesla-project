@@ -585,26 +585,26 @@ public class Solver
 	    	ecl.append( "] #:: [ 1 .. " ).append( tlb.getJTLBSize() ).append(" ],").append( eoln );
 
 	    	// i1.g != i2.g => i1 != i2
-	    	viewed_cmds.clear();
-	    	for( Command cmd1 : tlbCommands )
-	    	{
-	    		viewed_cmds.add( cmd1 );
-	    		if ( ((TLBExists)cmd1.getTLBSituation()).getG() == null )
-	    			continue;
-	    		for( Command cmd2 : tlbCommands )
-	    		{
-	    			if ( viewed_cmds.contains( cmd2 ) )
-	    				continue;
-	    			if ( ((TLBExists)cmd2.getTLBSituation()).getG() == null )
-	    				continue;
-	    			if ( ((TLBExists)cmd1.getTLBSituation()).getG().intValue() 
-	    					!= ((TLBExists)cmd2.getTLBSituation()).getG().intValue() )
-	    			{
-	    				ecl.append( tlbBufferIndexes.get(cmd1) ).append( " #\\= " )
-	    				.append( tlbBufferIndexes.get(cmd2) ).append( "," ).append( eoln );
-	    			}
-	    		}
-	    	}
+//	    	viewed_cmds.clear();
+//	    	for( Command cmd1 : tlbCommands )
+//	    	{
+//	    		viewed_cmds.add( cmd1 );
+//	    		if ( ((TLBExists)cmd1.getTLBSituation()).getG() == null )
+//	    			continue;
+//	    		for( Command cmd2 : tlbCommands )
+//	    		{
+//	    			if ( viewed_cmds.contains( cmd2 ) )
+//	    				continue;
+//	    			if ( ((TLBExists)cmd2.getTLBSituation()).getG() == null )
+//	    				continue;
+//	    			if ( ((TLBExists)cmd1.getTLBSituation()).getG().intValue() 
+//	    					!= ((TLBExists)cmd2.getTLBSituation()).getG().intValue() )
+//	    			{
+//	    				ecl.append( tlbBufferIndexes.get(cmd1) ).append( " #\\= " )
+//	    				.append( tlbBufferIndexes.get(cmd2) ).append( "," ).append( eoln );
+//	    			}
+//	    		}
+//	    	}
 	    	for( String diffVar : diffFalseVars.keySet() )
 	    	{
 	    		ecl.append( "( " + diffVar + " = 1 -> " );
@@ -940,11 +940,12 @@ public class Solver
     	Set<Command> normalCommands = new HashSet<Command>();
     	for( Command cmd : tlbCommands )
     	{
-    		if ( ((TLBExists)cmd.getTLBSituation()).getValid() == 1 
-    				&&
+    		if ( //((TLBExists)cmd.getTLBSituation()).getValid() == 1 
+    			//	&&
     				( ! storeCommands.contains(cmd) 
-    				||
-    				((TLBExists)cmd.getTLBSituation()).getmoDify() == 1 )
+    			//	||
+    			//	((TLBExists)cmd.getTLBSituation()).getmoDify() == 1
+    				)
     			)
     		{
     			normalCommands.add(cmd);
@@ -1726,8 +1727,10 @@ public class Solver
     			.append( tlb.getPABITS() ).append( ", " )
     			.append( tlb.getPABITS() - 1 ).append( ", " )
     			.append( tlb.getPABITS() - tlb.getPFNBitLen() ).append( ", " )
-    			.append( ((TLBExists)cmd.getTLBSituation()).getValid() ).append( ", " )
-    			.append( ((TLBExists)cmd.getTLBSituation()).getmoDify() )
+    			.append( 1 // ((TLBExists)cmd.getTLBSituation()).getValid()
+    					).append( ", " )
+    			.append( 1 //((TLBExists)cmd.getTLBSituation()).getmoDify()
+    					)
     		.append( " )," ).append( eoln );
     	}
     	ecl.append( "lru:closeList( TLB )," ).append( eoln );
@@ -1830,15 +1833,15 @@ public class Solver
     		globalFlagVars.put(cmd, g);
     	}
     	ecl.append( " ] #:: [0..1]," ).append( eoln );
-    	// g = const
-    	for( Command cmd : tlbCommands )
-    	{
-    		if ( ((TLBExists)cmd.getTLBSituation()).getG() != null )
-    		{
-    			ecl.append( globalFlagVars.get(cmd) ).append( " = " )
-    				.append( ((TLBExists)cmd.getTLBSituation()).getG().intValue() ).append( "," ).append( eoln );
-    		}
-    	}
+//    	// g = const
+//    	for( Command cmd : tlbCommands )
+//    	{
+//    		if ( ((TLBExists)cmd.getTLBSituation()).getG() != null )
+//    		{
+//    			ecl.append( globalFlagVars.get(cmd) ).append( " = " )
+//    				.append( ((TLBExists)cmd.getTLBSituation()).getG().intValue() ).append( "," ).append( eoln );
+//    		}
+//    	}
     	// i1 = i2 => g1 = g2
     	viewed_cmds.clear();
     	for( Command cmd1 : tlbCommands )
@@ -1936,19 +1939,19 @@ public class Solver
 						.append( tlb.getPABITS() - tlb.getPFNBitLen() )
 					.append( " ), " ).append( eoln );
 					
-				TLBExists situation1 = (TLBExists)cmd1.getTLBSituation();
-				TLBExists situation2 = (TLBExists)cmd2.getTLBSituation();
-					if ( situation1.getValid() != situation2.getValid() 
-						||
-						situation1.getmoDify() != situation2.getmoDify() )
-					{
-						ecl .append( oddbit1 ).append( " #\\= " ).append( oddbit2 )
-						.append( ", " ).append( "numbers:notequal( " )
-									.append( pfn1 ).append( ", " )
-									.append( pfn2 ).append( ", " )
-									.append( tlb.getPFNBitLen() ).append( " ) ) )," ).append( eoln );
-					}
-					else
+//				TLBExists situation1 = (TLBExists)cmd1.getTLBSituation();
+//				TLBExists situation2 = (TLBExists)cmd2.getTLBSituation();
+//					if ( situation1.getValid() != situation2.getValid() 
+//						||
+//						situation1.getmoDify() != situation2.getmoDify() )
+//					{
+//						ecl .append( oddbit1 ).append( " #\\= " ).append( oddbit2 )
+//						.append( ", " ).append( "numbers:notequal( " )
+//									.append( pfn1 ).append( ", " )
+//									.append( pfn2 ).append( ", " )
+//									.append( tlb.getPFNBitLen() ).append( " ) ) )," ).append( eoln );
+//					}
+//					else
 					{
 						ecl .append( "( " ).append( oddbit1 ).append( " #= " ).append( oddbit2 )
 						.append( ", " ).append( "numbers:equal( " )
@@ -3100,13 +3103,13 @@ public class Solver
 		int s = Math.max(cmd1.getMemoryValueSize(), cmd2.getMemoryValueSize());
 		int min = Math.min( cmd1.getMemoryValueSize(), cmd2.getMemoryValueSize() );
 		// phys1[physBitLen .. s] = phys2[physBitLen .. s] -> val1 = val2
-		ecl.append( "( numbers:boundedEqual( " )
-			.append( cmd1.getPhysicalAddress() ).append( ", " )
-			.append( cmd2.getPhysicalAddress() ).append( ", " )
-			.append( physicalAddressBitLen ).append( ", " )
-			.append( physicalAddressBitLen - 1 ).append( ", " )
-			.append( s )
-		.append( " ) -> " );
+//		ecl.append( "( numbers:boundedEqual( " )
+//			.append( cmd1.getPhysicalAddress() ).append( ", " )
+//			.append( cmd2.getPhysicalAddress() ).append( ", " )
+//			.append( physicalAddressBitLen ).append( ", " )
+//			.append( physicalAddressBitLen - 1 ).append( ", " )
+//			.append( s )
+//		.append( " ) -> " );
 		// равенство пересечений
 		if ( s == min )
 		{
