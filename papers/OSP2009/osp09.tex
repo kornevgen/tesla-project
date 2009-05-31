@@ -1,0 +1,63 @@
+\documentclass[11pt]{article}
+
+\usepackage[cp1251]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{pscyr}
+
+\title{Семантика инструкций микропроцессоров}
+\author{Евгений Корныхин}
+\date{}
+
+\oddsidemargin=0mm
+\textwidth=160mm
+
+\topmargin=-20mm
+\textheight=250mm
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Какие есть способы описания семантики инструкций микропроцессоров в процессе подготовки модели микропроцессора. (деревья с ветвями функциональности, исчисления, явные/неявные/алгебраические спецификации)
+Что делают разработчики микропроцессоров, чтобы задать семантику инструкций - как они ее фиксируют, в какой нотации, какие методические процедуры составления существуют. Чем одна лучше/хуже другой.
+Что-то удобно для тестирования - легко выделить требования, что-то удобно для верификации, что-то удобно для последующей генерации чего-нибудь.
+Использование формальных методов (формальные спецификации) и неформальные.
+
+Как, возможно, описывается поведение конвейера, если это необходимо.
+
+Какие решения предлагаются чисто теоретические, а какие оценены практиками?
+\end{abstract}
+
+вступление
+
+\section{Первая}
+
+http://www.google.ru/search?hl=ru&rlz=1C1CHMA_ruRU315RU315&newwindow=1&q=Microprocessors+design+semantics&btnG=Поиск&lr=&aq=f&oq=
+
+http://portal.acm.org/citation.cfm?id=949983
+
+http://www.gigascale.org/pubs/352.html  -- тут есть обзор
+
+http://citeseer.ist.psu.edu/old/227859.html
+
+Jonathan P.Bowen. The formal specification of a microprocessor instruction set. Technical Monograph PRG-60, Oxford University Computing Laboratory, 11 Keble Road, Oxford, UK, January 1987. The Z notation is used to define the Motorola M6800 8-bit microprocessor instruction set. 4
+
+http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.16.7404
+
+http://portal.acm.org/citation.cfm?id=108208
+
+http://ieeexplore.ieee.org/Xplore/login.jsp?url=http://ieeexplore.ieee.org/iel3/1245/5033/00196381.pdf&authDecision=-203
+
+http://www.springerlink.com/content/p01034312222258q/
+
+http://www.citforum.ru/programming/embedded/languages/ - статья Рубанова (2.3. ADL языки!)
+http://citforum.proc.ru/programming/embedded/metadsp/
+
+цель исследования -- понять, откуда берутся части тестового шаблона (инструкции и их тестовые ситуации). Насколько употребительно задание семантики (тестовой ситуации инструкции) с помощью императивных программ с битовыми операциями (то, что сделано у меня), ведь так делается, например, в стандарте MIPS64. Если более употребительным окажется другой формализм, то надо подумать, можно ли его транслировать в TeSLa-определения.
+
+Теоретики могут предложить многое - надо читать именно технические обзоры, что применялось инженерами в реальных проектах, что показало свою эффективность или неэффективность.
+
+Зачастую разные микропроцессоры одного семейства обладают инструкциями одинаковой семантики. Это говорит о том, что семантика формулируется изначально не для одного микропроцессора, а для целого семейства. Отсюда появляются стандарты архитектуры (например, MIPS64 -- это не какой-то конкретный микропроцессор, а стандарт, где описано, какие должны быть инструкции с какой семантикой) -- где применен тот же подход?
+
+\end{document} 
