@@ -1,17 +1,27 @@
 package ru.teslaprj.ranges;
 
-import ru.teslaprj.scheme.Command;
+import ru.teslaprj.scheme.MemoryCommand;
 
 public abstract class Range
 {
-	Command command;
-	public Range( Command cmd )
+	MemoryCommand command;
+	public Range( MemoryCommand cmd )
 	{
 		command = cmd;
 	}
 	
-	public Command getCommand()
+	public MemoryCommand getCommand()
 	{
 		return command;
+	}
+	
+	Ranges ranges;
+	public void setContext( Ranges ranges )
+	{
+		this.ranges = ranges;
+	}
+	public Ranges getContext()
+	{
+		return ranges;
 	}
 }

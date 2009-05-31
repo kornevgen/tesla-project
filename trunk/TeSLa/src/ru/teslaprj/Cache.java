@@ -42,4 +42,16 @@ public interface Cache
 //    void setData(int section, int row, byte data[]);
 
 	Set<Long> getTagsets();
+	
+	int getLevel();
+	
+	CACHETYPE getType();
+	
+	public enum CACHETYPE
+	{
+		DATA,
+		INSTRUCTION,
+		MIXED
+	}
 }
+

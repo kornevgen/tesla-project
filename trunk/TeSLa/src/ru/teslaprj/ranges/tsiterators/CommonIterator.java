@@ -2,10 +2,9 @@ package ru.teslaprj.ranges.tsiterators;
 
 import java.util.Iterator;
 
-import ru.teslaprj.ranges.Range;
 import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 
-public abstract class CommonIterator implements Iterator<Range>
+public abstract class CommonIterator<E> implements Iterator<E>
 {
 	ProcedureTestSituation ts;
 	

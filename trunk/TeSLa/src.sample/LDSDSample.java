@@ -14,16 +14,18 @@ import ru.teslaprj.Solver;
 import ru.teslaprj.TLB;
 import ru.teslaprj.TLBRow;
 import ru.teslaprj.Verdict;
-import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.ConstDefinition;
 import ru.teslaprj.scheme.Definition;
+import ru.teslaprj.scheme.MemoryCommand;
 import ru.teslaprj.scheme.RegisterDefinition;
 import ru.teslaprj.scheme.Scheme;
 import ru.teslaprj.scheme.ts.CacheHit;
 import ru.teslaprj.scheme.ts.CacheMiss;
+import ru.teslaprj.scheme.ts.CacheTestSituation;
 import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 import ru.teslaprj.scheme.ts.TLBHit;
 import ru.teslaprj.scheme.ts.TLBMiss;
+import ru.teslaprj.scheme.ts.TLBSituation;
 
 public class LDSDSample
 {
@@ -52,7 +54,7 @@ public class LDSDSample
 				tags2[i][j] = r.nextInt( (int)Math.pow(2,17) );
 			}
 		}
-		cacheLevels.add( new Cache()
+		Cache cache1 = new Cache()
 		{
 			@Override
 			public int getSectionNumber()
@@ -84,8 +86,19 @@ public class LDSDSample
 			public Set<Long> getTagsets() {
 				throw new Error();
 			}
-		} );
-		cacheLevels.add( new Cache()
+
+			@Override
+			public int getLevel() {
+				return 1;
+			}
+
+			@Override
+			public Cache.CACHETYPE getType() {
+				return CACHETYPE.DATA;
+			}
+		};
+		cacheLevels.add( cache1 );
+		Cache cache2 = new Cache()
 		{
 			@Override
 			public int getSectionNumber()
@@ -117,7 +130,18 @@ public class LDSDSample
 			public Set<Long> getTagsets() {
 				throw new Error();
 			}
-		} );
+
+			@Override
+			public int getLevel() {
+				return 2;
+			}
+
+			@Override
+			public CACHETYPE getType() {
+				return CACHETYPE.MIXED;
+			}
+		};
+		cacheLevels.add( cache2 );
 		
 		// initialize TLB
 		final int[] pfn0 = new int[48];
@@ -256,8 +280,8 @@ public class LDSDSample
 			
 			final int iterationsCount = 4*4*3*3;
 			int iteratio = 0;
-			for( int ts1 = 0; ts1 < 3; ts1++ )
-			for( int ts2 = 0; ts2 < 3; ts2++ )
+			for( int cts1 = 0; cts1 < 3; cts1++ )
+			for( int cts2 = 0; cts2 < 3; cts2++ )
 			for( int at1 = 0; at1 < 2; at1++ )
 			for( int at2 = 0; at2 < 2; at2++ )
 			{
@@ -278,61 +302,65 @@ public class LDSDSample
 					scheme.addDefinition( new ConstDefinition( "c1", 16 ) );
 					scheme.addDefinition( new ConstDefinition( "c2", 16 ) );
 
-					List<Set<ProcedureTestSituation>> m1ts = new ArrayList<Set<ProcedureTestSituation>>();
-					for( int p : Arrays.asList(ts1, ts2))
+					Map<Cache, CacheTestSituation>[] cts = new HashMap[2];
+					int idx = 0;
+					for( int p : Arrays.asList(cts1, cts2))
 					{
-						Set<ProcedureTestSituation> ts = new HashSet<ProcedureTestSituation>();
+						cts[idx] = new HashMap<Cache, CacheTestSituation>();
 						switch( p )
 						{
 						case 0: // l1Hit
-							ts.add( new CacheHit(1) );
+							cts[idx].put( cache1, new CacheHit( cache1 ) );
 							break;
 						case 1: // l1Miss, l2Hit
-							ts.add( new CacheMiss(1, cacheLevels.get(0).getSectionNumber() ));
-							ts.add( new CacheHit(2));
+							cts[idx].put( cache1, new CacheMiss( cache1 ));
+							cts[idx].put( cache2, new CacheHit( cache2));
 							break;
 						case 2: // l1Miss, l2Miss
-							ts.add( new CacheMiss(1, cacheLevels.get(0).getSectionNumber()));
-							ts.add( new CacheMiss(2, cacheLevels.get(1).getSectionNumber()));
+							cts[idx].put( cache1, new CacheMiss( cache1 ));
+							cts[idx].put( cache2, new CacheMiss( cache2 ));
 							break;
 						default:
 							continue;
 						}
-						
-						m1ts.add( ts );
+						idx++;
 					}
 
-					List<Set<ProcedureTestSituation>> m11ts = new ArrayList<Set<ProcedureTestSituation>>();
+					List<TLBSituation> ats = new ArrayList<TLBSituation>();
 					for( int p : Arrays.asList( at1, at2 ) )
 					{
-						Set<ProcedureTestSituation> ts = new HashSet<ProcedureTestSituation>();
-						
 						//TODO вообще-то еще бывает TLBRefill, AddressError, TLBModified, TLBInvalid
 						switch( p )
 						{
 						case 0: //TLBHit
-							ts.add( new TLBHit() );
+							ats.add( new TLBHit() );
 							break;
 						case 1: //TLBMiss
-							ts.add( new TLBMiss(dtlb.size()) );
+							ats.add( new TLBMiss(dtlb.size()) );
 							break;
 						default:
 							continue;
 						}
-						
-						m11ts.add( ts );
 					}
 					
-					Map<String, Set<ProcedureTestSituation>> m1 = new HashMap<String, Set<ProcedureTestSituation>>();
-					m1.put( "LoadMemory", m1ts.get(0) );
-					m1.put( "AddressTranslation", m11ts.get(0));
-
-					Map<String, Set<ProcedureTestSituation>> m2 = new HashMap<String, Set<ProcedureTestSituation>>();
-					m2.put( "StoreMemory", m1ts.get(1) );
-					m2.put( "AddressTranslation", m11ts.get(1));
-
-					scheme.addCommand( new Command(scheme, "LD", params1, "regular", m1));
-					scheme.addCommand( new Command(scheme, "SD", params2, "regular", m2));
+					scheme.addCommand( 
+							new MemoryCommand(
+									scheme, 
+									"LD", 
+									params1, 
+									"regular", 
+									cts[0],
+									ats.get(0)
+								));
+					scheme.addCommand(
+							new MemoryCommand(
+									scheme, 
+									"SD", 
+									params2, 
+									"regular", 
+									cts[1],
+									ats.get(1)
+								));
 
 					//TLB build
 					//TODO представленное тут вычисление границ vpn/2 работает только в Mapped сегменте!

@@ -2,77 +2,111 @@ package ru.teslaprj.ranges;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
-import ru.teslaprj.scheme.Command;
+import ru.teslaprj.scheme.MemoryCommand;
 import yices.YicesLite;
 
 public class Ranges
 {
-	final Map<Command, Range> l1Ranges;
-	final Map<Command, Range> tlbRanges;
-	YicesLite yl = new YicesLite();
+	final Map<MemoryCommand, L1Range> l1Ranges;
+	final Map<MemoryCommand, TLBRange> tlbRanges;
+	YicesLite yl;
+	int context;
+	final int tagsetLength;
+	final int pfnLength;
 	
-	public Ranges(Range[] l1values, Range[] tlbvalues)
+	public Ranges(L1Range[] l1values, TLBRange[] tlbvalues)
 	{
-		l1Ranges = new HashMap<Command, Range>();
-		for( Range r : l1values )
+		l1Ranges = new HashMap<MemoryCommand, L1Range>();
+		for( L1Range r : l1values )
 		{
 			l1Ranges.put(r.getCommand(), r);
+			r.setContext(this);
 		}
-		tlbRanges = new HashMap<Command, Range>();
-		for( Range r : tlbvalues )
+		tlbRanges = new HashMap<MemoryCommand, TLBRange>();
+		for( TLBRange r : tlbvalues )
 		{
 			tlbRanges.put(r.getCommand(), r);
-		}		
+			r.setContext(this);
+		}
 	}
 
 	public boolean isConsistency()
 	{
-		int ctx = yl.yicesl_mk_context();
-		try
-		{
-
-		// проходимся по каждой команде и формируем ограничение для ее тегсета
-//		for( Command cmd : l1Ranges.keySet() )
-//		{
-//			assert tlbRanges.containsKey(cmd);
-//			String yicesAssert = getAssert( l1Ranges.get(cmd), tlbRanges.get(cmd) );
-//			// write to the yices
-//		}
+		yl = new YicesLite();
+		context = yl.yicesl_mk_context();
 		
-	//definig some bools
-//			System.out.println(yl.yicesl_version());
-		yl.yicesl_read(ctx, "(define a::bool)");
-		yl.yicesl_read(ctx, "(define b::bool)");
-		yl.yicesl_read(ctx, "(define c::bool)");
-		yl.yicesl_read(ctx, "(define d::bool)");
-		yl.yicesl_read(ctx, "(define e::bool)");
-		yl.yicesl_read(ctx, "(define f::bool)");
-	//adding some bool expressions
-		yl.yicesl_read(ctx, "(assert (and a b)");
-		yl.yicesl_read(ctx, "(assert (and a (not b)))");
-	//adding functions to count
-
-	     yl.yicesl_read(ctx, "(define x1::int (if (a) (= x1 1)(= x1 0)))");//line 15
-		yl.yicesl_read(ctx, "(define x2::int (if (f) (= x2 1)(= x2 0)))");
-		yl.yicesl_read(ctx, "(define x3::int (if (b) (= x3 1)(= x3 0)))");
-		yl.yicesl_read(ctx, "(define x4::int (if (c) (= x4 1)(= x4 0)))");
-		yl.yicesl_read(ctx, "(define x5::int (if (d) (= x5 1)(= x5 0)))");
-		yl.yicesl_read(ctx, "(define x6::int (if (e) (= x6 1)(= x6 0)))");
-
-	        yl.yicesl_read(ctx, "(define x::bool (/=(+ x1 x2 x3 x4 x5 x6) 3)");
-	        //yl.yicesl_read(ctx, "(check)");
-	        
-	    boolean result = yl.yicesl_inconsistent(ctx) == 0; 
-
-	        return result;
-		}
-		finally
+		yl.yicesl_read( context, "(define-type tagset (bitvector " + tagsetLength + "))" );
+		yl.yicesl_read( context, "(define-type pfn (bitvector " + pfnLength + "))" );
+		yl.yicesl_read( context, "(define getPfn :: (-> tagset pfn) " +
+				"(lambda " +
+					"(x :: tagset) " +
+					"(bv-extract " + (tagsetLength-1) + " " + (tagsetLength-pfnLength) + " x)" +
+				"))" );
+		
+		for( MemoryCommand cmd : l1Ranges.keySet() )
 		{
-	        yl.yicesl_del_context(ctx);
+			yl.yicesl_read( context, "(define " + cmd.getTagset() + " :: tagset)" );
 		}
 		
-//		return false;
+		for( MemoryCommand cmd : l1Ranges.keySet() )
+		{
+			assert tlbRanges.containsKey(cmd); // `Cached Mapped' case
+			tlbRanges.get(cmd).visit( l1Ranges.get(cmd) );
+		}
+		
+		int ttt = yl.yicesl_inconsistent(context);
+		boolean result = (ttt == 0);
+        yl.yicesl_del_context(context);
+
+        return result;
+	}
+
+	public void postAssert( String _assert )
+	{
+		yl.yicesl_read( context, "(assert " + _assert + ")" );
+	}
+	
+	public Set<Long> getLinterM()
+	{
+		// TODO Auto-generated method stub
+		return null;		
+	}
+
+	public int getTagsetLength() {
+		return tagsetLength;
+	}
+
+	public Set<Long> getLinterPFN() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public Set<Long> getLinterPFNminusM() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public Set<Long> getLinterPFN(int tagIndex) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	/**
+	 * возвращает все более старые элементы в microDTLB
+	 */
+	public Set<Long> getMremains(int tagIndex) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	/**
+	 * возвращает L \inter [{M_tagIndex}]
+	 */
+	public Set<Long> getLinterMremains(int tagIndex) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }
