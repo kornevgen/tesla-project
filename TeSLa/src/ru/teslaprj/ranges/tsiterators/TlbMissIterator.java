@@ -2,42 +2,50 @@ package ru.teslaprj.ranges.tsiterators;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import ru.teslaprj.ranges.BlockRange;
-import ru.teslaprj.ranges.Range;
-import ru.teslaprj.ranges.ts.InitialL1Miss;
+import ru.teslaprj.ranges.TLBRange;
+import ru.teslaprj.ranges.ts.InitialTlbMiss;
 import ru.teslaprj.scheme.Command;
-import ru.teslaprj.scheme.ts.ProcedureTestSituation;
+import ru.teslaprj.scheme.MemoryCommand;
 import ru.teslaprj.scheme.ts.TLBMiss;
+import ru.teslaprj.scheme.ts.TLBSituation;
 
-public class TlbMissIterator extends CommonIterator {
+public class TlbMissIterator extends TLBIterator {
 
-	public TlbMissIterator(int assoc, ProcedureTestSituation testSituation)
+	public TlbMissIterator(int assoc, TLBSituation testSituation)
 	{
 		super(testSituation);
 		w = assoc;
 		
-		Command cmd1 = testSituation.getCommand();
-		previousCommands = new ArrayList<Command>();
-		misses = new ArrayList<Integer>();
+		MemoryCommand cmd1 = testSituation.getCommand();
 		int i = 0;
 		for( Command cmd : cmd1.getScheme().getCommands() )
 		{
 			if ( cmd == cmd1 )
 				break;
-			previousCommands.add( cmd );
-			if ( cmd.getTLBSituation() instanceof TLBMiss )
-				misses.add(i);
-			i++;
+			if ( cmd instanceof MemoryCommand )
+			{
+				previousCommands.add( (MemoryCommand)cmd );
+				if ( ((MemoryCommand)cmd).getTLBSituation() instanceof TLBMiss )
+				{
+					previousMisses.add((MemoryCommand)cmd);
+					misses.add(i);
+				}
+				i++;
+			}
 		}
 	}
 
 	int m = 0;
 	final int w;
 	BlockIterator blockIterator;
-	final List<Command> previousCommands;
-	List<Integer> misses;
+	final List<MemoryCommand> previousCommands = new ArrayList<MemoryCommand>();
+	final Set<MemoryCommand> previousMisses = new HashSet<MemoryCommand>();
+	final List<Integer> misses = new ArrayList<Integer>();
 	
 	@Override
 	public boolean hasNext()
@@ -48,7 +56,7 @@ public class TlbMissIterator extends CommonIterator {
 	boolean hasNext = true;
 
 	@Override
-	public Range next()
+	public TLBRange next()
 	{
 		try
 		{
@@ -58,7 +66,7 @@ public class TlbMissIterator extends CommonIterator {
 		case 0:
 			m = Math.max( w - previousCommands.size(), 1 );
 			blockIterator = new BlockIterator( w-m, previousCommands );
-			return new InitialL1Miss(ts.getCommand());
+			return new InitialTlbMiss(getTestSituation().getCommand(), previousMisses );
 		default:
 			if ( m <= w - misses.size() )
 			{
@@ -78,7 +86,12 @@ public class TlbMissIterator extends CommonIterator {
 					if ( Arrays.binarySearch(block, m) < 0 )
 						return next(); // этот блок содержит не все miss
 				}
-				return new BlockRange( ts.getCommand(), m, block );
+				List<MemoryCommand> blockCommands = new ArrayList<MemoryCommand>();
+				for( int b : block )
+				{
+					blockCommands.add( previousCommands.get(b) );
+				}
+				return new BlockRange.TLB( getTestSituation().getCommand(), m, blockCommands, previousCommands );
 			}
 			return null;
 		}

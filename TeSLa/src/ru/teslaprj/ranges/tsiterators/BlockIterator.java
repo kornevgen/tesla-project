@@ -3,7 +3,7 @@ package ru.teslaprj.ranges.tsiterators;
 import java.util.Iterator;
 import java.util.List;
 
-import ru.teslaprj.scheme.Command;
+import ru.teslaprj.scheme.MemoryCommand;
 
 public class BlockIterator implements Iterator<int[]>
 {
@@ -20,7 +20,7 @@ public class BlockIterator implements Iterator<int[]>
 	}
 	
 	// перебор подпоследовательностей длины blockLength
-	public BlockIterator( int blockLength, List<Command> commands )
+	public BlockIterator( int blockLength, List<MemoryCommand> commands )
 	{
 		assert blockLength <= commands.size();
 		iterationsCount = factorial(commands.size()) / 
@@ -32,7 +32,7 @@ public class BlockIterator implements Iterator<int[]>
 	final long iterationsCount;
 	final int blockLength;
 	int i = 0;
-	List<Command> allCommands;
+	List<MemoryCommand> allCommands;
 	int[] block;
 
 	@Override

@@ -1,6 +1,6 @@
 package ru.teslaprj.scheme.ts;
 
-import ru.teslaprj.ranges.tsiterators.CommonIterator;
+import ru.teslaprj.ranges.tsiterators.TLBIterator;
 import ru.teslaprj.ranges.tsiterators.TlbMissIterator;
 
 public class TLBMiss extends TLBExists
@@ -12,7 +12,7 @@ public class TLBMiss extends TLBExists
 	}
 	
 	@Override
-	public CommonIterator iterator( ) {
+	public TLBIterator iterator( ) {
 		return new TlbMissIterator( assoc, this ) ;
 	}
 }

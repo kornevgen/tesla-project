@@ -169,14 +169,17 @@ public class Solver
 			}
 		}
 		
-		RangeIterator it = new RangeIterator( //tlb, cacheState,
-				scheme );
+		RangeIterator it = new RangeIterator( //tlb, 
+				cacheState, scheme );
 		while( it.hasNext() )
 		{
 			Ranges ranges = it.next();
 			
 			if ( ! ranges.isConsistency() )
+			{
+				System.out.println("inconsistent :(");
 				continue;
+			}
 			
 			System.out.println("consistent!");
 			
@@ -1056,221 +1059,6 @@ public class Solver
     	cache2init.put(cacheLevels.get(0), initial1Diffs );
     	cache2init.put(cacheLevels.get(1), initial2Diffs );
     	
-    	CacheProblem cacheProblem = new CacheProblem( scheme.getCommands(), initials );
-    	
-    	//TODO сгенерировать ограничения на diff'ы:
-    	for( Cache cache : cacheLevels )
-    	{
-    		for( CacheProblem.Hit hit : cacheProblem.getHits(cache) )
-    		{
-				// add constraint (tagset \notisin vytesned) 
-    			for( CacheProblem.ProcessElement v : hit.cacheState.vytesned )
-    			{
-    				// add constraint diff( tagset, v ) = 0
-    				// 1. find diff var...
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), hit, v );
-    				ecl.append( var ).append(" = 0," ).append( eoln );
-    			}
-    		}
-
-    		for( CacheProblem.Miss miss : cacheProblem.getMisses(cache) )
-    		{
-				// add constraint (miss.rangeStart \notisin vytesned) 
-    			for( CacheProblem.ProcessElement v : miss.cacheState.vytesned )
-    			{
-    				// add constraint diff( tagset, v ) = 0
-    				// 1. find diff var...
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss.rangeStart, v );
-    				ecl.append( var ).append(" = 0," ).append( eoln );
-    			}
-    			
-        		// 1) rangeStart \isin {between}  (went to the beginning!)  (from equation of vytesned tagset)
-    			for( CacheProblem.Rangeable v : miss.range )
-    			{
-    				// add constraint diff( tagset, v ) = 0
-    				// 1. find diff var...
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss.rangeStart, v );
-    				ecl.append( var ).append(" = 0," ).append( eoln );
-    			}
-    		}
-    		
-    		for( CacheProblem.Hit hit : cacheProblem.getHits(cache) )
-    		{	
-    			// add constraint( tagset \isin (init U vytesn) )
-    			for( CacheProblem.InitialTagSet v : hit.cacheState.initial )
-    			{
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), hit, v );
-    				ecl.append( var ).append( " + " );
-    			}
-    			for( CacheProblem.ProcessElement v : hit.cacheState.vytesn )
-    			{
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), hit, v );
-    				ecl.append( var ).append( " + " );
-    			}
-    			ecl.append( " 0 #>= 1," ).append( eoln );
-    		}
-    		
-    		// vytesn \notisin cachestate
-			// vytesned \isin cachestate  (нужно ли?)
-			// regions of vytesned and startRegion are equals
-			// equation of vytesned tagset
-    		
-    		for( CacheProblem.Miss miss : cacheProblem.getMisses(cache) )
-    		{	
-    			// add constraint( miss.rangeStart \isin (init U vytesn) )
-    			for( CacheProblem.InitialTagSet v : miss.cacheState.initial )
-    			{
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss.rangeStart, v );
-    				ecl.append( var ).append( " + " );
-    			}
-    			for( CacheProblem.ProcessElement v : miss.cacheState.vytesn )
-    			{
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss.rangeStart, v );
-    				ecl.append( var ).append( " + " );
-    			}
-    			ecl.append( " 0 #>= 1," ).append( eoln );
-    		}
-
-    		
-    		for( CacheProblem.Miss miss : cacheProblem.getMisses(cache) )
-    		{    			
-    			ecl.append( "( " );
-    			for( CacheProblem.InitialTagSet v : miss.cacheState.initial )
-    			{
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss, v );
-    				ecl.append( var ).append( " = 0, ");
-    			}
-    			for( CacheProblem.ProcessElement v : miss.cacheState.vytesn )
-    			{
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss, v );
-    				ecl.append( var ).append( " = 0, " );
-    			}
-    			ecl.append( "true; " );
-    			for( CacheProblem.ProcessElement v : miss.cacheState.vytesned )
-    			{
-    				String var = cacheProblem.findDiffVar( tagsetDiffs, cache2init.get(cache), miss, v );
-    				ecl.append( var ).append( " + " );
-    			}
-    			ecl.append( " 0 #>= 1 )," ).append( eoln );
-    		}
-    		
-    		// equations of vytesned tagsets
-    		// { init + vytesn } \ { between + vytesned } = { rangeStart }
-    		// 1) rangeStart \isin {between}  (went to the beginning!)
-    		// 2) init = rangeStart \/ init != rangeStart, init \notisin {between + vytesned}
-    		// 3) vytesn = rangeStart \/ vytesn != rangeStart, vytesn \notisin {between + vytesned}
-    		for( CacheProblem.Miss miss : cacheProblem.getMisses(cache))
-    		{
-    			List<CacheProblem.Rangeable> l = new ArrayList<CacheProblem.Rangeable>( miss.cacheState.initial );
-    			l.addAll( miss.cacheState.vytesn );
-    			
-    			for( CacheProblem.Rangeable init : l )
-    			{
-    				String var = cacheProblem.findDiffVar(tagsetDiffs, cache2init.get(cache), init, miss.rangeStart );
-    				ecl.append( "( " ).append( var ).append( " = 1 ; " ).append( var ).append( " = 0, ");
-    				for( CacheProblem.Rangeable b : miss.range )
-    				{
-        				String v = cacheProblem.findDiffVar(tagsetDiffs, cache2init.get(cache), init, b );
-        				ecl.append( v ).append( " = 0," );
-    				}
-    				ecl.append( "true)," ).append( eoln );
-    			}
-    		}
-    	}
-    	//TODO транзитивность:  d(x,y) = 1 -> (d(x,z) = d(y,z))  + другие 2 варианта с циклической заменой x,y,z
-    	// + dR + dS
-    	for( List<Command> cmds : tagsetDiffs.keySet() )
-    	{
-    		ecl.append( "( " ).append( tagsetDiffs.get(cmds) ).append( " = 1 -> ");
-    		for( Command cmd : scheme.getCommands() )
-    		{
-    			if ( cmds.get(0).equals(cmd) || cmds.get(1).equals(cmd) )
-    				continue;
-    			
-				String v1 = cacheProblem.findDiffVar(tagsetDiffs, cmds.get(0), cmd );
-				String v2 = cacheProblem.findDiffVar(tagsetDiffs, cmds.get(1), cmd );
-				ecl.append( v1 ).append( " #= " ).append( v2 ).append( ", " );
-    		}
-        	for( Map<String, Map<Command, String>> initialDiffs : cache2init.values() )
-        	{
-        		for( Map<Command, String> cs : initialDiffs.values() )
-        		{
-    				String v1 = cs.get(cmds.get(0) );
-    				String v2 = cs.get(cmds.get(1) );
-    				ecl.append( v1 ).append( " #= " ).append( v2 ).append( ", " );        			
-        		}
-        	}
-			ecl.append( " true ; true ),").append( eoln );
-    	}
-    	for( Map<String, Map<Command, String>> initialDiffs : cache2init.values() )
-    	{
-    		for( String iniTag : initialDiffs.keySet() )
-    		{
-    			for( Command cmd : initialDiffs.get(iniTag).keySet() )
-    			{
-    				String var = initialDiffs.get(iniTag).get( cmd );
-    				ecl.append( "( " ).append( var ).append( " = 1 -> " );
-    				for( String iniTag2 : initialDiffs.keySet() )
-    				{
-    					if ( iniTag2.equals( iniTag ) )
-    						continue;
-    					
-    					String v = initialDiffs.get( iniTag2 ).get( cmd );
-    					ecl.append( v ).append( " = 0, " );
-    				}
-    				ecl.append( " true ; true )," ).append( eoln );
-    			}
-    		}
-    	}
-    	
-    	/**
-    	 * TODO связи diff'ов разных типов:
-    	 * 1) d(x,y)=1 -> dR(x,y) = 1, dS(x,y) = 1
-    	 * 2) dR(x,y)=0 -> d(x,y) = 0, dS(x,y) = 0 (последнее если сет в L2 больше сета в L1)
-    	 * 3) dS(x,y)=0 -> d(x,y) = 0
-    	 * 4) (если сет в L2 больше сета в L1) dS(x,y) = 1 -> dR(x,y) = 1
-    	 */
-    	
-    	//TODO labeling diff'ов
-    	ecl.append( "labeling( [ 0" );
-    	for( String diff : tagsetDiffs.values() )
-    	{
-    		ecl.append( ", " ).append( diff );
-    	}
-    	for( Map<String, Map<Command, String>> initialDiffs : cache2init.values() )
-    	{
-    		for( Map<Command, String> cs : initialDiffs.values() )
-    		{
-    			for( String s : cs.values() )
-    			{
-    				ecl.append( ", " ).append( s );
-    			}
-    		}
-    	}
-    	ecl.append( " ])," ).append( eoln );
-
-    	// подбор начального состояния кэша
-    	Map<Cache, String> regions = new HashMap<Cache, String>();
-    	int physLen = cacheLevels.get(0).getAddressBitLength();
-    	for( Cache cache : cacheLevels )
-    	{
-    		String region = tagNames.newVar().toString();
-    		regions.put( cache, region );
-        	ecl.append( "( " );
-	    	for( int i = 0; i < 10; i++ )//TODO (int)Math.pow(2, cache.getSetNumberBitLength()); i++ )
-	    	{
-	    		int row = 0;
-		    	for( String init1 : initials.get(cache) )
-		    	{
-		    		ecl.append( init1 ).append( " = " )
-		    		.append( cache.getTag(i, row++) * (long)Math.pow(2, physLen - cache.getTagBitLength() )
-		    				+ i * (long)Math.pow(2, physLen - cache.getTagBitLength() - cache.getSetNumberBitLength() )
-		    				).append( ", " );
-		    	}
-		    	ecl.append( "true;" ).append( eoln );
-	    	}
-	    	ecl.append( "false ),").append( eoln );
-    	}
     	
     	
     	//TODO перевести ограничения на diff в ограничения на части физических адресов (boundedEqual)

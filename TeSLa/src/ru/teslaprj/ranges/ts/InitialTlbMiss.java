@@ -6,24 +6,23 @@ import ru.teslaprj.ranges.L1Range;
 import ru.teslaprj.ranges.TLBRange;
 import ru.teslaprj.scheme.MemoryCommand;
 
-public class EvictingTlbHit extends TLBRange
+public class InitialTlbMiss extends TLBRange
 {
-	final Set<MemoryCommand> evics;
-	
-	public EvictingTlbHit(MemoryCommand cmd, Set<MemoryCommand> evictings)
+	Set<MemoryCommand> ev;
+	public InitialTlbMiss(MemoryCommand cmd, Set<MemoryCommand> evictings)
 	{
 		super(cmd);
-		evics = evictings; 
+		ev = evictings;
 	}
 
 	@Override
 	public void visit(L1Range r)
 	{
-		r.visitEvictingTlbHit(this);
+		r.visitInitialTlbMiss(this);
 	}
 
 	public Set<MemoryCommand> getEvictings()
 	{
-		return evics;
+		return ev;
 	}
 }

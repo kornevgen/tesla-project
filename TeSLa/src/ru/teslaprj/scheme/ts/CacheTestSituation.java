@@ -1,17 +1,22 @@
 package ru.teslaprj.scheme.ts;
 
+import ru.teslaprj.Cache;
+import ru.teslaprj.ranges.tsiterators.L1Iterator;
+import ru.teslaprj.scheme.MemoryCommand;
+
 public abstract class CacheTestSituation extends ProcedureTestSituation
 {
-	int level;
-	
-	public CacheTestSituation( int level )
-	{
-		this.level = level;
+	@Override
+	public MemoryCommand getCommand() {
+		return (MemoryCommand)super.getCommand();
 	}
+
+	public abstract L1Iterator iterator();
 	
-	/** уровень тега; 0 - для DATA-кэша */
-	public int getLevel()
+	Cache cache;
+	
+	public CacheTestSituation( Cache cache )
 	{
-		return level;
+		this.cache = cache;
 	}
 }

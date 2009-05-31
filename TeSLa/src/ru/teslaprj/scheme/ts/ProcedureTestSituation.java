@@ -5,7 +5,7 @@ import ru.teslaprj.scheme.Command;
 
 public abstract class ProcedureTestSituation 
 {
-	public abstract CommonIterator iterator();
+	public abstract CommonIterator<?> iterator();
 
 	Command cmd = null;
 	public void setCommand( Command cmd )

@@ -5,17 +5,18 @@ import java.util.Iterator;
 import java.util.List;
 
 import ru.teslaprj.Cache;
-import ru.teslaprj.TLB;
-import ru.teslaprj.ranges.tsiterators.CommonIterator;
+import ru.teslaprj.ranges.tsiterators.L1Iterator;
+import ru.teslaprj.ranges.tsiterators.TLBIterator;
 import ru.teslaprj.scheme.Command;
+import ru.teslaprj.scheme.MemoryCommand;
 import ru.teslaprj.scheme.Scheme;
 
 public class RangeIterator implements Iterator<Ranges>
 {
-	CommonIterator[] l1Iterators;
-	CommonIterator[] tlbIterators;
-	Range[] l1values;
-	Range[] tlbvalues;
+	L1Iterator[] l1Iterators;
+	TLBIterator[] tlbIterators;
+	L1Range[] l1values;
+	TLBRange[] tlbvalues;
 	boolean hasNext = true;
 	
 	@Override
@@ -36,7 +37,7 @@ public class RangeIterator implements Iterator<Ranges>
 			{
 			for( int i = 0; i < l1Iterators.length; i++ )
 			{
-				CommonIterator c = l1Iterators[i];
+				L1Iterator c = l1Iterators[i];
 				if ( c.hasNext() )
 				{
 					l1values[i] = c.next();
@@ -50,7 +51,7 @@ public class RangeIterator implements Iterator<Ranges>
 			}
 			for( int i = 0; i < tlbIterators.length; i++ )
 			{
-				CommonIterator c = tlbIterators[i];
+				TLBIterator c = tlbIterators[i];
 				if ( c.hasNext() )
 				{
 					tlbvalues[i] = c.next();
@@ -73,35 +74,44 @@ public class RangeIterator implements Iterator<Ranges>
 	
 	
 
-	public RangeIterator( //TLB tlb, List<Cache> cacheState, 
+	public RangeIterator( //TLB tlb, 
+			List<Cache> cacheState, 
 			Scheme scheme  )
 	{
-		List<CommonIterator> l1its = new ArrayList<CommonIterator>();
-		List<CommonIterator> tlbits = new ArrayList<CommonIterator>();
+		List<L1Iterator> l1its = new ArrayList<L1Iterator>();
+		List<TLBIterator> tlbits = new ArrayList<TLBIterator>();
 		
 		for( Command cmd : scheme.getCommands() )
 		{
-			if ( cmd.hasCacheSituation() )
+			if ( cmd instanceof MemoryCommand )
 			{
-				l1its.add( cmd.getCacheSituation(1).iterator() );
-			}
-			
-			if ( cmd.hasTLBSituation() )
-			{
-				tlbits.add( cmd.getTLBSituation().iterator() );
+				MemoryCommand c = (MemoryCommand)cmd;
+		
+				for( Cache cache : cacheState )
+				{
+					if ( c.hasCacheSituation(cache) )
+					{
+						l1its.add( c.getCacheSituation(cache).iterator() );
+					}
+				}
+				
+				if ( c.hasTLBSituation() )
+				{
+					tlbits.add( c.getTLBSituation().iterator() );
+				}
 			}
 		}
 		
-		l1Iterators = l1its.toArray(new CommonIterator[]{});
-		tlbIterators = tlbits.toArray(new CommonIterator[]{});
+		l1Iterators = l1its.toArray(new L1Iterator[]{});
+		tlbIterators = tlbits.toArray(new TLBIterator[]{});
 		
-		l1values = new Range[l1Iterators.length];
+		l1values = new L1Range[l1Iterators.length];
 		for( int i = 0; i < l1Iterators.length; i++ )
 		{
 			l1values[i] = l1Iterators[i].next();
 		}
 		
-		tlbvalues = new Range[tlbIterators.length];
+		tlbvalues = new TLBRange[tlbIterators.length];
 		for( int i = 0; i < tlbIterators.length; i++ )
 		{
 			tlbvalues[i] = tlbIterators[i].next();

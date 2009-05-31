@@ -3,17 +3,19 @@ package ru.teslaprj.ranges.tsiterators;
 import java.util.HashSet;
 import java.util.Set;
 
-import ru.teslaprj.ranges.Range;
+import ru.teslaprj.Cache;
+import ru.teslaprj.ranges.L1Range;
 import ru.teslaprj.ranges.ts.EvictingL1Hit;
 import ru.teslaprj.ranges.ts.InitialL1Hit;
 import ru.teslaprj.scheme.Command;
+import ru.teslaprj.scheme.MemoryCommand;
 import ru.teslaprj.scheme.ts.CacheMiss;
-import ru.teslaprj.scheme.ts.ProcedureTestSituation;
+import ru.teslaprj.scheme.ts.CacheTestSituation;
 
-public class L1HitIterator extends CommonIterator {
+public class L1HitIterator extends L1Iterator {
 
-	public L1HitIterator(ProcedureTestSituation testSituation) {
-		super(testSituation);
+	public L1HitIterator( Cache level, CacheTestSituation testSituation) {
+		super(level, testSituation);
 	}
 
 	int number = 0;
@@ -24,25 +26,26 @@ public class L1HitIterator extends CommonIterator {
 	}
 
 	@Override
-	public Range next()
+	public L1Range next()
 	{
 		switch( number )
 		{
 		case 0:
 			number = 1;
-			return new InitialL1Hit(ts.getCommand());
+			return new InitialL1Hit( getTestSituation().getCommand());
 		case 1:
 			number = 2;
-			Set<Command> evictings = new HashSet<Command>();
+			Set<MemoryCommand> evictings = new HashSet<MemoryCommand>();
 			// build all previous evicting in L1 commands
-			Command cmd = ts.getCommand();
+			MemoryCommand cmd = getTestSituation().getCommand();
 			for( Command cmd1 : cmd.getScheme().getCommands() )
 			{
 				if ( cmd1 == cmd )
 					break;
-				if ( cmd1.getCacheSituation(1) instanceof CacheMiss )
+				if ( cmd1 instanceof MemoryCommand &&
+						((MemoryCommand)cmd1).getCacheSituation(L1) instanceof CacheMiss )
 				{
-					evictings.add( cmd1 );
+					evictings.add( (MemoryCommand)cmd1 );
 				}
 			}
 			return new EvictingL1Hit( cmd, evictings );
