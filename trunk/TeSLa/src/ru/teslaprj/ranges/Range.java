@@ -24,4 +24,6 @@ public abstract class Range
 	{
 		return ranges;
 	}
+	
+	public abstract String print();
 }

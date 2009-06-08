@@ -35,4 +35,10 @@ public class InitialL1Miss extends L1Range
 		
 	}
 
+	@Override
+	public String print()
+	{
+		return "L1Miss( " + getCommand().getTagset() + " ) from the initial";
+	}
+
 }

@@ -21,8 +21,20 @@ public class L1HitIterator extends L1Iterator {
 	int number = 0;
 	
 	@Override
-	public boolean hasNext() {
-		return number < 2;
+	public boolean hasNext()
+	{
+		MemoryCommand cmd = getTestSituation().getCommand();
+		for( Command cmd1 : cmd.getScheme().getCommands() )
+		{
+			if ( cmd1 == cmd )
+				break;
+			if ( cmd1 instanceof MemoryCommand &&
+					((MemoryCommand)cmd1).getCacheSituation(L1) instanceof CacheMiss )
+			{
+				return number < 2;
+			}
+		}
+		return number < 1;
 	}
 
 	@Override

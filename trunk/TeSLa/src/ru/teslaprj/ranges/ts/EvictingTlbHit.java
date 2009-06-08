@@ -26,4 +26,16 @@ public class EvictingTlbHit extends TLBRange
 	{
 		return evics;
 	}
+
+	@Override
+	public String print()
+	{
+		StringBuffer result = new StringBuffer( "TLBHit( " ).append( getCommand().getTagset() )
+				.append( " ) with evicting(#" );
+		for( MemoryCommand cmd : evics )
+		{
+			result.append( ", ^" ).append( cmd.getTagset() ).append("^");
+		}
+		return result.append(")").toString();
+	}
 }

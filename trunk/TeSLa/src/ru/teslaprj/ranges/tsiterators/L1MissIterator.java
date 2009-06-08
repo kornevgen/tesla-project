@@ -48,6 +48,8 @@ public class L1MissIterator extends L1Iterator {
 		{
 		case 0:
 			m = Math.max( w - previousCommands.size(), 1 );
+			//TODO подправить - надо аккуратнее определять, что hasNext == null
+			// например, что если ни одного miss'а
 			blockIterator = new BlockIterator( w-m, previousCommands );
 			return new InitialL1Miss( getTestSituation().getCommand());
 		default:

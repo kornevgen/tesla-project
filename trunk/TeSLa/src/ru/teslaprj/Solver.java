@@ -47,9 +47,6 @@ import ru.teslaprj.syntax.TeSLaLexer;
 import ru.teslaprj.syntax.TeSLaParser;
 import ru.teslaprj.syntax.VarsController;
 import ru.teslaprj.syntax.LogicalVariable.Status;
-import ru.teslaprj.tagsets.Domain;
-import ru.teslaprj.tagsets.EmptyDomain;
-import ru.teslaprj.tagsets.Tagset;
 
 import com.parctechnologies.eclipse.CompoundTerm;
 import com.parctechnologies.eclipse.EclipseEngine;
@@ -62,8 +59,8 @@ public class Solver
 {
 	public static final String eoln = System.getProperty("line.separator");
 	
-	private File sourcePath;
-	private File libPath;
+	final private File sourcePath;
+	final private File libPath;
 
     // Object representing the Eclipse process
     private static EclipseEngine eclipse = null;
@@ -123,18 +120,7 @@ public class Solver
 	{
 		// 0. check correctness of the `scheme`
 		checkVarsKnowness( scheme );
-		
-		if ( cacheState != null )
-		{
-			for( Cache cache : cacheState )
-			{			
-				if ( cache.getTagBitLength() > BitLen.WORD_VALUE )
-				{
-					throw new SemanticException( null, "operations with addresses more than " + BitLen.WORD_VALUE + " bits are not implemented yet");
-				}
-			}
-		}
-		
+				
 		if ( cacheState == null )
 		{
 			cacheState = new ArrayList<Cache>();

@@ -25,4 +25,16 @@ public class InitialTlbMiss extends TLBRange
 	{
 		return ev;
 	}
+
+	@Override
+	public String print()
+	{
+		StringBuffer result = new StringBuffer( "TLBMiss( " )
+		.append( getCommand().getTagset() ).append( " ) from initial DTLB with evictings(#" );
+		for( MemoryCommand cmd : ev )
+		{
+			result.append( ", ^" ).append( cmd.getTagset() ).append("^");
+		}
+		return result.append(")").toString();
+	}
 }

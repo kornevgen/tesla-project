@@ -21,7 +21,18 @@ public class TlbHitIterator extends TLBIterator {
 	
 	@Override
 	public boolean hasNext() {
-		return number < 2;
+		MemoryCommand cmd = getTestSituation().getCommand();
+		for( Command cmd1 : cmd.getScheme().getCommands() )
+		{
+			if ( cmd1 == cmd )
+				break;
+			if ( cmd1 instanceof MemoryCommand &&
+					((MemoryCommand)cmd1).getTLBSituation() instanceof TLBMiss )
+			{
+				return number < 2;
+			}
+		}
+		return number < 1;
 	}
 
 	@Override
