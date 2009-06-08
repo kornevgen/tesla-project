@@ -41,7 +41,7 @@ public interface Cache
 //    
 //    void setData(int section, int row, byte data[]);
 
-	Set<Long> getTagsets();
+	Set<Long> getValidTagsets();
 	
 	int getLevel();
 	

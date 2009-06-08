@@ -22,7 +22,6 @@ import ru.teslaprj.scheme.Scheme;
 import ru.teslaprj.scheme.ts.CacheHit;
 import ru.teslaprj.scheme.ts.CacheMiss;
 import ru.teslaprj.scheme.ts.CacheTestSituation;
-import ru.teslaprj.scheme.ts.ProcedureTestSituation;
 import ru.teslaprj.scheme.ts.TLBHit;
 import ru.teslaprj.scheme.ts.TLBMiss;
 import ru.teslaprj.scheme.ts.TLBSituation;
@@ -36,16 +35,20 @@ public class LDSDSample
 		Solver solver = new Solver( new File("src.sample" ), new File("clp") );
 		
 		List<Cache> cacheLevels = new ArrayList<Cache>();
-		
+		final Set<Long> tagsets1 = new HashSet<Long>();
+		Set<Integer> ttt = new HashSet<Integer>();
 		Random r = new Random();
 		final int[][] tags1 = new int[(int)Math.pow(2, 7)][4];
 		for( int i = 0; i < (int)Math.pow(2,7); i++ )
 		{
 			for( int j = 0; j < 4; j++ )
 			{
-				tags1[i][j] = r.nextInt( (int)Math.pow(2,24) );
+				tags1[i][j] = r.nextInt( (int)Math.pow(2,24) ); // <<i>> is set value for this tag
+				tagsets1.add( tags1[i][j] * (long)Math.pow(2,7) + (long)i );
+				ttt.add(tags1[i][j]);
 			}
 		}
+		
 		final int[][] tags2 = new int[(int)Math.pow(2, 14)][4];
 		for( int i = 0; i < (int)Math.pow(2,14); i++ )
 		{
@@ -83,11 +86,6 @@ public class LDSDSample
 			}
 
 			@Override
-			public Set<Long> getTagsets() {
-				throw new Error();
-			}
-
-			@Override
 			public int getLevel() {
 				return 1;
 			}
@@ -95,6 +93,11 @@ public class LDSDSample
 			@Override
 			public Cache.CACHETYPE getType() {
 				return CACHETYPE.DATA;
+			}
+
+			@Override
+			public Set<Long> getValidTagsets() {
+				return tagsets1;
 			}
 		};
 		cacheLevels.add( cache1 );
@@ -127,11 +130,6 @@ public class LDSDSample
 			}
 
 			@Override
-			public Set<Long> getTagsets() {
-				throw new Error();
-			}
-
-			@Override
 			public int getLevel() {
 				return 2;
 			}
@@ -139,6 +137,11 @@ public class LDSDSample
 			@Override
 			public CACHETYPE getType() {
 				return CACHETYPE.MIXED;
+			}
+
+			@Override
+			public Set<Long> getValidTagsets() {
+				throw new Error("getValidTagsets for L2");
 			}
 		};
 		cacheLevels.add( cache2 );
@@ -151,6 +154,10 @@ public class LDSDSample
 		{
 			pfn0[i] = r.nextInt( (int)Math.pow(2, PFN_BITLEN) );
 			pfn1[i] = r.nextInt( (int)Math.pow(2, PFN_BITLEN) );
+			if ( ttt.contains(pfn0[i]) )
+				System.out.println(pfn0[i]);
+			if ( ttt.contains(pfn1[i]) )
+				System.out.println(pfn1[i]);
 			ranges[i] = r.nextInt( 4 );
 		}
 		
@@ -170,7 +177,7 @@ public class LDSDSample
 			for( int i = 0; i < indexes.size(); i++ )
 			{
 				// выбираем маску
-				masks[indexes.get(i)] = r.nextInt(9); //maxmask = 8
+				masks[indexes.get(i)] = PFN_BITLEN; //r.nextInt(9); //maxmask = 8
 				
 				// выбираем vpn/2
 				int v;
@@ -367,7 +374,7 @@ public class LDSDSample
 					TLB tlb = new TLB(){
 
 						@Override
-						public int getMicroTLBSize() {
+						public int getDTLBSize() {
 							return 4;
 						}
 
@@ -436,15 +443,7 @@ public class LDSDSample
 							return tlbRows[index];
 						}
 
-						@Override
-						public Set<Long> getMicroPfns() {
-							throw new Error();
-						}
-
-						@Override
-						public Set<Long> getNotMicroPfns() {
-							throw new Error();
-						}};
+						};
 
 					
 					Verdict verdict = solver.solve(scheme, cacheLevels, tlb );
@@ -455,53 +454,53 @@ public class LDSDSample
 					// 3. распечатать ответ
 					System.out.println( ++iteratio + " / " + iterationsCount + " :" );
 					
-					Map<Definition, BigInteger> values = verdict.getDefinitionValues();
-					for( Definition def : values.keySet() )
-					{
-						System.out.println( def + " = " + values.get( def ) );	
-					}
-
-//					List<Map<Long, List<Long>>> caches = verdict.getCacheInitialization();
-//					for( Cache cache : cacheLevels )
+//					Map<Definition, BigInteger> values = verdict.getDefinitionValues();
+//					for( Definition def : values.keySet() )
 //					{
-//						int level = cacheLevels.indexOf( cache );
-//						Map<Long, List<Long>> sets = caches.get( level );
-//						for( long setNumber : sets.keySet() )
-//						{
-//							System.out.print( 
-//									"level " + ( level + 1 ) + 
-//									": set " + setNumber + ": _ " );
-//							for( Long tag : sets.get( setNumber ) )
-//							{
-//								System.out.print( ", " + tag );
-//							}
-//							System.out.println();
-//						}
+//						System.out.println( def + " = " + values.get( def ) );	
 //					}
-					
-					Map<Integer, TLBRow> tlbrows = verdict.getTlbrows();
-					for( TLBRow row : tlbrows.values() )
-					{
-						System.out.println( "tlb:" +
-								" range = " + row.getRange() +
-								", vpn/2 = " + row.getVPNd2() +
-								", mask = " + row.getMask() + 
-								", g = " + row.getGlobal() + 
-								", asid = " + row.getAsid() + 
-								", pfn0 = " + row.getPFN0() + 
-								", v0 = " + row.getValid0() +
-								", d0 = " + row.getmoDify0() +
-								", pfn1 = " + row.getPFN1() +
-								", v1 = " + row.getValid1() +
-								", d1 = " + row.getmoDify1()
-							);
-					}
-					
-					Map<BigInteger, BigInteger> memory = verdict.getMemory();
-					for( BigInteger address : memory.keySet() )
-					{
-						System.out.println( "memory[ " + address + " ] = " + memory.get(address) );
-					}
+//
+////					List<Map<Long, List<Long>>> caches = verdict.getCacheInitialization();
+////					for( Cache cache : cacheLevels )
+////					{
+////						int level = cacheLevels.indexOf( cache );
+////						Map<Long, List<Long>> sets = caches.get( level );
+////						for( long setNumber : sets.keySet() )
+////						{
+////							System.out.print( 
+////									"level " + ( level + 1 ) + 
+////									": set " + setNumber + ": _ " );
+////							for( Long tag : sets.get( setNumber ) )
+////							{
+////								System.out.print( ", " + tag );
+////							}
+////							System.out.println();
+////						}
+////					}
+//					
+//					Map<Integer, TLBRow> tlbrows = verdict.getTlbrows();
+//					for( TLBRow row : tlbrows.values() )
+//					{
+//						System.out.println( "tlb:" +
+//								" range = " + row.getRange() +
+//								", vpn/2 = " + row.getVPNd2() +
+//								", mask = " + row.getMask() + 
+//								", g = " + row.getGlobal() + 
+//								", asid = " + row.getAsid() + 
+//								", pfn0 = " + row.getPFN0() + 
+//								", v0 = " + row.getValid0() +
+//								", d0 = " + row.getmoDify0() +
+//								", pfn1 = " + row.getPFN1() +
+//								", v1 = " + row.getValid1() +
+//								", d1 = " + row.getmoDify1()
+//							);
+//					}
+//					
+//					Map<BigInteger, BigInteger> memory = verdict.getMemory();
+//					for( BigInteger address : memory.keySet() )
+//					{
+//						System.out.println( "memory[ " + address + " ] = " + memory.get(address) );
+//					}
 					System.out.println();
 					System.out.println();					
 				}

@@ -21,7 +21,6 @@ public class InitialL1Hit extends L1Range
 	public void visitBlockTlbMiss(TLB range)
 	{
 		StringBuffer constraint = new StringBuffer().append("(or false ");
-		
 		for( long l : getContext().getLinterMremains(range.getTagIndex()) )
 		{
 			constraint.append( "(= " )
@@ -29,15 +28,14 @@ public class InitialL1Hit extends L1Range
 				.append( " (mk-bv " ).append( getContext().getTagsetLength() ).append( l )
 				.append(" ) )");
 		}
-
-		constraint.append(")");
-		getContext().postAssert( constraint.toString() );
+		getContext().postAssert( constraint.append(")").toString() );
 				
 		List<MemoryCommand> remainedFromBlock = new ArrayList<MemoryCommand>( range.getBlock() );
 		Set<Long> remainPfns = getContext().getMremains(range.getTagIndex());
 		Set<String> visitedTagsets = new HashSet<String>();
 		boolean weAreInBlock = false;
 		int tlbAssoc = getContext().getTLBAssociativity();
+		
 		for( MemoryCommand cmd : range.getPreviousCommands() )
 		{
 			if ( cmd.getTLBSituation() instanceof TLBHit )
@@ -45,7 +43,28 @@ public class InitialL1Hit extends L1Range
 				if ( remainedFromBlock.contains(cmd) )
 				{
 					// in-block constraint
-					// m < assoc /\ ^cmd.getTS()^ \in remainPfns /\ ^cmd.getTS()^ \notin visitedTagsets )
+					// m < assoc /\ ^cmd.getTS()^ \in remainPfns /\ ^cmd.getTS()^ \notin ^visitedBlockTagsets^ )
+					if ( range.getTagIndex() == tlbAssoc )
+						getContext().postAssert("false");
+					else
+					{
+						constraint = new StringBuffer( "(or false " );
+						for( long l : remainPfns )
+						{
+							constraint.append("(= " )
+								.append("(getPfn ").append( getCommand().getTagset() )
+								.append(") (mk-bv " ).append( getContext().getPfnLength() ).append(" " ).append(l)
+							.append("))");
+						}
+						getContext().postAssert( constraint.append(")").toString() );
+						
+						for( String ts : visitedTagsets )
+						{
+							getContext().postAssert( new StringBuffer("(/= ")
+								.append("(getPfn ").append( getCommand().getTagset() )
+								.append(") (getPfn " ).append( ts ).append( "))").toString() );
+						}
+					}
 				}
 				else if ( weAreInBlock )
 				{
@@ -83,9 +102,6 @@ public class InitialL1Hit extends L1Range
 					}
 					else
 					{
-						if ( visitedTagsets.isEmpty() )
-							??;
-
 						for( String ts : visitedTagsets )
 						{
 							getContext().postAssert( new StringBuffer("(= ")

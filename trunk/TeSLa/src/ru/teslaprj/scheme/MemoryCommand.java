@@ -36,6 +36,7 @@ public class MemoryCommand extends Command implements MemoryAccessInstruction
 		{
 			p.setCommand(this);
 		}
+		this.tlbSituation.setCommand(this);
 	}
 	
 	String tagset = null;

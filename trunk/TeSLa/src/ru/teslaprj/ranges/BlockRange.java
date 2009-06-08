@@ -2,6 +2,9 @@ package ru.teslaprj.ranges;
 
 import java.util.List;
 
+import ru.teslaprj.ranges.ts.EvictingTlbHit;
+import ru.teslaprj.ranges.ts.InitialTlbHit;
+import ru.teslaprj.ranges.ts.InitialTlbMiss;
 import ru.teslaprj.scheme.MemoryCommand;
 
 public interface BlockRange
@@ -10,6 +13,30 @@ public interface BlockRange
 	{
 		public L1(MemoryCommand cmd, int m, int[] commandIndexes) {
 			super(cmd);
+		}
+
+		@Override
+		public void visitBlockTlbMiss(TLB range) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void visitEvictingTlbHit(EvictingTlbHit range) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void visitInitialTlbHit(InitialTlbHit range) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void visitInitialTlbMiss(InitialTlbMiss range) {
+			// TODO Auto-generated method stub
+			
 		}		
 	}
 	public static class TLB extends TLBRange implements BlockRange
