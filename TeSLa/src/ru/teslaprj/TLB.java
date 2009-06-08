@@ -1,12 +1,11 @@
 package ru.teslaprj;
 
 import java.util.List;
-import java.util.Set;
 
 public interface TLB
 {
 	/** размер буфера для кэширования строк TLB */
-	int getMicroTLBSize();
+	int getDTLBSize();
 	
 	/** количество строк в TLB */
 	int getJTLBSize();
@@ -33,6 +32,7 @@ public interface TLB
 	
 	int getVPNd2StartBit();
 	
+	/** по сути этот параметр задает размер страницы виртуальной памяти! */
 	int getPFNBitLen();
 	
 	int getASIDBitLen();
@@ -40,16 +40,12 @@ public interface TLB
 	TLBRow getRow( int index );
 
 	/**
-	 * индексы строк, входящих в DTLB, в порядке омоложения lru
+	 * индексы строк, входящих в DTLB, в порядке старения lru
 	 */
 	List<Integer> getDTLB();
 	
 	/**
-	 * индексы строк, входящих в ITLB, в порядке омоложения lru
+	 * индексы строк, входящих в ITLB, в порядке старения lru
 	 */
 	List<Integer> getITLB();
-
-	Set<Long> getMicroPfns();
-
-	Set<Long> getNotMicroPfns();
 }

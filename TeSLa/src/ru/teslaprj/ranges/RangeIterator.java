@@ -5,6 +5,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import ru.teslaprj.Cache;
+import ru.teslaprj.TLB;
+import ru.teslaprj.Cache.CACHETYPE;
 import ru.teslaprj.ranges.tsiterators.L1Iterator;
 import ru.teslaprj.ranges.tsiterators.TLBIterator;
 import ru.teslaprj.scheme.Command;
@@ -19,6 +21,9 @@ public class RangeIterator implements Iterator<Ranges>
 	TLBRange[] tlbvalues;
 	boolean hasNext = true;
 	
+	final TLB tlb;
+	final List<Cache> caches;
+	
 	@Override
 	public boolean hasNext() {
 		return hasNext;
@@ -29,7 +34,7 @@ public class RangeIterator implements Iterator<Ranges>
 	{
 		try
 		{
-			return new Ranges( l1values, tlbvalues );
+			return new Ranges( l1values, tlbvalues, getDataL1( caches ),tlb );
 		}
 		finally
 		{
@@ -68,13 +73,24 @@ public class RangeIterator implements Iterator<Ranges>
 		}
 	}
 
+	private static Cache getDataL1(List<Cache> caches)
+	{
+		for( Cache c : caches )
+		{
+			if ( c.getLevel() == 1  && c.getType() == CACHETYPE.DATA )
+				return c;
+		}
+		throw new Error("Data-L1 is not found");
+	}
+
 	@Override
-	public void remove() {
+	public void remove()
+	{
 	}
 	
-	
 
-	public RangeIterator( //TLB tlb, 
+	public RangeIterator(
+			TLB tlb, 
 			List<Cache> cacheState, 
 			Scheme scheme  )
 	{
@@ -116,6 +132,9 @@ public class RangeIterator implements Iterator<Ranges>
 		{
 			tlbvalues[i] = tlbIterators[i].next();
 		}
+		
+		this.tlb = tlb;
+		this.caches = cacheState;
 	}
 
 
