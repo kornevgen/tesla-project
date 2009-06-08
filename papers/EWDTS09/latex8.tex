@@ -35,7 +35,7 @@ Institute for System Programming of RAS\\ Solzhenitsyn St., 25, Moscow, Russia\\
 \thispagestyle{empty}
 
 \begin{abstract}
-Core-level verification of microprocessors is performed using 
+Core-level verification of microprocessors is performed using
 many assembly programs (test programs). Instructions (and their behavior) for test program can be selected combinatorially. But special initial values for registers are required to satisfy this test program. This article proposes algorithm for generation these values. The article considers instructions performed memory access through cache. Proposing algorithm describes test program behavior as SMT-assertions and uses SMT-solvers to get initial values of registers for given initial state of cache-memory.
 \end{abstract}
 
@@ -128,13 +128,20 @@ second step is memory access through cache using generated physical address (see
 
 The following syntax will be used for operations on tagsets and virtual addresses:
 \begin{enumerate}
-\item "bit-extraction" $x_5$ is the 5th bit of $x$;
-\item "bit-range-extraction" $x_{5..3}$ is bits from 5th to 3th of $x$;
+\item "bit-extraction" $x_{<5>}$ is the 5th bit of $x$;
+\item "bit-range-extraction" $x_{<5..3>}$ is bits from 5th to 3th of $x$;
 \item "bit-concatenation" $x||y$.
 \end{enumerate}
 
 \subsection{Satisfiability Modulo Theories}
-SMT (Satisfiability Modulo Theories) problem is "the satisfiability problem of the quantifier-free fragment of various first-order theories"~\cite{SMT}. SMT-solvers concern SMT problem as SAT problem (satisfiability) with special terms. Conjunctions of these terms can be satisfied by special algorithms and heuristics. Examples of SMT-solvers are Yices, Z3, CVC3. This article uses bit-vector theory for constraints described tagsets and registers values relations.
+SMT (Satisfiability Modulo Theories) problem is "the satisfiability
+problem of the quantifier-free fragment of various first-order
+theories"~\cite{SMT}. SMT-solvers concern SMT problem as SAT problem
+(satisfiability) with special terms. Conjunctions of these terms can
+be satisfied by special algorithms and heuristics. Examples of
+SMT-solvers are Yices~\cite{Yices}, Z3~\cite{Z3}, CVC3~\cite{CVC3}.
+This article uses bit-vector theory for constraints described
+tagsets and registers values relations.
 
 \section{Test case generation}
 
@@ -143,11 +150,18 @@ The aim of proposed algorithm is generation initial values for registers using s
 The following constraints present cache behavior for \emph{simple} test templates only, i.e. templates with no more than $w+1$ misses (and unlimited count of hits). $w$ is associativity of cache.
 
 \subsection{Tagsets constraints}
-Lets $L$ is set of all tagsets from initial cache state and $PFN$ is set of all physical frame number fields of TLB lines from initial TLB state. Lets $LP = \{ x | x \in L \wedge x_{pfn~bits} \in PFN\}$. Then walk through given test template and collect constraints from test situations by the following way:
-\begin{enumerate}
-\item for "l1Hit($x$)": $x \in LP \cup \{ x_1, ..., x_n \}$, where $x_1, ..., x_n$ are all previous evicting tagsets; algorithm returns "no solution"\ , if $LP \cup \{ x_1, ..., x_n \} = \varnothing$;
-\item for "l1Miss($x$)": $x \notin \{x_1, ..., x_n \} \wedge (x \notin LP \vee \bigvee_{\lambda \in LP} (x = \lambda \wedge LRU(\lambda, x_1, ..., x_n))$, where $x_1, ..., x_n$ are all previous evicting tagsets.
-\end{enumerate}
+Lets $L$ is set of all tagsets from initial cache state and $PFN$ is
+set of all physical frame number fields of TLB lines from initial
+TLB state. Lets $LP = \{ x | x \in L \wedge x_{<pfn~bits>} \in
+PFN\}$. Then walk through given test template and collect
+constraints from test situations by the following way:
+\begin{enumerate} \item for "l1Hit($x$)": $x \in LP \cup \{ x_1,
+..., x_n \}$, where $x_1, ..., x_n$ are all previous evicting
+tagsets; algorithm returns "no solution"\ , if $LP \cup \{ x_1, ...,
+x_n \} = \varnothing$; \item for "l1Miss($x$)": $x \notin \{x_1,
+..., x_n \} \wedge (x \notin LP \vee \bigvee_{\lambda \in LP} (x =
+\lambda \wedge LRU(\lambda, x_1, ..., x_n))$, where $x_1, ..., x_n$
+are all previous evicting tagsets. \end{enumerate}
 
 Constraint $LRU(\lambda, x_1, ..., x_n) = \bigvee_{\{y_1, ..., y_m\} \subseteq \{x_1, ..., x_n\}} \bigwedge_{t \in \{x_1, ..., y_m\}}  TS(t, \lambda, x_1, ..., x_n,\\y_1, ..., y_m)$, where $\lambda = \lambda_m$ ($m$ is number of $\lambda$ in its set, $\lambda_1$ is the youngest element of set by LRU order). Constraint $TS$ is the following:\\
 $TS(t, \lambda, x_1, ..., x_n, y_1, ..., y_m) = \\
@@ -164,13 +178,37 @@ $t$ : l1Hit (or l1Miss) means corresponded test situation of instruction with ta
 These constraints describe cache behavior without exponential selection all values of any variable. And often $LP$ is not large. Proposed algorithm is correct, full and defines fast way to get tagsets.
 
 \subsection{Register constraints}
-Additional constraints should be extracted from test template ($TsLen$ is bit-length of tagsets, $PfnLen$ is bit-length of physical frame number field of TLB line, $OfsLen$ is offset bit-length of virtual address):
+Additional constraints should be extracted from test template
+($TsLen$ is bit-length of tagsets, $PfnLen$ is bit-length of
+physical frame number field of TLB line, $OfsLen$ is offset
+bit-length of virtual address):
+
 \begin{enumerate}
-\item 
- low bits of tagset equal to the high bits of virtual address's offset for each instruction "LOAD/STORE $x, y$" with tagset $ts$:  $ts_{TsLen-PfnLen-1..0} = y_{OfsLen-1..OfsLen-TsLen+PfnLen+1}$;
-\item high bits of virtual address correspond to high bits of tagset (physical frame number bits) for each instruction "LOAD/STORE $x, y$" with tagset $ts$; these constraints depend on TLB structure; for example, $y_{range bits} = line.r \wedge y_{vpn bits} = line.vpn$, where $line$ is TLB line with $line.pfn = ts_{TsLen-1..TsLen-PfnLen}$;
-\item for each pair "STORE $x_1, y_1$" and "LOAD $x_2, y_2$" (LOAD follows from STORE) $phys_1 = phys_2 \wedge phys_1 \notin P \rightarrow x_1 = x_2$, where $phys_i = ts_i || {y_i}_{OfsLen-TsLen+PfnLen..0}$ (physical addresses), $i \in \{1, 2\}$, $P$ is set of physical addresses of STORE instructions between these "STORE" and "LOAD" instructions;
-\item for each pair "LOAD $x_1, y_1$" and "LOAD $x_2, y_2$" (the second LOAD follows from the first LOAD) $phys_1 = phys_2 \wedge phys_1 \notin P \rightarrow x_1 = x_2$, where $phys_i = ts_i || {y_i}_{OfsLen-TsLen+PfnLen..0}$ (physical addresses), $i \in \{1, 2\}$, $P$ is set of physical addresses of STORE instructions between these "LOAD" instructions.
+
+\item low bits of tagset equal to the high bits of virtual address's offset for each
+instruction "LOAD/STORE $x, y$" with tagset $ts$:
+$ts_{<TsLen-PfnLen-1..0>} = y_{<OfsLen-1..OfsLen-TsLen+PfnLen+1>}$;
+
+\item high bits of virtual address correspond to high bits of tagset
+(physical frame number bits) for each instruction "LOAD/STORE $x,
+y$" with tagset $ts$; these constraints depend on TLB structure; for
+example, $y_{<range~bits>} = line.r \wedge y_{<vpn~bits>} =
+line.vpn$, where $line$ is TLB line with $line.pfn =
+ts_{<TsLen-1~..~TsLen-PfnLen>}$;
+
+\item for each pair "STORE $x_1, y_1$"
+and "LOAD $x_2, y_2$" (LOAD follows from STORE) $phys_1 = phys_2
+\wedge phys_1 \notin P \rightarrow x_1 = x_2$, where $phys_i = ts_i
+|| {y_i}_{<OfsLen-TsLen+PfnLen..0>}$ (physical addresses), $i \in
+\{1, 2\}$, $P$ is set of physical addresses of STORE instructions
+between these "STORE" and "LOAD" instructions;
+
+\item for each pair "LOAD
+$x_1, y_1$" and "LOAD $x_2, y_2$" (the second LOAD follows from the
+first LOAD) $phys_1 = phys_2 \wedge phys_1 \notin P \rightarrow x_1
+= x_2$, where $phys_i = ts_i || {y_i}_{<OfsLen-TsLen+PfnLen~..~0>}$
+(physical addresses), $i \in \{1, 2\}$, $P$ is set of physical
+addresses of STORE instructions between these "LOAD" instructions.
 \end{enumerate}
 
 \subsection{SMT representation of constraints}
