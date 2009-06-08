@@ -11,8 +11,10 @@ public interface BlockRange
 {
 	public static class L1 extends L1Range implements BlockRange 
 	{
+		final int m;
 		public L1(MemoryCommand cmd, int m, int[] commandIndexes) {
 			super(cmd);
+			this.m = m;
 		}
 
 		@Override
@@ -37,6 +39,12 @@ public interface BlockRange
 		public void visitInitialTlbMiss(InitialTlbMiss range) {
 			// TODO Auto-generated method stub
 			
+		}
+
+		@Override
+		public String print()
+		{
+			return "L1Miss( " + getCommand().getTagset() + " )-Block with m=" + m;
 		}		
 	}
 	public static class TLB extends TLBRange implements BlockRange
@@ -75,6 +83,12 @@ public interface BlockRange
 		public void visit(L1Range r)
 		{
 			r.visitBlockTlbMiss(this);
+		}
+
+		@Override
+		public String print()
+		{
+			return "TLBMiss( " + getCommand().getTagset() + " )-Block with m=" + m;
 		}
 	}
 }

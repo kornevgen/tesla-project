@@ -16,4 +16,10 @@ public class InitialTlbHit extends TLBRange {
 		r.visitInitialTlbHit(this);
 	}
 
+	@Override
+	public String print()
+	{
+		return "TLBHit( " + getCommand().getTagset() + " ) to the initial DTLB";
+	}
+
 }

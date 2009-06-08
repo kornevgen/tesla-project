@@ -1,6 +1,9 @@
 package ru.teslaprj.ranges;
 
-import java.util.Arrays;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -50,6 +53,9 @@ public class Ranges
 	{
 		yl = new YicesLite();
 		yl.yicesl_enable_log_file("system" + (++nnn) + ".txt" );
+		yl.yicesl_set_verbosity((short)0);
+		yl.yicesl_enable_type_checker((short)1);
+		yl.yicesl_set_output_file("output.txt");
 		context = yl.yicesl_mk_context();
 		
 		yl.yicesl_read( context, "(define-type tagset (bitvector " + tagsetLength + "))" );
@@ -75,6 +81,27 @@ public class Ranges
 		boolean result = (ttt == 0);
         yl.yicesl_del_context(context);
 
+        try
+        {
+	        BufferedWriter w = new BufferedWriter( 
+	        		new FileWriter( new File( "system" + nnn + ".txt" ), true ) );
+	        for( MemoryCommand cmd : l1Ranges.keySet() )
+	        {
+	        	if ( tlbRanges.containsKey(cmd) )
+	        	{
+	        		w.write("[ " + l1Ranges.get(cmd).print() + " || " +
+	        				tlbRanges.get(cmd).print() + " ]" );
+	        		w.newLine();
+	        	}
+	        }
+	        
+	        w.close();
+        }
+        catch( IOException e )
+        {
+        	System.out.println(e.getStackTrace());
+        }
+        
         return result;
 	}
 

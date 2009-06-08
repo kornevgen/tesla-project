@@ -64,15 +64,30 @@ public class TlbMissIterator extends TLBIterator {
 		switch( m )
 		{
 		case 0:
-			m = Math.max( w - previousCommands.size(), 1 );
+			m = Math.max( w - previousCommands.size() + 1, 1 );
 			blockIterator = new BlockIterator( w-m, previousCommands );
+			//if ( существует miss, не входящий в previous )  hasNext = false;
+			MemoryCommand cmd1 = getTestSituation().getCommand();
+			for( Command cmd : cmd1.getScheme().getCommands() )
+			{
+				if ( 	cmd != cmd1 
+						&& cmd instanceof MemoryCommand
+						&& ! previousCommands.contains(cmd)
+						&& ((MemoryCommand)cmd).getTLBSituation() instanceof TLBMiss
+					)
+						hasNext = false;
+			}
+			// if ( количество предыдущих инструкций < w-m+1 ) hasNext = false;
+			if ( m > w || misses.size() == 0 )
+				hasNext = false;
+			
 			return new InitialTlbMiss(getTestSituation().getCommand(), previousMisses );
 		default:
-			if ( m <= w - misses.size() )
+			if ( m - 1 <= w - misses.size() )
 			{
 				if ( ! blockIterator.hasNext() )
 				{
-					if ( m == w )
+					if ( m - 1 == w )
 					{
 						return null;
 					}

@@ -349,25 +349,31 @@ public class LDSDSample
 							continue;
 						}
 					}
+
+					System.out.println( ++iteratio + " / " + iterationsCount + " :" );					
 					
-					scheme.addCommand( 
-							new MemoryCommand(
-									scheme, 
-									"LD", 
-									params1, 
-									"regular", 
-									cts[0],
-									ats.get(0)
-								));
-					scheme.addCommand(
-							new MemoryCommand(
-									scheme, 
-									"SD", 
-									params2, 
-									"regular", 
-									cts[1],
-									ats.get(1)
-								));
+					MemoryCommand command1 = new MemoryCommand(
+							scheme, 
+							"LD", 
+							params1, 
+							"regular", 
+							cts[0],
+							ats.get(0)
+						);
+					System.out.println(command1 + " " + cts[0].get(cache1).getClass().getSimpleName() + " "
+							+ ats.get(0).getClass().getSimpleName());
+					scheme.addCommand( command1 );
+					MemoryCommand command2 = new MemoryCommand(
+							scheme, 
+							"SD", 
+							params2, 
+							"regular", 
+							cts[1],
+							ats.get(1)
+						);
+					System.out.println(command2 + " " + cts[1].get(cache1).getClass().getSimpleName() + " "
+							+ ats.get(1).getClass().getSimpleName());
+					scheme.addCommand( command2 );
 
 					//TLB build
 					//TODO представленное тут вычисление границ vpn/2 работает только в Mapped сегменте!
@@ -445,15 +451,15 @@ public class LDSDSample
 
 						};
 
-					
-					Verdict verdict = solver.solve(scheme, cacheLevels, tlb );
+					//Verdict verdict = 
+						solver.solve(scheme, cacheLevels, tlb );
 					
 					//TODO check verdict and change cache and TLB
 
 					//TODO print answer, check answer
 					// 3. распечатать ответ
-					System.out.println( ++iteratio + " / " + iterationsCount + " :" );
-					
+//					System.out.println( ++iteratio + " / " + iterationsCount + " :" );
+//					
 //					Map<Definition, BigInteger> values = verdict.getDefinitionValues();
 //					for( Definition def : values.keySet() )
 //					{

@@ -21,7 +21,7 @@ public class InitialL1Hit extends L1Range
 	public void visitBlockTlbMiss(TLB range)
 	{
 		StringBuffer constraint = new StringBuffer().append("(or false ");
-		for( long l : getContext().getLinterMremains(range.getTagIndex()) )
+		for( long l : getContext().getLinterMremains(range.getTagIndex() - 1) )
 		{
 			constraint.append( "(= " )
 				.append( getCommand().getTagset() )
@@ -31,7 +31,7 @@ public class InitialL1Hit extends L1Range
 		getContext().postAssert( constraint.append(")").toString() );
 				
 		List<MemoryCommand> remainedFromBlock = new ArrayList<MemoryCommand>( range.getBlock() );
-		Set<Long> remainPfns = getContext().getMremains(range.getTagIndex());
+		Set<Long> remainPfns = getContext().getMremains(range.getTagIndex() - 1);
 		Set<String> visitedTagsets = new HashSet<String>();
 		boolean weAreInBlock = false;
 		int tlbAssoc = getContext().getTLBAssociativity();
@@ -205,5 +205,11 @@ public class InitialL1Hit extends L1Range
 				.append( "(getPfn " ).append( cmd.getTagset() ).append( ")" )
 				.append(")").toString() );
 		}
+	}
+
+	@Override
+	public String print()
+	{
+		return "L1Hit( " + getCommand().getTagset() + " ) to the initial";
 	}
 }
