@@ -12,7 +12,9 @@ import java.util.Set;
 import ru.teslaprj.Cache;
 import ru.teslaprj.TLB;
 import ru.teslaprj.TLBRow;
+import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.MemoryCommand;
+import ru.teslaprj.scheme.Scheme;
 import yices.YicesLite;
 
 public class Ranges
@@ -86,9 +88,15 @@ public class Ranges
         {
 	        BufferedWriter w = new BufferedWriter( 
 	        		new FileWriter( new File( "system" + nnn + ".txt" ), true ) );
-	        for( MemoryCommand cmd : l1Ranges.keySet() )
+	        Scheme scheme = null;
+	        for(MemoryCommand cmd : l1Ranges.keySet() )
 	        {
-	        	if ( tlbRanges.containsKey(cmd) )
+	        	scheme = cmd.getScheme();
+	        	break;
+	        }
+	        for( Command cmd : scheme.getCommands() )
+	        {
+	        	if ( l1Ranges.containsKey(cmd) && tlbRanges.containsKey(cmd) )
 	        	{
 	        		w.write("[ " + l1Ranges.get(cmd).print() + " || " +
 	        				tlbRanges.get(cmd).print() + " ]" );
@@ -283,6 +291,63 @@ public class Ranges
 	public synchronized long getUniqueNumber()
 	{
 		return ++counter;
+	}
+
+	public Set<Long> getMfull()
+	{
+		Set<Long> result = new HashSet<Long>();
+		for( int rowIndex : tlb.getDTLB() )
+		{
+			TLBRow r = tlb.getRow( rowIndex );
+			if ( r.getValid0() == 1 && r.getMask().intValue() == tlb.getPFNBitLen() )
+			{
+				result.add( r.getPFN0().longValue() );
+			}
+			if ( r.getValid1() == 1 && r.getMask().intValue() == tlb.getPFNBitLen() )
+			{
+				result.add( r.getPFN1().longValue() );
+			}
+		}
+		return result;
+	}
+
+	public Set<Long> getPFNminusMfull()
+	{
+		Set<Long> result = new HashSet<Long>();
+		for( int rowIndex = 0; rowIndex < tlb.getJTLBSize(); rowIndex++ )
+		{
+			if ( tlb.getDTLB().contains( rowIndex ) )
+				continue;
+			
+			TLBRow r = tlb.getRow( rowIndex );
+			if ( r.getValid0() == 1 && r.getMask().intValue() == tlb.getPFNBitLen() )
+			{
+				result.add( r.getPFN0().longValue() );
+			}
+			if ( r.getValid1() == 1 && r.getMask().intValue() == tlb.getPFNBitLen() )
+			{
+				result.add( r.getPFN1().longValue() );
+			}
+		}
+		return result;
+	}
+
+	public Set<Long> getM(int i)
+	{
+		Set<Long> result = new HashSet<Long>();
+		
+		TLBRow r = tlb.getRow( tlb.getDTLB().get(i) );
+
+		if ( r.getValid0() == 1 && r.getMask().intValue() == tlb.getPFNBitLen() )
+		{
+			result.add( r.getPFN0().longValue() );
+		}
+		if ( r.getValid1() == 1 && r.getMask().intValue() == tlb.getPFNBitLen() )
+		{
+			result.add( r.getPFN1().longValue() );
+		}
+		
+		return result;
 	}
 
 }
