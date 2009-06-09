@@ -53,6 +53,7 @@ public class Ranges
 	{
 		yl = new YicesLite();
 		yl.yicesl_enable_log_file("system" + (++nnn) + ".txt" );
+		System.out.print("system" + nnn + ": ");
 		yl.yicesl_set_verbosity((short)0);
 		yl.yicesl_enable_type_checker((short)1);
 		yl.yicesl_set_output_file("output.txt");
@@ -108,6 +109,11 @@ public class Ranges
 	public void postAssert( String _assert )
 	{
 		yl.yicesl_read( context, "(assert " + _assert + ")" );
+	}
+	
+	public void postDefine( String name, String type, String expression )
+	{
+		yl.yicesl_read( context, "(define " + name + " :: " + type + " " + expression + ")" );
 	}
 	
 	public Set<Long> getLinterM()
@@ -261,6 +267,22 @@ public class Ranges
 
 	public int getTLBAssociativity() {
 		return tlbAssoc;
+	}
+
+	public Set<Long> getLinterMrange(int minimumM, int maximumM)
+	{
+		Set<Long> result = new HashSet<Long>();
+		for( int m = minimumM; m <= maximumM; m++ )
+		{
+			result.addAll( getLinterMremains(m - 1) );
+		}
+		return result;
+	}
+	
+	private int counter = 0;
+	public synchronized long getUniqueNumber()
+	{
+		return ++counter;
 	}
 
 }
