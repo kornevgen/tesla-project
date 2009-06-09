@@ -144,7 +144,7 @@ public class LDSDSample
 				throw new Error("getValidTagsets for L2");
 			}
 		};
-		cacheLevels.add( cache2 );
+//		cacheLevels.add( cache2 );
 		
 		// initialize TLB
 		final int[] pfn0 = new int[48];

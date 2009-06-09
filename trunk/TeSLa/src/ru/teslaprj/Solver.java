@@ -149,6 +149,7 @@ public class Solver
 			}
 			
 			System.out.println("consistent!");
+			break;
 			
 //			File tmp;
 //			CompoundTerm result = null;

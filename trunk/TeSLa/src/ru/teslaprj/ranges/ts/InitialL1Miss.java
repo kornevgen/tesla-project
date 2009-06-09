@@ -17,9 +17,32 @@ public class InitialL1Miss extends L1Range
 	}
 
 	@Override
-	public void visitInitialTlbHit(InitialTlbHit range) {
-		// TODO Auto-generated method stub
+	public void visitInitialTlbHit(InitialTlbHit range)
+	{
+		for( long l : getContext().getLinterM() )
+		{
+			getContext().postAssert( new StringBuffer("(/= " )
+				.append( getCommand().getTagset() )
+				.append(" (mk-bv " ).append( getContext().getTagsetLength() )
+				.append(" " ).append(l).append("))").toString() );
+		}
 		
+		for( MemoryCommand cmd : evictings )
+		{
+			getContext().postAssert( new StringBuffer("(/= " )
+				.append( getCommand().getTagset() )
+				.append( " ").append( cmd.getTagset() )
+				.append(")").toString() );
+		}
+		
+		StringBuffer constraint = new StringBuffer("(or false ");
+		for( long mu : getContext().getMfull() )
+		{
+			constraint.append(" (= (getPfn ").append( getCommand().getTagset() )
+				.append( ") (mk-bv " ).append( getContext().getPfnLength() )
+				.append(" " ).append( mu ).append("))");
+		}
+		getContext().postAssert( constraint.append(")").toString() );
 	}
 
 	@Override

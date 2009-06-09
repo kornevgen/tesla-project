@@ -1,10 +1,12 @@
 package ru.teslaprj.ranges.ts;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import ru.teslaprj.ranges.L1Range;
 import ru.teslaprj.scheme.MemoryCommand;
 
+/** ts \in {ts_1, ..., ts_n} where ts_i is a tagset of previous miss */
 public class EvictingL1Hit extends L1Range
 {
 	final Set<MemoryCommand> evictings;
@@ -16,21 +18,87 @@ public class EvictingL1Hit extends L1Range
 	}
 
 	@Override
-	public void visitEvictingTlbHit(EvictingTlbHit range) {
-		// TODO Auto-generated method stub
-		
+	public void visitEvictingTlbHit(EvictingTlbHit range)
+	{
+		StringBuffer constraint = new StringBuffer("(or false ");
+		for( MemoryCommand cmd : range.evics )
+		{
+			constraint.append("(= (getPfn ").append( getCommand().getTagset() ).append(") " +
+					"(getPfn " ).append(cmd.getTagset())
+				.append("))");
+		}
+		getContext().postAssert( constraint.append(")" ).toString() );
+	
+		constraint = new StringBuffer( "(or false ");
+		for( MemoryCommand cmd : evictings )
+		{
+			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
+			.append( cmd.getTagset() ).append(")");
+		}		
+		getContext().postAssert( constraint.append(")").toString() );
 	}
 
 	@Override
-	public void visitInitialTlbHit(InitialTlbHit range) {
-		// TODO Auto-generated method stub
+	public void visitInitialTlbHit(InitialTlbHit range)
+	{
+		StringBuffer constraint = new StringBuffer("(or false ");
+		for( long l : getContext().getMfull() )
+		{
+			constraint.append("(= (getPfn ").append( getCommand().getTagset() ).append(") " +
+					"(mk-bv " ).append( getContext().getPfnLength() ).append(" " ).append(l)
+				.append("))");
+		}
+		getContext().postAssert( constraint.append(")").toString());
 		
+		constraint = new StringBuffer("(or false ");
+		for( MemoryCommand cmd : evictings )
+		{
+			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
+			.append( cmd.getTagset() ).append(")");
+		}		
+		getContext().postAssert( constraint.append("))").toString() );
 	}
 
 	@Override
-	public void visitInitialTlbMiss(InitialTlbMiss range) {
-		// TODO Auto-generated method stub
+	public void visitInitialTlbMiss(InitialTlbMiss range)
+	{
+		Set<MemoryCommand> evs = new HashSet<MemoryCommand>();
+		for( MemoryCommand cmd : evictings )
+		{
+			if ( ! range.ev.contains(cmd) )
+				evs.add( cmd );
+		}
 		
+		if ( evs.isEmpty() )
+		{
+			getContext().postAssert("false");
+			return;
+		}
+		
+		StringBuffer constraint = new StringBuffer("(or false ");
+		for( long l : getContext().getPFNminusMfull() )
+		{
+			constraint.append("(= (getPfn ").append( getCommand().getTagset() ).append(") " +
+					"(mk-bv " ).append( getContext().getPfnLength() ).append(" " ).append(l)
+				.append("))");
+		}
+		getContext().postAssert( constraint.append(")").toString());
+		
+		constraint = new StringBuffer("(or false ");
+		for( MemoryCommand cmd : evs )
+		{
+			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
+			.append( cmd.getTagset() ).append(")");
+		}		
+		getContext().postAssert( constraint.append("))").toString() );
+		
+		for( MemoryCommand cmd : range.ev )
+		{
+			getContext().postAssert( new StringBuffer("(/= ")
+				.append("(getPfn ").append( getCommand().getTagset() ).append(") ")
+				.append("(getPfn ").append( cmd.getTagset() ).append(")")
+				.append(")").toString() );
+		}
 	}
 
 	@Override
@@ -46,15 +114,154 @@ public class EvictingL1Hit extends L1Range
 	}
 
 	@Override
-	public void visitUnusefulTlbMiss(UnusefulTlbMiss range) {
-		// TODO Auto-generated method stub
+	public void visitUnusefulTlbMiss(UnusefulTlbMiss range)
+	{
+		Set<MemoryCommand> evs = new HashSet<MemoryCommand>();
+		for( MemoryCommand cmd : evictings )
+		{
+			if ( ! range.getEvictings().contains(cmd) )
+				evs.add( cmd );
+		}
 		
+		if ( evs.isEmpty() )
+		{
+			getContext().postAssert("false");
+			return;
+		}
+		
+		StringBuffer constraint = new StringBuffer("(or false ");
+		for( long l : getContext().getMremains( range.minM - 1) )
+		{
+			constraint.append("(= (getPfn ").append( getCommand().getTagset() ).append(") " +
+					"(mk-bv " ).append( getContext().getPfnLength() ).append(" " ).append(l)
+				.append("))");
+		}
+		getContext().postAssert( constraint.append(")").toString());
+		
+		constraint = new StringBuffer("(or ");
+		for( MemoryCommand cmd : evs )
+		{
+			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
+			.append( cmd.getTagset() ).append(")");
+		}		
+		getContext().postAssert( constraint.append("))").toString() );
+		
+		for( MemoryCommand cmd : range.getEvictings() )
+		{
+			getContext().postAssert( new StringBuffer("(/= ")
+				.append("(getPfn ").append( getCommand().getTagset() ).append(") ")
+				.append("(getPfn ").append( cmd.getTagset() ).append(")")
+				.append(")").toString() );
+		}
 	}
 
 	@Override
-	public void visitUsefulTlbMiss(UsefulTlbMiss range) {
-		// TODO Auto-generated method stub
+	public void visitUsefulTlbMiss(UsefulTlbMiss range)
+	{
+		Set<Long> mmm = getContext().getM( range.m - 1 );
+		if ( mmm.isEmpty() )
+		{
+			getContext().postAssert("false");
+			return;
+		}
 		
+		Set<MemoryCommand> evs = new HashSet<MemoryCommand>();
+		for( MemoryCommand cmd : evictings )
+		{
+			if ( ! range.getEvictings().contains(cmd) )
+				evs.add( cmd );
+		}
+		
+		if ( evs.isEmpty() )
+		{
+			getContext().postAssert("false");
+			return;
+		}
+		
+		
+		StringBuffer constraint = new StringBuffer("(or false ");
+		for( MemoryCommand cmd : evictings )
+		{
+			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
+			.append( cmd.getTagset() ).append(")");
+		}		
+		getContext().postAssert( constraint.append("))").toString() );
+		
+		constraint = new StringBuffer("(or false ");
+		for( long mu : mmm )
+		{
+			constraint.append("(= (getPfn " )
+					.append( getCommand().getTagset() ).append(") (mk-bv " )
+					.append( getContext().getPfnLength() ).append( mu )
+					.append("))");
+		}
+		getContext().postAssert( constraint.append(")").toString() );
+		
+		constraint = new StringBuffer("(or false ");
+		for( MemoryCommand cmd : evs )
+		{
+			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
+			.append( cmd.getTagset() ).append(")");
+		}		
+		getContext().postAssert( constraint.append("))").toString() );
+		
+				
+		// вводим новые переменные
+		//(define b_i::(subrange 0 1) (ite ( condition ) 1 0))
+		//(assert (>= w-m-k (+ b_i)))
+		Set<String> viewedHitTagsets = new HashSet<String>();
+		StringBuffer flagsSum = new StringBuffer();
+		Set<Long> remainsM = getContext().getMremains( range.getM() - 1 );
+		for( MemoryCommand hit : range.getHits() )
+		{
+			String flag = "b" + getContext().getUniqueNumber();
+			flagsSum.append( " " ).append( flag );
+			
+			StringBuffer useful = new StringBuffer();
+			if ( viewedHitTagsets.isEmpty() )
+			{
+				useful.append("(or false ");
+				for( long mu : remainsM )
+				{
+					useful.append( "(= (getPfn ").append( getCommand().getTagset() ).append(")")
+						.append(" (mk-bv ").append( getContext().getPfnLength() ).append( " " )
+						.append(mu).append(") )");
+				}
+				useful.append(")");
+			}
+			else
+			{
+				useful.append("(and (or false ");
+				for( long mu : remainsM )
+				{
+					useful.append( "(= (getPfn ").append( getCommand().getTagset() ).append(")")
+						.append(" (mk-bv ").append( getContext().getPfnLength() ).append( " " )
+						.append(mu).append(") )");
+				}
+				useful.append(")");
+				for( String ts : viewedHitTagsets )
+				{
+					useful.append( "(/= (getPfn " ).append( getCommand().getTagset() ).append(")")
+					.append(" (getPfn " ).append( ts ).append("))");
+				}
+				useful.append(")");
+			}
+			
+			getContext().postDefine(flag, "(subrange 0 1)", "(ite " + useful.toString() + " 1 0 )" );
+			
+			viewedHitTagsets.add( hit.getTagset() );
+		}
+		getContext().postAssert( new StringBuffer("(>= (+ ").append( flagsSum ).append(") ")
+				.append( range.getWminusK() - range.getM() ).append(")").toString() );
+		
+		// ^ts^ \notin { ^ts1^, ^ts2^, ... } 
+		for( MemoryCommand cmd : range.getEvictings() )
+		{
+			getContext().postAssert( new StringBuffer("(/= ")
+				.append("(getPfn ").append( getCommand().getTagset() ).append(") ")
+				.append("(getPfn ").append( cmd.getTagset() ).append(")")
+				.append(")").toString() );
+		}
 	}
 
 }
