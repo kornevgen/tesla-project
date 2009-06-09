@@ -1,146 +1,16 @@
 package ru.teslaprj.ranges.ts;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import ru.teslaprj.ranges.L1Range;
-import ru.teslaprj.ranges.BlockRange.TLB;
 import ru.teslaprj.scheme.MemoryCommand;
-import ru.teslaprj.scheme.ts.TLBHit;
 
 public class InitialL1Hit extends L1Range
 {
 
 	public InitialL1Hit(MemoryCommand cmd) {
 		super(cmd);
-	}
-
-	@Override
-	public void visitBlockTlbMiss(TLB range)
-	{
-		StringBuffer constraint = new StringBuffer().append("(or false ");
-		for( long l : getContext().getLinterMremains(range.getTagIndex() - 1) )
-		{
-			constraint.append( "(= " )
-				.append( getCommand().getTagset() )
-				.append( " (mk-bv " ).append( getContext().getTagsetLength() ).append( l )
-				.append(" ) )");
-		}
-		getContext().postAssert( constraint.append(")").toString() );
-				
-		List<MemoryCommand> remainedFromBlock = new ArrayList<MemoryCommand>( range.getBlock() );
-		Set<Long> remainPfns = getContext().getMremains(range.getTagIndex() - 1);
-		Set<String> visitedTagsets = new HashSet<String>();
-		boolean weAreInBlock = false;
-		int tlbAssoc = getContext().getTLBAssociativity();
-		
-		for( MemoryCommand cmd : range.getPreviousCommands() )
-		{
-			if ( cmd.getTLBSituation() instanceof TLBHit )
-			{
-				if ( remainedFromBlock.contains(cmd) )
-				{
-					// in-block constraint
-					// m < assoc /\ ^cmd.getTS()^ \in remainPfns /\ ^cmd.getTS()^ \notin ^visitedBlockTagsets^ )
-					if ( range.getTagIndex() == tlbAssoc )
-						getContext().postAssert("false");
-					else
-					{
-						constraint = new StringBuffer( "(or false " );
-						for( long l : remainPfns )
-						{
-							constraint.append("(= " )
-								.append("(getPfn ").append( getCommand().getTagset() )
-								.append(") (mk-bv " ).append( getContext().getPfnLength() ).append(" " ).append(l)
-							.append("))");
-						}
-						getContext().postAssert( constraint.append(")").toString() );
-						
-						for( String ts : visitedTagsets )
-						{
-							getContext().postAssert( new StringBuffer("(/= ")
-								.append("(getPfn ").append( getCommand().getTagset() )
-								.append(") (getPfn " ).append( ts ).append( "))").toString() );
-						}
-					}
-				}
-				else if ( weAreInBlock )
-				{
-					// constraint "внутри блока", но не в блоке
-					// if ( m < assoc ) (^cmd.getTS()^ \notin remainPfns ) \/ ^cmd.getTS()^ \in ^visitedTagsets^ )
-					constraint = new StringBuffer();
-					if ( range.getTagIndex() < tlbAssoc )
-					{
-						if ( ! visitedTagsets.isEmpty() )
-							constraint.append("(or " );
-						
-						constraint.append( "(and true ");
-						for( long l : remainPfns )
-						{
-							constraint.append("(/= ")
-									.append( "(getPfn ").append( cmd.getTagset() ).append( " )" )
-									.append( "(mk-bv " ).append( getContext().getPfnLength() ).append( " " )
-									.append(l).append("))");
-						}
-						constraint.append( " )");
-						
-						for( String ts : visitedTagsets )
-						{
-							constraint.append("(= ")
-							.append( " (getPfn " ).append( cmd.getTagset() ).append( " )" )
-							.append( " (getPfn " ).append( ts ).append( " )" )
-							.append(")");
-						}
-						
-						
-						if ( ! visitedTagsets.isEmpty() )
-							constraint.append(" )" );
-						
-						getContext().postAssert( constraint.toString() );
-					}
-					else
-					{
-						for( String ts : visitedTagsets )
-						{
-							getContext().postAssert( new StringBuffer("(= ")
-							.append( " (getPfn " ).append( cmd.getTagset() ).append( " )" )
-							.append( " (getPfn " ).append( ts ).append( " )" )
-							.append(")").toString() );
-						}
-					}
-				}
-				else
-				{
-					// constraint "перед блоком"
-					// if ( m < assoc ) ^cmd.getTS()^ \notin remainPfns
-					if ( range.getTagIndex() < tlbAssoc )
-					{
-						for( long l : remainPfns )
-						{
-							getContext().postAssert(
-									new StringBuffer("(/= ")
-									.append( "(getPfn ").append( cmd.getTagset() ).append( " )" )
-									.append( "(mk-bv " ).append( getContext().getPfnLength() ).append( " " )
-									.append(l).append("))").toString()
-								);
-						}
-					}
-				}
-			}
-			
-			if ( remainedFromBlock.contains(cmd) )
-			{
-				visitedTagsets.add( cmd.getTagset() );
-				remainedFromBlock.remove(cmd);
-				weAreInBlock = true;
-			}
-			
-			if ( remainedFromBlock.isEmpty() )
-				break;
-		}
-
 	}
 
 	@Override
@@ -211,5 +81,113 @@ public class InitialL1Hit extends L1Range
 	public String print()
 	{
 		return "L1Hit( " + getCommand().getTagset() + " ) to the initial";
+	}
+
+	@Override
+	public void visitUnusefulTlbMiss(UnusefulTlbMiss range)
+	{
+		// ts \in L \inter [{M<m1>, M<m1+1>,..., M<m2>}]
+		Set<Long> domain = getContext().getLinterMrange( range.getMinimumM(), range.getMaximumM() );
+
+		if ( domain.isEmpty() )
+		{
+			getContext().postAssert("false");
+			return;
+		}
+		
+		StringBuffer constraint = new StringBuffer("(or false " );
+		for( long l : domain )
+		{
+			constraint.append( "(= " ).append( getCommand().getTagset() )
+				.append( " (mk-bv " ).append( getContext().getTagsetLength() )
+				.append(" " ).append(l).append("))");
+		}
+		getContext().postAssert( constraint.append(")").toString() );
+		
+		// ^ts^ \notin { ^ts1^, ^ts2^, ... } 
+		for( MemoryCommand cmd : range.getEvictings() )
+		{
+			getContext().postAssert( new StringBuffer( "(/= " )
+			.append("(getPfn " ).append( getCommand().getTagset() ).append(")")
+			.append("(getPfn " ).append( cmd.getTagset() ).append(")")
+			.append(")").toString() );				
+		}
+	}
+
+	@Override
+	public void visitUsefulTlbMiss(UsefulTlbMiss range)
+	{
+		Set<Long> domain = getContext().getLinterMremains( range.getM() - 1 );
+		if ( domain.isEmpty() )
+		{
+			getContext().postAssert("false");
+			return;
+		}
+		
+		StringBuffer constraint = new StringBuffer("(or false " );
+		for( long l : domain )
+		{
+			constraint.append( "(= " ).append( getCommand().getTagset() )
+				.append( " (mk-bv " ).append( getContext().getTagsetLength() )
+				.append(" " ).append(l).append("))");
+		}
+		getContext().postAssert( constraint.append(")").toString() );
+		
+		// вводим новые переменные
+		//(define b_i::(subrange 0 1) (ite ( condition ) 1 0))
+		//(assert (>= w-m-k (+ b_i)))
+		Set<String> viewedHitTagsets = new HashSet<String>();
+		StringBuffer flagsSum = new StringBuffer();
+		Set<Long> remainsM = getContext().getMremains( range.getM() - 1 );
+		for( MemoryCommand hit : range.getHits() )
+		{
+			String flag = "b" + getContext().getUniqueNumber();
+			flagsSum.append( " " ).append( flag );
+			
+			StringBuffer useful = new StringBuffer();
+			if ( viewedHitTagsets.isEmpty() )
+			{
+				useful.append("(or false ");
+				for( long mu : remainsM )
+				{
+					useful.append( "(= (getPfn ").append( getCommand().getTagset() ).append(")")
+						.append(" (mk-bv ").append( getContext().getPfnLength() ).append( " " )
+						.append(mu).append(") )");
+				}
+				useful.append(")");
+			}
+			else
+			{
+				useful.append("(and (or false ");
+				for( long mu : remainsM )
+				{
+					useful.append( "(= (getPfn ").append( getCommand().getTagset() ).append(")")
+						.append(" (mk-bv ").append( getContext().getPfnLength() ).append( " " )
+						.append(mu).append(") )");
+				}
+				useful.append(")");
+				for( String ts : viewedHitTagsets )
+				{
+					useful.append( "(/= (getPfn " ).append( getCommand().getTagset() ).append(")")
+					.append(" (getPfn " ).append( ts ).append("))");
+				}
+				useful.append(")");
+			}
+			
+			getContext().postDefine(flag, "(subrange 0 1)", "(ite " + useful.toString() + " 1 0 )" );
+			
+			viewedHitTagsets.add( hit.getTagset() );
+		}
+		getContext().postAssert( new StringBuffer("(>= (+ ").append( flagsSum ).append(") ")
+				.append( range.getWminusK() - range.getM() ).append(")").toString() );
+		
+		// ^ts^ \notin { ^ts1^, ^ts2^, ... } 
+		for( MemoryCommand cmd : range.getEvictings() )
+		{
+			getContext().postAssert( new StringBuffer( "(/= " )
+			.append("(getPfn " ).append( getCommand().getTagset() ).append(")")
+			.append("(getPfn " ).append( cmd.getTagset() ).append(")")
+			.append(")").toString() );				
+		}
 	}
 }

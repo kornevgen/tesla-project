@@ -1,125 +1,143 @@
 package ru.teslaprj.ranges.tsiterators;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import ru.teslaprj.ranges.BlockRange;
 import ru.teslaprj.ranges.TLBRange;
 import ru.teslaprj.ranges.ts.InitialTlbMiss;
+import ru.teslaprj.ranges.ts.UnusefulTlbMiss;
+import ru.teslaprj.ranges.ts.UsefulTlbMiss;
 import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.MemoryCommand;
+import ru.teslaprj.scheme.ts.TLBHit;
 import ru.teslaprj.scheme.ts.TLBMiss;
 import ru.teslaprj.scheme.ts.TLBSituation;
 
-public class TlbMissIterator extends TLBIterator {
-
+public class TlbMissIterator extends TLBIterator
+{
 	public TlbMissIterator(int assoc, TLBSituation testSituation)
 	{
 		super(testSituation);
 		w = assoc;
 		
-		MemoryCommand cmd1 = testSituation.getCommand();
-		int i = 0;
-		for( Command cmd : cmd1.getScheme().getCommands() )
+		// вычислить k и N
+		// если их нельзя вычислить, то варианты "без полезностей" невозможны (только initial)
+		MemoryCommand cmd = testSituation.getCommand();
+		MainPreviousMissFinding:
 		{
-			if ( cmd == cmd1 )
-				break;
-			if ( cmd instanceof MemoryCommand )
+			for( int i = cmd.getScheme().getCommands().indexOf(cmd) - 1; i >= 0; i-- )
 			{
-				previousCommands.add( (MemoryCommand)cmd );
-				if ( ((MemoryCommand)cmd).getTLBSituation() instanceof TLBMiss )
+				Command cc = cmd.getScheme().getCommands().get(i); 
+				if ( cc instanceof MemoryCommand 
+						&& ((MemoryCommand)cc).getTLBSituation() instanceof TLBMiss )
 				{
-					previousMisses.add((MemoryCommand)cmd);
-					misses.add(i);
-				}
-				i++;
-			}
-		}
-	}
-
-	int m = 0;
-	final int w;
-	BlockIterator blockIterator;
-	final List<MemoryCommand> previousCommands = new ArrayList<MemoryCommand>();
-	final Set<MemoryCommand> previousMisses = new HashSet<MemoryCommand>();
-	final List<Integer> misses = new ArrayList<Integer>();
-	
-	@Override
-	public boolean hasNext()
-	{
-		return m == 0 ||  misses.size() <= w - 1 && hasNext;
-	}
-	
-	boolean hasNext = true;
-
-	@Override
-	public TLBRange next()
-	{
-		try
-		{
-		//TODO изменить направление изменения m, чтобы сначала просматривались более простые системы
-		switch( m )
-		{
-		case 0:
-			m = Math.max( w - previousCommands.size() + 1, 1 );
-			blockIterator = new BlockIterator( w-m, previousCommands );
-			//if ( существует miss, не входящий в previous )  hasNext = false;
-			MemoryCommand cmd1 = getTestSituation().getCommand();
-			for( Command cmd : cmd1.getScheme().getCommands() )
-			{
-				if ( 	cmd != cmd1 
-						&& cmd instanceof MemoryCommand
-						&& ! previousCommands.contains(cmd)
-						&& ((MemoryCommand)cmd).getTLBSituation() instanceof TLBMiss
-					)
-						hasNext = false;
-			}
-			// if ( количество предыдущих инструкций < w-m+1 ) hasNext = false;
-			if ( m > w || misses.size() == 0 )
-				hasNext = false;
-			
-			return new InitialTlbMiss(getTestSituation().getCommand(), previousMisses );
-		default:
-			if ( m - 1 <= w - misses.size() )
-			{
-				if ( ! blockIterator.hasNext() )
-				{
-					if ( m - 1 == w )
+					Set<MemoryCommand> previousMisses = new HashSet<MemoryCommand>();
+					
+					// main previous miss is found
+					for( Command c : cmd.getScheme().getCommands() )
 					{
-						return null;
+						if ( c == cc )
+							break;
+						if ( c instanceof MemoryCommand )
+						{
+							if ( ((MemoryCommand)c).getTLBSituation() instanceof TLBHit )
+								previousHits.add((MemoryCommand)c);
+							else if ( ((MemoryCommand)c).getTLBSituation() instanceof TLBMiss )
+								previousMisses.add((MemoryCommand)c);
+						}
 					}
-					m++;
-					blockIterator = new BlockIterator( w-m, previousCommands );
+					int k = previousMisses.size();
+					int N = previousHits.size();
+					wMinusK = w - k;
+
+					if ( w - k <= 1 || N == 0 )
+					{
+						iterationsLeft = 2;
+					}
+					else if ( w-k-N < 1 )
+					{
+						iterationsLeft = w-k+1;
+					}
+					else
+					{
+						iterationsLeft = N+2;
+					}
+					
+					allPreviousMisses.addAll( previousMisses );
+					allPreviousMisses.add( (MemoryCommand) cc );
+					
+					break MainPreviousMissFinding;
 				}
-				int[] block = blockIterator.next(); // already sorted
-				// if not all misses in block continue!!
-				for( int m : misses )
-				{
-					if ( Arrays.binarySearch(block, m) < 0 )
-						return next(); // этот блок содержит не все miss
-				}
-				List<MemoryCommand> blockCommands = new ArrayList<MemoryCommand>();
-				for( int b : block )
-				{
-					blockCommands.add( previousCommands.get(b) );
-				}
-				return new BlockRange.TLB( getTestSituation().getCommand(), m, blockCommands, previousCommands );
 			}
-			return null;
+			
+			// main miss is not found
+			iterationsLeft = 1;
+			wMinusK = 0;//fake
 		}
-		}
-		finally
-		{
-			if ( w - m == misses.size() )
-				hasNext = false;
-		}
+		
+		// итератор выдает m из подмножества множества 1..w, определяемого k и N.
+		// if w-k <= 1 -> всего один вариант: без полезностей m:1..w
+		// else N = 0 -> всего один вариант: без полезностей m:w-k..w
+		// else w-k-N < 1 -> w-k вариантов: без полезностей m:w-k..w & с полезностями m:1..w-k-1
+		// else -> N+1 вариантов: без полезностей m:w-k..w & с полезностями m:w-k-N..w-k-1
+		// ну и + initialMiss
 	}
+
+	final int w;
+	private int iterationsLeft;
+	final List<MemoryCommand> previousHits = new ArrayList<MemoryCommand>();
+	final Set<MemoryCommand> allPreviousMisses = new HashSet<MemoryCommand>();
+	private int wMinusK;
+	// unuseful M : max(1, w-k) .. w
+	// useful M : w-k - 1 downto iterationsLeft = 0  
 
 	@Override
 	public void remove() {
+	}
+
+
+	@Override
+	public boolean hasNext() {
+		return iterationsLeft > 0;
+	}
+
+
+	private boolean first = true;
+	private boolean unuseful = true;
+	
+	@Override
+	public TLBRange next()
+	{
+		if ( first )
+		{
+			first = false;
+			iterationsLeft --;
+			return new InitialTlbMiss(
+					getTestSituation().getCommand(),
+					allPreviousMisses );
+		}
+		else if ( unuseful )
+		{
+			unuseful = false;
+			iterationsLeft -- ;
+			return new UnusefulTlbMiss(
+					getTestSituation().getCommand(),
+					allPreviousMisses,
+					Math.max(1, wMinusK), w );
+		}
+		
+		int m = wMinusK - 1;
+		
+		wMinusK --;
+		iterationsLeft --;
+		
+		return new UsefulTlbMiss(
+				getTestSituation().getCommand(),
+				allPreviousMisses,
+				previousHits,
+				m, w - allPreviousMisses.size() - 1 );
 	}
 
 }
