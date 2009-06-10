@@ -10,7 +10,7 @@ public abstract class L1Range extends Range implements TLBRangesVisitor
 	}
 
 	
-	public void visit( TLBRange range )
+	public void visit( TLBRange range ) throws Inconsistent
 	{
 		range.visit( this );
 	}

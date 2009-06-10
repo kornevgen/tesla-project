@@ -8,9 +8,9 @@ import ru.teslaprj.ranges.ts.UsefulTlbMiss;
 
 public interface TLBRangesVisitor
 {
-	void visitInitialTlbHit( InitialTlbHit range );
-	void visitEvictingTlbHit( EvictingTlbHit range );
-	void visitInitialTlbMiss( InitialTlbMiss range );
-	void visitUnusefulTlbMiss( UnusefulTlbMiss range );
-	void visitUsefulTlbMiss( UsefulTlbMiss range );
+	void visitInitialTlbHit( InitialTlbHit range ) throws Inconsistent;
+	void visitEvictingTlbHit( EvictingTlbHit range ) throws Inconsistent;
+	void visitInitialTlbMiss( InitialTlbMiss range ) throws Inconsistent;
+	void visitUnusefulTlbMiss( UnusefulTlbMiss range ) throws Inconsistent;
+	void visitUsefulTlbMiss( UsefulTlbMiss range ) throws Inconsistent;
 }

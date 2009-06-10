@@ -1,5 +1,6 @@
 package ru.teslaprj.ranges.ts;
 
+import ru.teslaprj.ranges.Inconsistent;
 import ru.teslaprj.ranges.L1Range;
 import ru.teslaprj.ranges.TLBRange;
 import ru.teslaprj.scheme.MemoryCommand;
@@ -11,7 +12,7 @@ public class InitialTlbHit extends TLBRange {
 	}
 
 	@Override
-	public void visit(L1Range r)
+	public void visit(L1Range r) throws Inconsistent
 	{
 		r.visitInitialTlbHit(this);
 	}

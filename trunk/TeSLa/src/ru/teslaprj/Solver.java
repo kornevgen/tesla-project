@@ -25,6 +25,7 @@ import ru.teslaprj.constraints.pfn.Argument;
 import ru.teslaprj.constraints.pfn.Constant;
 import ru.teslaprj.constraints.pfn.PFNsAreDifferent;
 import ru.teslaprj.constraints.pfn.Variable;
+import ru.teslaprj.ranges.Inconsistent;
 import ru.teslaprj.ranges.RangeIterator;
 import ru.teslaprj.ranges.Ranges;
 import ru.teslaprj.scheme.Command;
@@ -142,7 +143,15 @@ public class Solver
 		{
 			Ranges ranges = it.next();
 			
-			if ( ! ranges.isConsistency() )
+			try
+			{
+				if ( ! ranges.isConsistency() )
+				{
+					System.out.println("inconsistent :(");
+					continue;
+				}
+			}
+			catch(Inconsistent e )
 			{
 				System.out.println("inconsistent :(");
 				continue;
