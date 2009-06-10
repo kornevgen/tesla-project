@@ -45,7 +45,6 @@ TLB состоит из набора строк, задающих соответствие значений бит
 \begin{verbatim}
 REGISTER ax:32; REGISTER bx:32; CONST c:16;
 LW ax, bx, c @ l1Hit, tlbMiss
-ADD ax, ax, bx @ overflow
 SW ax, bx, c @ l2Miss, tlbHit
 \end{verbatim}
 }
@@ -54,7 +53,7 @@ SW ax, bx, c @ l2Miss, tlbHit
 \texttt{l1Hit, tlbMiss}. Идентификатор \texttt{l1Hit} означает
 попадание в кэш-памяти первого уровня (L1). Идентификатор
 \texttt{tlbMiss} означает промах в буфере TLB. Тестовая ситуация
-третьей команды составлена из промаха в кэш-памяти второго уровня
+второй инструкции составлена из промаха в кэш-памяти второго уровня
 (L2) -- \texttt{l2Miss} -- и попадания в буфере TLB
 (\texttt{tlbHit}).
 
