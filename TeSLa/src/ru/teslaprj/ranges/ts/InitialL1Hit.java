@@ -3,6 +3,7 @@ package ru.teslaprj.ranges.ts;
 import java.util.HashSet;
 import java.util.Set;
 
+import ru.teslaprj.ranges.Inconsistent;
 import ru.teslaprj.ranges.L1Range;
 import ru.teslaprj.scheme.MemoryCommand;
 
@@ -14,10 +15,14 @@ public class InitialL1Hit extends L1Range
 	}
 
 	@Override
-	public void visitEvictingTlbHit(EvictingTlbHit range)
+	public void visitEvictingTlbHit(EvictingTlbHit range) throws Inconsistent
 	{
+		Set<Long> domain = getContext().getLinterPFN();
+		if ( domain.isEmpty() )
+			throw new Inconsistent();
+		
 		StringBuffer constraint = new StringBuffer().append("(or false ");
-		for( long l : getContext().getLinterPFN() )
+		for( long l : domain )
 		{
 			constraint.append( "(= " )
 				.append( getCommand().getTagset() )
@@ -40,10 +45,14 @@ public class InitialL1Hit extends L1Range
 	}
 
 	@Override
-	public void visitInitialTlbHit(InitialTlbHit range)
+	public void visitInitialTlbHit(InitialTlbHit range) throws Inconsistent
 	{
+		Set<Long> domain = getContext().getLinterM();
+		if ( domain.isEmpty() )
+			throw new Inconsistent();
+		
 		StringBuffer constraint = new StringBuffer().append("(or false ");
-		for( long l : getContext().getLinterM() )
+		for( long l : domain )
 		{
 			constraint.append( "(= " )
 				.append( getCommand().getTagset() )
@@ -55,10 +64,14 @@ public class InitialL1Hit extends L1Range
 	}
 
 	@Override
-	public void visitInitialTlbMiss(InitialTlbMiss range)
+	public void visitInitialTlbMiss(InitialTlbMiss range) throws Inconsistent
 	{
+		Set<Long> domain = getContext().getLinterPFNminusM();
+		if ( domain.isEmpty() )
+			throw new Inconsistent();
+		
 		StringBuffer constraint = new StringBuffer().append("(or false ");
-		for( long l : getContext().getLinterPFNminusM() )
+		for( long l : domain )
 		{
 			constraint.append( "(= " )
 				.append( getCommand().getTagset() )
@@ -85,14 +98,13 @@ public class InitialL1Hit extends L1Range
 
 	@Override
 	public void visitUnusefulTlbMiss(UnusefulTlbMiss range)
+		throws Inconsistent
 	{
 		// ts \in L \inter [{M<m1>, M<m1+1>,..., M<m2>}]
 		Set<Long> domain = getContext().getLinterMrange( range.getMinimumM(), range.getMaximumM() );
-
 		if ( domain.isEmpty() )
 		{
-			getContext().postAssert("false");
-			return;
+			throw new Inconsistent();
 		}
 		
 		StringBuffer constraint = new StringBuffer("(or false " );
@@ -115,13 +127,12 @@ public class InitialL1Hit extends L1Range
 	}
 
 	@Override
-	public void visitUsefulTlbMiss(UsefulTlbMiss range)
+	public void visitUsefulTlbMiss(UsefulTlbMiss range) throws Inconsistent
 	{
-		Set<Long> domain = getContext().getLinterMremains( range.getM() - 1 );
+		Set<Long> domain = getContext().getLinterM( range.getM() - 1 );
 		if ( domain.isEmpty() )
 		{
-			getContext().postAssert("false");
-			return;
+			throw new Inconsistent();
 		}
 		
 		StringBuffer constraint = new StringBuffer("(or false " );

@@ -3,6 +3,7 @@ package ru.teslaprj.ranges.ts;
 import java.util.HashSet;
 import java.util.Set;
 
+import ru.teslaprj.ranges.Inconsistent;
 import ru.teslaprj.ranges.L1Range;
 import ru.teslaprj.scheme.MemoryCommand;
 
@@ -56,23 +57,17 @@ public class EvictingL1Hit extends L1Range
 			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
 			.append( cmd.getTagset() ).append(")");
 		}		
-		getContext().postAssert( constraint.append("))").toString() );
+		getContext().postAssert( constraint.append(")").toString() );
 	}
 
 	@Override
-	public void visitInitialTlbMiss(InitialTlbMiss range)
+	public void visitInitialTlbMiss(InitialTlbMiss range) throws Inconsistent
 	{
-		Set<MemoryCommand> evs = new HashSet<MemoryCommand>();
-		for( MemoryCommand cmd : evictings )
-		{
-			if ( ! range.ev.contains(cmd) )
-				evs.add( cmd );
-		}
-		
+		Set<MemoryCommand> evs = new HashSet<MemoryCommand>(evictings);
+		evs.removeAll(range.ev);		
 		if ( evs.isEmpty() )
 		{
-			getContext().postAssert("false");
-			return;
+			throw new Inconsistent();
 		}
 		
 		StringBuffer constraint = new StringBuffer("(or false ");
@@ -114,23 +109,21 @@ public class EvictingL1Hit extends L1Range
 	}
 
 	@Override
-	public void visitUnusefulTlbMiss(UnusefulTlbMiss range)
+	public void visitUnusefulTlbMiss(UnusefulTlbMiss range) throws Inconsistent
 	{
-		Set<MemoryCommand> evs = new HashSet<MemoryCommand>();
-		for( MemoryCommand cmd : evictings )
-		{
-			if ( ! range.getEvictings().contains(cmd) )
-				evs.add( cmd );
-		}
+		Set<Long> domain = getContext().getMremains( range.minM - 1);
+		if ( domain.isEmpty() )
+			throw new Inconsistent();
 		
+		Set<MemoryCommand> evs = new HashSet<MemoryCommand>(evictings);
+		evs.removeAll(range.getEvictings());
 		if ( evs.isEmpty() )
 		{
-			getContext().postAssert("false");
-			return;
+			throw new Inconsistent();
 		}
 		
 		StringBuffer constraint = new StringBuffer("(or false ");
-		for( long l : getContext().getMremains( range.minM - 1) )
+		for( long l : domain )
 		{
 			constraint.append("(= (getPfn ").append( getCommand().getTagset() ).append(") " +
 					"(mk-bv " ).append( getContext().getPfnLength() ).append(" " ).append(l)
@@ -156,26 +149,19 @@ public class EvictingL1Hit extends L1Range
 	}
 
 	@Override
-	public void visitUsefulTlbMiss(UsefulTlbMiss range)
+	public void visitUsefulTlbMiss(UsefulTlbMiss range) throws Inconsistent
 	{
 		Set<Long> mmm = getContext().getM( range.m - 1 );
 		if ( mmm.isEmpty() )
 		{
-			getContext().postAssert("false");
-			return;
+			throw new Inconsistent();
 		}
 		
-		Set<MemoryCommand> evs = new HashSet<MemoryCommand>();
-		for( MemoryCommand cmd : evictings )
-		{
-			if ( ! range.getEvictings().contains(cmd) )
-				evs.add( cmd );
-		}
-		
+		Set<MemoryCommand> evs = new HashSet<MemoryCommand>( evictings );
+		evs.removeAll( range.getEvictings() );		
 		if ( evs.isEmpty() )
 		{
-			getContext().postAssert("false");
-			return;
+			throw new Inconsistent();
 		}
 		
 		
@@ -203,7 +189,7 @@ public class EvictingL1Hit extends L1Range
 			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
 			.append( cmd.getTagset() ).append(")");
 		}		
-		getContext().postAssert( constraint.append("))").toString() );
+		getContext().postAssert( constraint.append(")").toString() );
 		
 				
 		// вводим новые переменные
