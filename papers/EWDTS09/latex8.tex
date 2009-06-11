@@ -143,18 +143,20 @@ SMT-solvers are Yices~\cite{Yices}, Z3~\cite{Z3}, CVC3~\cite{CVC3}.
 This article uses bit-vector theory for constraints described
 tagsets and registers values relations.
 
-\subsection{Limitations of proposing approach}
+\subsection{Limitations of the approach}
 There are some requirements to the testing process which are took into account and efficiently used in proposing approach.
 \begin{enumerate}
-\item known initial state of the cache and TLB;
-\item only hits in Joint TLB;
-\item `Cached Mapped' segments only;
-\item only L1 cache; L2 cache 
+\item known initial state of the cache and TLB; this is a key requirement of the approach; initial state is used for initial values of registers generation;
+\item hits in Joint TLB are considered only; misses (i.e., absence a TLB line for virtual address) requires hardware or software refilling programs, so this test situations are very hard for constraints definition;
+\item `Cached Mapped' segments of virtual memory only; another segments may require more complex constraints because of number of cases growth;
+\item L1 cache only; L2 cache can contain data and instructions; so cache with only type of contents is considered.
 \end{enumerate}
 
 \section{Test case generation}
 
-The aim of proposed algorithm is generation initial values for registers using solution of SMT-constraints. These constraints describe relations on registers values. Each instruction can change values of registers and cache state. Additional variables should be introduced to describe changes of cache state. These variables are tagsets. They don't present cache as it is (by cells). Instead of this constraints on tagsets describe relations between virtual addresses of instructions. Registers are used to get virtual addresses (as second arguments of LOAD and STORE) and values loaded or stored to memory (as first arguments of LOAD and STORE).
+Test case is a test program. Each test program consists of initialization instructions, body instructions and finalization instructions. Initialization instruction prepare microprocessor to the appropriate state. Then body instructions are executed (they are defined in test template). And finalization instructions check state of microprocessor after body instructions execution (for example, check values for registers).
+
+The aim of proposing algorithm is generation initial values for registers using solution of SMT-constraints. Generated initial values are used for initialization instructions generation. SMT-constraints describe relations on registers values. Each instruction can change values of registers and cache state. Additional variables should be introduced to describe changes of cache state. These variables are tagsets. They don't present cache as it is (by cells). Instead of this constraints on tagsets describe relations between virtual addresses of instructions. Registers are used to get virtual addresses (as second arguments of LOAD and STORE) and values loaded or stored to memory (as first arguments of LOAD and STORE).
 
 The following constraints present cache behavior for \emph{simple} test templates only, i.e. templates with no more than $w+1$ misses (and unlimited count of hits). $w$ is associativity of cache.
 
