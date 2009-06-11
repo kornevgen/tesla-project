@@ -124,7 +124,7 @@ second step is memory access through cache using generated physical address (see
 \subsection{Tagsets}
 
 \emph{Tagset} is bit-field of physical address (see pic.~\ref{LOAD}). Each LOAD/STORE instruction has a tagset. Tagset is used by memory management unit for cache access.
-\emph{Evicting tagset} is tagset of instruction with l1Miss test situation.
+\emph{Displacing tagset} is tagset of instruction with l1Miss test situation. \emph{Hit tagset} is tagset of instruction with l1Hit test situation.
 
 The following syntax will be used for operations on tagsets and virtual addresses:
 \begin{enumerate}
@@ -143,6 +143,15 @@ SMT-solvers are Yices~\cite{Yices}, Z3~\cite{Z3}, CVC3~\cite{CVC3}.
 This article uses bit-vector theory for constraints described
 tagsets and registers values relations.
 
+\subsection{Limitations of proposing approach}
+There are some requirements to the testing process which are took into account and efficiently used in proposing approach.
+\begin{enumerate}
+\item known initial state of the cache and TLB;
+\item only hits in Joint TLB;
+\item `Cached Mapped' segments only;
+\item only L1 cache; L2 cache 
+\end{enumerate}
+
 \section{Test case generation}
 
 The aim of proposed algorithm is generation initial values for registers using solution of SMT-constraints. These constraints describe relations on registers values. Each instruction can change values of registers and cache state. Additional variables should be introduced to describe changes of cache state. These variables are tagsets. They don't present cache as it is (by cells). Instead of this constraints on tagsets describe relations between virtual addresses of instructions. Registers are used to get virtual addresses (as second arguments of LOAD and STORE) and values loaded or stored to memory (as first arguments of LOAD and STORE).
@@ -156,14 +165,14 @@ TLB state. Lets $LP = \{ x | x \in L \wedge x_{<pfn~bits>} \in
 PFN\}$. Then walk through given test template and collect
 constraints from test situations by the following way:
 \begin{enumerate} \item for "l1Hit($x$)": $x \in LP \cup \{ x_1,
-..., x_n \}$, where $x_1, ..., x_n$ are all previous evicting
+..., x_n \}$, where $x_1, ..., x_n$ are all previous displacing
 tagsets; algorithm returns "no solution"\ , if $LP \cup \{ x_1, ...,
 x_n \} = \varnothing$; \item for "l1Miss($x$)": $x \notin \{x_1,
 ..., x_n \} \wedge (x \notin LP \vee \bigvee_{\lambda \in LP} (x =
 \lambda \wedge LRU(\lambda, x_1, ..., x_n))$, where $x_1, ..., x_n$
-are all previous evicting tagsets. \end{enumerate}
+are all previous displacing tagsets. \end{enumerate}
 
-Constraint $LRU(\lambda, x_1, ..., x_n) = \bigvee_{\{y_1, ..., y_m\} \subseteq \{x_1, ..., x_n\}} \bigwedge_{t \in \{x_1, ..., y_m\}}  TS(t, \lambda, x_1, ..., x_n,\\y_1, ..., y_m)$, where $\lambda = \lambda_m$ ($m$ is number of $\lambda$ in its set, $\lambda_1$ is the youngest element of set by LRU order). Constraint $TS$ is the following:\\
+Constraint $LRU(\lambda, x_1, ..., x_n) = \bigvee_{\{y_1, ..., y_m\} \subseteq \{x_1, ..., x_n\}} \bigwedge_{t \in \{x_1, ..., y_m\}}  TS(t, \lambda, x_1, ..., x_n,\\y_1, ..., y_m)$, where $\lambda = \lambda_m$ ($m$ is a number of $\lambda$ in its set, $\lambda_1$ is the youngest element of set by LRU order). Constraint $TS$ is the following:\\
 $TS(t, \lambda, x_1, ..., x_n, y_1, ..., y_m) = \\
 \begin{cases}
 R(t) \neq R(\lambda),&\text{if~} t:\text{l1Miss} \wedge t \notin \{y_1, ..., y_m\}\\
@@ -174,6 +183,9 @@ t \notin \{\lambda_{m+1}, ..., \lambda_w\}&\text{if~} t:\text{l1Hit} \wedge t = 
 \end{cases}$
 
 $t$ : l1Hit (or l1Miss) means corresponded test situation of instruction with tagset $t$.
+
+Constraint $LRU(\lambda, x_1, ..., x_n)$ has other representation using \emph{usefulness predicates}. Tagset is \emph{useful}, if it helps to displace tagset $\lambda$ (otherwords, if it does this tagset more older by means of LRU). Constraint $LRU(\lambda, x_1, ..., x_n)$ is satisfied, if tagset $\lambda$ is displaced before current instruction (and current instruction uses $\lambda$ as displacing tagset). So constraint $LRU$ requires all tagsets \textbf{before the closest cache miss before current instruction}, hit tagsets and displacing tagsets. So, this constraint can be represented as follows:
+$LRU(\lambda, x_1, ..., x_n) = (\sum u(x_i) \geqslant w-m)$, where $x_i$ is a tagset (not only displacing tagset) before the closest cache miss before the current instruction, $m$ is a number of $\lambda$ in its set, $w$ is set size (i.e., cache associativity), and $u(x_i)$ is a usefulness predicate for $x_i$. Usefulness predicates can be represented as follows: $u(x_i) = (x_i \in \{ \lambda_{m+1}, \lambda_{m+2}, ..., \lambda_w \} \wedge x_i \notin hit~tagsets~from~\{x_1, ..., x_{i-1} \})$, if $x_i$ is hit tagset, and $u(x_i) = (R(x_i) = R(\lambda))$, if $x_i$ is displacing tagset. This representation is simpler but requires linear inequalities support in solver.
 
 These constraints describe cache behavior without exponential selection all values of any variable. And often $LP$ is not large. Proposed algorithm is correct, full and defines fast way to get tagsets.
 
@@ -196,6 +208,8 @@ example, $y_{<range~bits>} = line.r \wedge y_{<vpn~bits>} =
 line.vpn$, where $line$ is TLB line with $line.pfn =
 ts_{<TsLen-1~..~TsLen-PfnLen>}$;
 
+\item high bits of virtual address correspond to the segment of virtual memory;
+
 \item for each pair "STORE $x_1, y_1$"
 and "LOAD $x_2, y_2$" (LOAD follows from STORE) $phys_1 = phys_2
 \wedge phys_1 \notin P \rightarrow x_1 = x_2$, where $phys_i = ts_i
@@ -212,7 +226,7 @@ addresses of STORE instructions between these "LOAD" instructions.
 \end{enumerate}
 
 \subsection{SMT representation of constraints}
-All generated constraints can be (and should be) represented by constraints on bit-vectors (using bit-extraction and equality relation) and efficiently solved by SMT-solver (we use Yices).
+All generated constraints can be (and should be) represented by constraints on bit-vectors (using bit-extraction and equality relation) and efficiently solved by SMT-solver (we use Yices). $LRU$ constraint was represented using usefulness predicates.
 
 \section{Conclusions}
 The article has presented the algorithm for generation test programs used in cache-memory testing. The algorithm works well for simple test templates, i.e. test templates with no more than $w+1$ instructions with cache misses ($w$ is associativity of cache). Further it is planned to increase the algorithm for test situations with uncached or unmapped access and add possibility to offer changes of cache-memory before test program execution to cover more test templates.
