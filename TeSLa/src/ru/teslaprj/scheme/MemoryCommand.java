@@ -10,8 +10,9 @@ import ru.teslaprj.scheme.ts.TLBSituation;
 
 public class MemoryCommand extends Command implements MemoryAccessInstruction
 {
-	Map<Cache, CacheTestSituation> cacheSituations; 
-	TLBSituation tlbSituation; 
+	final Map<Cache, CacheTestSituation> cacheSituations; 
+	final TLBSituation tlbSituation; 
+	final boolean load;
 	
 	public MemoryCommand
 			( Scheme scheme
@@ -20,16 +21,20 @@ public class MemoryCommand extends Command implements MemoryAccessInstruction
 			, String testSituation
 			, Map<Cache, CacheTestSituation> cacheSituations
 			, TLBSituation tlbSituation
+			, boolean isLoad
 			)
 	throws CommandDefinitionError
 	{
 		super(scheme, cop, args, testSituation);
 
-		this.cacheSituations = cacheSituations;
 		this.tlbSituation = tlbSituation;
-		if ( this.cacheSituations == null )
+		if ( cacheSituations == null )
 		{
 			this.cacheSituations = new HashMap<Cache, CacheTestSituation>();
+		}
+		else
+		{
+			this.cacheSituations = cacheSituations;
 		}
 		
 		for( CacheTestSituation p : this.cacheSituations.values() )
@@ -37,14 +42,15 @@ public class MemoryCommand extends Command implements MemoryAccessInstruction
 			p.setCommand(this);
 		}
 		this.tlbSituation.setCommand(this);
+		this.load = isLoad;
 	}
 	
 	String tagset = null;
 	
-	static private int tagsetNumber = 0;
+	static private int counter = 0;
 	static private final synchronized String getNewTagset()
 	{
-		return "ts" + (tagsetNumber++);
+		return "ts" + (counter++);
 	}
 
 	@Override
@@ -80,13 +86,35 @@ public class MemoryCommand extends Command implements MemoryAccessInstruction
 	@Override
 	public boolean isLOAD() {
 		// TODO это можно узнать только после разбора описания тестовой ситуации...
-		return false;
+		return load;
 	}
 
 	@Override
 	public boolean isSTORE() {
-		// TODO Auto-generated method stub
-		return false;
+		// TODO это можно узнать только после разбора описания тестовой ситуации...
+		return !load;
+	}
+
+	String virtualAddress = null;
+	
+	static private final synchronized String getNewVirtualAddress()
+	{
+		return "va" + (counter++);
+	}
+
+	@Override
+	public String getVirtualAddress()
+	{
+		if ( virtualAddress == null )
+		{
+			virtualAddress = getNewVirtualAddress();
+		}
+		return virtualAddress;
+	}
+
+	@Override
+	public String getResult() {
+		return getArgs().get(0);
 	}
 	
 }
