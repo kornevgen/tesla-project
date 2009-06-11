@@ -85,7 +85,7 @@ public class EvictingL1Hit extends L1Range
 			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
 			.append( cmd.getTagset() ).append(")");
 		}		
-		getContext().postAssert( constraint.append("))").toString() );
+		getContext().postAssert( constraint.append(")").toString() );
 		
 		for( MemoryCommand cmd : range.ev )
 		{

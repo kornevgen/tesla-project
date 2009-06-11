@@ -29,6 +29,8 @@ import ru.teslaprj.scheme.ts.TLBSituation;
 public class LDSDSample
 {
 	private static final int PFN_BITLEN = 24;
+	private static final int SEGBITS = 40;
+	private static final int PABITS = 36;
 
 	public static void main( String[] args )
 	{
@@ -162,7 +164,7 @@ public class LDSDSample
 		}
 		
 		final int[] masks = new int[48];
-		final int[] vpnd2s = new int[48]; 
+		final long[] vpnd2s = new long[48]; 
 		// генерируем так, чтобы не нарушилась консистентность TLB
 		for( int range = 0; range < 4; range++ )
 		{
@@ -173,32 +175,32 @@ public class LDSDSample
 				if ( ranges[i] == range )
 					indexes.add(i);
 			}
-			List<Integer> vs = new ArrayList<Integer>();
+			List<Long> vs = new ArrayList<Long>();
 			for( int i = 0; i < indexes.size(); i++ )
 			{
 				// выбираем маску
 				masks[indexes.get(i)] = PFN_BITLEN; //r.nextInt(9); //maxmask = 8
 				
 				// выбираем vpn/2
-				int v;
+				long v;
 				do
 				{
-					v = r.nextInt((int)Math.pow(2, 40-28));//segbits - (2*maxmask+vpnd2start-1)
+					v = r.nextInt((int)Math.pow(2, SEGBITS - 1 - (PABITS-PFN_BITLEN)));//segbits - 1 - (pabits-pfnlength)
 				} while( vs.contains(v) );
 				
 				vs.add(v);
-				vpnd2s[indexes.get(i)] = v << 2*masks[indexes.get(i)];
+				vpnd2s[indexes.get(i)] = v;
 			}
 		}
 		
 		final TLBRow[] tlbRows = new TLBRow[48];
 		for( int i = 0; i < 48; i++ )
 		{
-			final BigInteger p0 = new BigInteger( new Integer(pfn0[i]).toString() );
-			final BigInteger p1 = new BigInteger( new Integer(pfn1[i]).toString() );
+			final BigInteger p0 = new BigInteger( pfn0[i] + "" );
+			final BigInteger p1 = new BigInteger( pfn1[i] + "" );
 			final int range = ranges[i];
 			final int mask = masks[i];
-			final BigInteger v = new BigInteger( new Integer(vpnd2s[i]).toString() );
+			final BigInteger v = new BigInteger( vpnd2s[i] + "" );
 			
 			tlbRows[i] = new TLBRow(){
 				@Override
@@ -296,8 +298,8 @@ public class LDSDSample
 				{
 					List<String> params1 = new ArrayList<String>( dep.subList(0, 2) );
 					List<String> params2 = new ArrayList<String>( dep.subList(2, 4) );
-					params1.add("c1");
-					params2.add("c2");
+					params1.add("cc");
+					params2.add("ccc");
 					
 					try
 					{
@@ -306,8 +308,8 @@ public class LDSDSample
 					scheme.addDefinition( new RegisterDefinition( "y", 64 ) );
 					scheme.addDefinition( new RegisterDefinition( "s", 64 ) );
 					scheme.addDefinition( new RegisterDefinition( "t", 64 ) );
-					scheme.addDefinition( new ConstDefinition( "c1", 16 ) );
-					scheme.addDefinition( new ConstDefinition( "c2", 16 ) );
+					scheme.addDefinition( new ConstDefinition( "cc", 16 ) );
+					scheme.addDefinition( new ConstDefinition( "ccc", 16 ) );
 
 					Map<Cache, CacheTestSituation>[] cts = new HashMap[2];
 					int idx = 0;
@@ -358,7 +360,8 @@ public class LDSDSample
 							params1, 
 							"regular", 
 							cts[0],
-							ats.get(0)
+							ats.get(0),
+							true
 						);
 					System.out.println(command1 + " " + cts[0].get(cache1).getClass().getSimpleName() + " "
 							+ ats.get(0).getClass().getSimpleName());
@@ -369,7 +372,8 @@ public class LDSDSample
 							params2, 
 							"regular", 
 							cts[1],
-							ats.get(1)
+							ats.get(1),
+							false
 						);
 					System.out.println(command2 + " " + cts[1].get(cache1).getClass().getSimpleName() + " "
 							+ ats.get(1).getClass().getSimpleName());
@@ -416,7 +420,7 @@ public class LDSDSample
 
 						@Override
 						public int getSEGBITS() {
-							return 40;
+							return SEGBITS;
 						}
 
 						@Override
@@ -426,7 +430,7 @@ public class LDSDSample
 
 						@Override
 						public int getPABITS() {
-							return 36;
+							return PABITS;
 						}
 
 						@Override

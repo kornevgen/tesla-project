@@ -7,6 +7,9 @@ import ru.teslaprj.scheme.ts.TLBSituation;
 interface MemoryAccessInstruction
 {
 	String getTagset();
+	String getVirtualAddress();
+	String getResult();
+	
 	boolean isLOAD();
 	boolean isSTORE();
 	boolean hasTLBSituation();
