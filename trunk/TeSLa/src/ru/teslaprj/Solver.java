@@ -77,7 +77,7 @@ public class Solver
 //		private static final long serialVersionUID = 2483583682716798422L;		
 //	}
 	
-	public Verdict solve( Scheme scheme, List<Cache> cacheState, TLB tlb )
+	public boolean solve( Scheme scheme, List<Cache> cacheState, TLB tlb )
 		throws SchemeDefinitionError, IOException, EclipseException, RecognitionException
 	{
 		// 0. check correctness of the `scheme`
@@ -119,7 +119,7 @@ public class Solver
 			}
 			
 			System.out.println("consistent!");
-			return null;
+			return true;
 			
 //			File tmp;
 //			CompoundTerm result = null;
@@ -154,7 +154,7 @@ public class Solver
 		
 		/// все построенные системы оказались несовместными -- пытаемся что-то добавить в TLB
 		
-		return null;
+		return false;
 	}
 	
 //	private synchronized static String createTempModuleName()

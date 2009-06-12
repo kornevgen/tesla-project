@@ -287,8 +287,9 @@ public class LDSDSample
 			deps.add( Arrays.asList( "x", "y", "y", "y" ) );
 			deps.add( Arrays.asList( "x", "x", "s", "x" ) );
 			
-			final int iterationsCount = 4*4*3*3;
+			final int iterationsCount = 4*3*3*3*3;
 			int iteratio = 0;
+			int numberOfConsistent = 0;
 			for( int cts1 = 0; cts1 < 3; cts1++ )
 			for( int cts2 = 0; cts2 < 3; cts2++ )
 			for( int at1 = 0; at1 < 2; at1++ )
@@ -455,8 +456,10 @@ public class LDSDSample
 
 						};
 
-					//Verdict verdict = 
-						solver.solve(scheme, cacheLevels, tlb );
+					if ( 
+						solver.solve(scheme, cacheLevels, tlb )
+					)
+						numberOfConsistent++;
 					
 					//TODO check verdict and change cache and TLB
 
@@ -519,6 +522,7 @@ public class LDSDSample
 					throw new Error(e);
 				}
 			}
-		}			
+		}
+			System.out.println("Consistent systems: " + numberOfConsistent + " ( " + (numberOfConsistent/iterationsCount)*100 + "% )" );
 	}
 }

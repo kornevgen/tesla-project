@@ -82,53 +82,54 @@ public class EvictingL1Hit extends L1Range
 	@Override
 	public void visitInitialTlbMiss(InitialTlbMiss range) throws Inconsistent
 	{
-		Set<MemoryCommand> evs = new HashSet<MemoryCommand>(evictings);
-		evs.removeAll(range.ev);		
-		if ( evs.isEmpty() )
-		{
-			throw new Inconsistent();
-		}
-		//убрать тех, у кого InitialTlbHit или Unuseful или Useful
-		Set<MemoryCommand> evs2 = new HashSet<MemoryCommand>();
-		for( MemoryCommand cmd : evs )
-		{
-			if ( getContext().getTLBRange(cmd) instanceof InitialTlbHit
-					||
-				getContext().getTLBRange(cmd) instanceof UnusefulTlbMiss
-					||
-				getContext().getTLBRange(cmd) instanceof UsefulTlbMiss
-			)
-				evs2.add(cmd);
-		}
-		if ( evs2.isEmpty() )
-		{
-			throw new Inconsistent();
-		}
-		
-		StringBuffer constraint = new StringBuffer("(or false ");
-		for( long l : getContext().getPFNminusMfull() )
-		{
-			constraint.append("(= (getPfn ").append( getCommand().getTagset() ).append(") " +
-					"(mk-bv " ).append( getContext().getPfnLength() ).append(" " ).append(l)
-				.append("))");
-		}
-		getContext().postAssert( constraint.append(")").toString());
-		
-		constraint = new StringBuffer("(or false ");
-		for( MemoryCommand cmd : evs2 )
-		{
-			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
-			.append( cmd.getTagset() ).append(")");
-		}		
-		getContext().postAssert( constraint.append(")").toString() );
-		
-		for( MemoryCommand cmd : range.ev )
-		{
-			getContext().postAssert( new StringBuffer("(/= ")
-				.append("(getPfn ").append( getCommand().getTagset() ).append(") ")
-				.append("(getPfn ").append( cmd.getTagset() ).append(")")
-				.append(")").toString() );
-		}
+		// this system is inconsistent always when [M] \inter [PFN\M] = empty
+		throw new Inconsistent();
+
+//		Set<MemoryCommand> evs = new HashSet<MemoryCommand>(evictings);
+//		evs.removeAll(range.ev);		
+//		if ( evs.isEmpty() )
+//		{
+//			throw new Inconsistent();
+//		}
+//		//убрать тех, у кого InitialTlbHit или Unuseful или Useful
+//		Set<MemoryCommand> evs2 = new HashSet<MemoryCommand>();
+//		for( MemoryCommand cmd : evs )
+//		{
+//			if ( getContext().getTLBRange(cmd) instanceof InitialTlbMiss
+//					||
+//				getContext().getTLBRange(cmd) instanceof EvictingTlbHit
+//			)
+//				evs2.add(cmd);
+//		}
+//		if ( evs2.isEmpty() )
+//		{
+//			throw new Inconsistent();
+//		}
+//		
+//		StringBuffer constraint = new StringBuffer("(or false ");
+//		for( long l : getContext().getPFNminusMfull() )
+//		{
+//			constraint.append("(= (getPfn ").append( getCommand().getTagset() ).append(") " +
+//					"(mk-bv " ).append( getContext().getPfnLength() ).append(" " ).append(l)
+//				.append("))");
+//		}
+//		getContext().postAssert( constraint.append(")").toString());
+//		
+//		constraint = new StringBuffer("(or false ");
+//		for( MemoryCommand cmd : evs2 )
+//		{
+//			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
+//			.append( cmd.getTagset() ).append(")");
+//		}		
+//		getContext().postAssert( constraint.append(")").toString() );
+//		
+//		for( MemoryCommand cmd : range.ev )
+//		{
+//			getContext().postAssert( new StringBuffer("(/= ")
+//				.append("(getPfn ").append( getCommand().getTagset() ).append(") ")
+//				.append("(getPfn ").append( cmd.getTagset() ).append(")")
+//				.append(")").toString() );
+//		}
 	}
 
 	@Override
