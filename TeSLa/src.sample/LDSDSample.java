@@ -185,8 +185,8 @@ public class LDSDSample
 				long v;
 				do
 				{
-					v = r.nextInt((int)Math.pow(2, SEGBITS - 1 - (PABITS-PFN_BITLEN)));//segbits - 1 - (pabits-pfnlength)
-				} while( vs.contains(v) );
+					v = r.nextInt((int)Math.pow(2, SEGBITS - (PABITS-PFN_BITLEN)));//segbits - 1 - (pabits-pfnlength)
+				} while( vs.contains(v) || v / (int)Math.pow(2, 20) != 63  );
 				
 				vs.add(v);
 				vpnd2s[indexes.get(i)] = v;

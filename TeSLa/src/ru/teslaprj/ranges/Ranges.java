@@ -273,6 +273,20 @@ public class Ranges
 				for( int p : dtlb.getDTLB() )
 				{
 					TLBRow r = dtlb.getRow(p);
+					// TODO отбор только в нужном сегменте
+					if ( dtlb.getPABITS() - pfnLength + 1 >= 30 )
+					{
+						if ( r.getVPNd2().intValue() != (int)Math.pow(2, dtlb.getSEGBITS()
+								- dtlb.getPABITS() + pfnLength) - 1 )
+							continue;
+					}
+					else
+					{
+						//старшие 10 бит номера виртуальной страницы == 1023
+						if ( r.getVPNd2().shiftRight(30 - dtlb.getPABITS() + pfnLength).intValue()
+								!= 255 )
+							continue;
+					}
 					if ( r.getMask() == pfnLength && r.getValid0() == 1 )
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
@@ -319,7 +333,24 @@ public class Ranges
 						continue;
 					
 					TLBRow r = dtlb.getRow(p);
-					if ( r.getMask() == pfnLength && r.getValid0() == 1 )
+					if ( r.getMask() != pfnLength )
+						continue;
+					// TODO отбор только в нужном сегменте
+					if ( dtlb.getPABITS() - pfnLength + 1 >= 30 )
+					{
+						if ( r.getVPNd2().intValue() != (int)Math.pow(2, dtlb.getSEGBITS()
+								- dtlb.getPABITS() + pfnLength) - 1 )
+							continue;
+					}
+					else
+					{
+						//старшие 10 бит номера виртуальной страницы == 1023
+						if ( r.getVPNd2().shiftRight(30 - dtlb.getPABITS() + pfnLength).intValue()
+								!= 255 )
+							continue;
+					}
+							
+					if ( r.getValid0() == 1 )
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
 						.append(" " ).append( r.getPFN0().longValue() ).append(") ")
@@ -328,7 +359,7 @@ public class Ranges
 						.append(") (mk-bv ").append( vpnLength ).append(" " )
 						.append( r.getVPNd2().longValue() * 2 ).append(")))");
 					}
-					if ( r.getMask() == pfnLength && r.getValid1() == 1 )
+					if ( r.getValid1() == 1 )
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
 						.append(" " ).append( r.getPFN1().longValue() ).append(") ")
@@ -351,6 +382,20 @@ public class Ranges
 					)
 				{
 					TLBRow r = dtlb.getRow(p);
+					// TODO отбор только в нужном сегменте
+					if ( dtlb.getPABITS() - pfnLength + 1 >= 30 )
+					{
+						if ( r.getVPNd2().intValue() != (int)Math.pow(2, dtlb.getSEGBITS()
+								- dtlb.getPABITS() + pfnLength) - 1 )
+							continue;
+					}
+					else
+					{
+						//старшие 10 бит номера виртуальной страницы == 1023
+						if ( r.getVPNd2().shiftRight(30 - dtlb.getPABITS() + pfnLength).intValue()
+								!= 255 )
+							continue;
+					}
 					if ( r.getMask() == pfnLength && r.getValid0() == 1 )
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
@@ -377,6 +422,20 @@ public class Ranges
 				// ищем среди M[m]
 				StringBuffer constraint = new StringBuffer("(or false ");
 				TLBRow r = dtlb.getRow( ((UsefulTlbMiss)tlbRanges.get(cmd)).getM() - 1 );
+				// TODO отбор только в нужном сегменте
+				if ( dtlb.getPABITS() - pfnLength + 1 >= 30 )
+				{
+					if ( r.getVPNd2().intValue() != (int)Math.pow(2, dtlb.getSEGBITS()
+							- dtlb.getPABITS() + pfnLength) - 1 )
+						continue;
+				}
+				else
+				{
+					//старшие 10 бит номера виртуальной страницы == 1023
+					if ( r.getVPNd2().shiftRight(30 - dtlb.getPABITS() + pfnLength).intValue()
+							!= 255 )
+						continue;
+				}
 				if ( r.getMask() == pfnLength && r.getValid0() == 1 )
 				{
 					constraint.append("(=> (= (mk-bv ").append( pfnLength )
