@@ -222,17 +222,24 @@ public class Ranges
 	        		{
 	        			System.out.println(line);
 	        			String[] parts = line.split(" ");
-	        			if ( parts.length != 3 )
+	        			if ( parts.length < 3 )
 	        				continue;
-	        			String name = parts[1];
-	        			if ( name.endsWith("1") || name.endsWith("2") )
-	        				continue;
-	        			if ( name.endsWith("0") )
-	        				name = name.substring(0, name.length() - 1 );
-	        			String bitvalue = parts[2].substring(2, parts[2].length() - 1 );
-	        			BigInteger v = new BigInteger(bitvalue, 2);
-	        			System.out.println(name + " = " + v.longValue());
-	        			result.put(name, v.longValue());
+	        			int i = 0;
+	        			while( i < parts.length )
+	        			{
+	        				i++;
+		        			String name = parts[i++];
+		        			if ( ! name.endsWith("1") && ! name.endsWith("2") || name.startsWith("ts") )
+		        			{
+			        			if ( name.endsWith("0") )
+			        				name = name.substring(0, name.length() - 1 );
+			        			String bitvalue = parts[i].substring(2, parts[i].length() - 1 );
+			        			BigInteger v = new BigInteger(bitvalue, 2);
+			        			System.out.println(name + " = " + v.longValue());
+			        			result.put(name, v.longValue());
+		        			}
+		        			i++;
+	        			}
 	        		}
 	        		return result;
 	        	}
@@ -744,6 +751,11 @@ public class Ranges
 		}
 		
 		return result;		
+	}
+
+	public TLBRange getTLBRange(MemoryCommand cmd)
+	{
+		return tlbRanges.get(cmd);
 	}
 
 }
