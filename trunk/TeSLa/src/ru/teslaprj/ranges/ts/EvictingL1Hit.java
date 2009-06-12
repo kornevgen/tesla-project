@@ -6,6 +6,7 @@ import java.util.Set;
 import ru.teslaprj.ranges.Inconsistent;
 import ru.teslaprj.ranges.L1Range;
 import ru.teslaprj.scheme.MemoryCommand;
+import ru.teslaprj.scheme.ts.TLBMiss;
 
 /** ts \in {ts_1, ..., ts_n} where ts_i is a tagset of previous miss */
 public class EvictingL1Hit extends L1Range
@@ -21,16 +22,21 @@ public class EvictingL1Hit extends L1Range
 	@Override
 	public void visitEvictingTlbHit(EvictingTlbHit range)
 	{
-		StringBuffer constraint = new StringBuffer("(or false ");
-		for( MemoryCommand cmd : range.evics )
+		Set<MemoryCommand> ev = new HashSet<MemoryCommand>( evictings );
+		ev.removeAll( range.evics );
+		if ( ! ev.isEmpty() )
 		{
-			constraint.append("(= (getPfn ").append( getCommand().getTagset() ).append(") " +
-					"(getPfn " ).append(cmd.getTagset())
-				.append("))");
+			StringBuffer constraint = new StringBuffer("(or false ");
+			for( MemoryCommand cmd : range.evics )
+			{
+				constraint.append("(= (getPfn ").append( getCommand().getTagset() ).append(") " +
+						"(getPfn " ).append(cmd.getTagset())
+					.append("))");
+			}
+			getContext().postAssert( constraint.append(")" ).toString() );
 		}
-		getContext().postAssert( constraint.append(")" ).toString() );
-	
-		constraint = new StringBuffer( "(or false ");
+		
+		StringBuffer constraint = new StringBuffer( "(or false ");
 		for( MemoryCommand cmd : evictings )
 		{
 			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
@@ -40,8 +46,21 @@ public class EvictingL1Hit extends L1Range
 	}
 
 	@Override
-	public void visitInitialTlbHit(InitialTlbHit range)
+	public void visitInitialTlbHit(InitialTlbHit range) throws Inconsistent
 	{
+		Set<MemoryCommand> evs = new HashSet<MemoryCommand>();
+		for( MemoryCommand cmd : evictings )
+		{
+			if ( ! (cmd.getTLBSituation() instanceof TLBMiss)
+					||
+				 ! (getContext().getTLBRange( cmd ) instanceof InitialTlbMiss ) )
+				evs.add(cmd);
+		}
+		if ( evs.isEmpty() )
+		{
+			throw new Inconsistent();
+		}
+		
 		StringBuffer constraint = new StringBuffer("(or false ");
 		for( long l : getContext().getMfull() )
 		{
@@ -52,7 +71,7 @@ public class EvictingL1Hit extends L1Range
 		getContext().postAssert( constraint.append(")").toString());
 		
 		constraint = new StringBuffer("(or false ");
-		for( MemoryCommand cmd : evictings )
+		for( MemoryCommand cmd : evs )
 		{
 			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
 			.append( cmd.getTagset() ).append(")");
