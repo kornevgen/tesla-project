@@ -88,6 +88,22 @@ public class EvictingL1Hit extends L1Range
 		{
 			throw new Inconsistent();
 		}
+		//убрать тех, у кого InitialTlbHit или Unuseful или Useful
+		Set<MemoryCommand> evs2 = new HashSet<MemoryCommand>();
+		for( MemoryCommand cmd : evs )
+		{
+			if ( getContext().getTLBRange(cmd) instanceof InitialTlbHit
+					||
+				getContext().getTLBRange(cmd) instanceof UnusefulTlbMiss
+					||
+				getContext().getTLBRange(cmd) instanceof UsefulTlbMiss
+			)
+				evs2.add(cmd);
+		}
+		if ( evs2.isEmpty() )
+		{
+			throw new Inconsistent();
+		}
 		
 		StringBuffer constraint = new StringBuffer("(or false ");
 		for( long l : getContext().getPFNminusMfull() )
@@ -99,7 +115,7 @@ public class EvictingL1Hit extends L1Range
 		getContext().postAssert( constraint.append(")").toString());
 		
 		constraint = new StringBuffer("(or false ");
-		for( MemoryCommand cmd : evs )
+		for( MemoryCommand cmd : evs2 )
 		{
 			constraint.append("(= ").append( getCommand().getTagset() ).append(" ")
 			.append( cmd.getTagset() ).append(")");
