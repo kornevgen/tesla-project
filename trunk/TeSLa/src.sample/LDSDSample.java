@@ -523,6 +523,6 @@ public class LDSDSample
 				}
 			}
 		}
-			System.out.println("Consistent systems: " + numberOfConsistent + " ( " + (numberOfConsistent/iterationsCount)*100 + "% )" );
+			System.out.println("Consistent systems: " + numberOfConsistent + " ( " + (100*numberOfConsistent/iterationsCount) + "% )" );
 	}
 }
