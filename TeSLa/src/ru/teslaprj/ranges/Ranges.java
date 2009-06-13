@@ -187,6 +187,16 @@ public class Ranges
 						.toString() );
 			}
 			
+			// часть тегсета -- это часть виртуального адреса
+			if ( yl.yicesl_inconsistent(context) == 0 )
+				for( MemoryCommand cmd : commands )
+				{
+					postAssert( new StringBuffer( "(= (bv-extract " ).append( tagsetLength - pfnLength - 1)
+							.append( " 0 " ).append( cmd.getTagset() ).append(") (bv-extract ")
+							.append( dtlb.getPABITS() - pfnLength - 1 ).append(" " ).append( dtlb.getPABITS() - tagsetLength )
+							.append(" " ).append( cmd.getVirtualAddress() ).append("))" ).toString() );
+				}
+			
 			yl.yicesl_read(context, "(check)");// без этого не появляется модель...
 			boolean consistent = (yl.yicesl_inconsistent(context) == 0);
 	
