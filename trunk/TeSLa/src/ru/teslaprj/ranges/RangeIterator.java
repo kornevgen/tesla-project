@@ -1,8 +1,10 @@
 package ru.teslaprj.ranges;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import ru.teslaprj.Cache;
 import ru.teslaprj.TLB;
@@ -12,6 +14,9 @@ import ru.teslaprj.ranges.tsiterators.TLBIterator;
 import ru.teslaprj.scheme.Command;
 import ru.teslaprj.scheme.MemoryCommand;
 import ru.teslaprj.scheme.Scheme;
+import ru.teslaprj.scheme.ts.CacheTestSituation;
+import ru.teslaprj.scheme.ts.ProcedureTestSituation;
+import ru.teslaprj.scheme.ts.TLBSituation;
 
 public class RangeIterator implements Iterator<Ranges>
 {
@@ -97,6 +102,8 @@ public class RangeIterator implements Iterator<Ranges>
 		List<L1Iterator> l1its = new ArrayList<L1Iterator>();
 		List<TLBIterator> tlbits = new ArrayList<TLBIterator>();
 		
+		Set<ProcedureTestSituation> viewedTestSituations = new  HashSet<ProcedureTestSituation>();
+		
 		for( Command cmd : scheme.getCommands() )
 		{
 			if ( cmd instanceof MemoryCommand )
@@ -107,12 +114,20 @@ public class RangeIterator implements Iterator<Ranges>
 				{
 					if ( c.hasCacheSituation(cache) )
 					{
-						l1its.add( c.getCacheSituation(cache).iterator() );
+						CacheTestSituation ts = c.getCacheSituation(cache);
+						if ( viewedTestSituations.contains(ts) )
+							throw new IllegalArgumentException("test situation objects must be unique");
+						viewedTestSituations.add(ts);
+						l1its.add( ts.iterator() );
 					}
 				}
 				
 				if ( c.hasTLBSituation() )
 				{
+					TLBSituation ts = c.getTLBSituation();
+					if ( viewedTestSituations.contains(ts) )
+						throw new IllegalArgumentException("test situation objects must be unique");
+					viewedTestSituations.add(ts);
 					tlbits.add( c.getTLBSituation().iterator() );
 				}
 			}

@@ -13,4 +13,10 @@ public interface TLBRangesVisitor
 	void visitInitialTlbMiss( InitialTlbMiss range ) throws Inconsistent;
 	void visitUnusefulTlbMiss( UnusefulTlbMiss range ) throws Inconsistent;
 	void visitUsefulTlbMiss( UsefulTlbMiss range ) throws Inconsistent;
+
+	void visit1InitialTlbHit( InitialTlbHit range ) throws Inconsistent;
+	void visit1EvictingTlbHit( EvictingTlbHit range ) throws Inconsistent;
+	void visit1InitialTlbMiss( InitialTlbMiss range ) throws Inconsistent;
+	void visit1UnusefulTlbMiss( UnusefulTlbMiss range ) throws Inconsistent;
+	void visit1UsefulTlbMiss( UsefulTlbMiss range ) throws Inconsistent;
 }

@@ -43,5 +43,9 @@ public class UnusefulTlbMiss extends TLBRange
 	public String print() {
 		return "TLBMiss( " + getCommand().getTagset() + " ) unuseful with m:" + minM + ".." + maxM;
 	}
+	@Override
+	public void visit1(L1Range r) throws Inconsistent {
+		r.visit1UnusefulTlbMiss(this);
+	}
 
 }

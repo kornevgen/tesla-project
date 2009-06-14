@@ -9,6 +9,9 @@ public abstract class TLBRange extends Range
 		super(cmd);
 	}
 	
+	// stage 0
 	public abstract void visit( L1Range r ) throws Inconsistent;
 
+	// stage 1
+	public abstract void visit1(L1Range r) throws Inconsistent;
 }

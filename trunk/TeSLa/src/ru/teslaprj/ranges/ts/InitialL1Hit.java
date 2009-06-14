@@ -201,4 +201,121 @@ public class InitialL1Hit extends L1Range
 			.append(")").toString() );				
 		}
 	}
+
+	@Override
+	public void visit1EvictingTlbHit(EvictingTlbHit range) throws Inconsistent
+	{
+		if ( range.evics.isEmpty() )
+		{
+			throw new Inconsistent();
+		}
+		
+		getContext().postDefine(getCommand().getTagset(), "Tagset", "");
+		getContext().postDefine(getCommand().getValueOfTagset(), "tagset", "");
+		
+		// pfntype constraints
+		Set<Integer> allowedPfntypes = new HashSet<Integer>();
+		allowedPfntypes.add(2);
+		if ( ! getContext().getLinterM().isEmpty() )
+		{
+			allowedPfntypes.add(0);
+		}
+		if ( ! getContext().getLinterPFNminusM().isEmpty() )
+		{
+			allowedPfntypes.add(1);
+		}
+		StringBuffer constraint = new StringBuffer("(or false ");
+		for( int pfnType : allowedPfntypes )
+		{
+			constraint.append("(= (pfntype ").append( getCommand().getTagset() )
+			.append(") ").append(pfnType).append(")");
+		}
+		getContext().postAssert( constraint.append(")").toString() );
+		
+		// constraints on previous evictings from TLB 
+		constraint = new StringBuffer("(or false ");
+		for( MemoryCommand cmd : range.evics )
+		{
+			constraint.append("(and true ");
+			constraint.append("(= (pfntype " ).append( getCommand().getTagset() )
+				.append(") (pfntype ").append( cmd.getTagset() ).append("))");
+			constraint.append("(or false ");
+			if ( allowedPfntypes.contains(2) )
+			{
+				constraint.append("(and (= (pfntype ").append(cmd.getTagset())
+				.append(") 2) (pfneq " ).append(cmd.getTagset())
+				.append(" ").append(getCommand().getTagset()).append("))");
+			}
+			if ( allowedPfntypes.contains(0) || allowedPfntypes.contains(1))
+			{
+				constraint.append("(and (< (pfntype ").append(cmd.getTagset())
+				.append(") 2) (value_ts " ).append(getCommand().getTagset())
+				.append(" ").append(getCommand().getValueOfTagset()).append(")")
+				.append(" (getPfn " ).append(getCommand().getValueOfTagset())
+				.append(") (getPfn ").append(cmd.getValueOfTagset()).append("))");
+			}
+			constraint.append("))");
+		}
+		getContext().postAssert( constraint.append(")").toString() );
+	}
+
+	@Override
+	public void visit1InitialTlbHit(InitialTlbHit range) throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visit1InitialTlbMiss(InitialTlbMiss range) throws Inconsistent
+	{
+		getContext().postDefine(getCommand().getTagset(), "Tagset", "");
+		getContext().postDefine(getCommand().getValueOfTagset(), "tagset", "");
+		
+		// pfntype constraints
+		Set<Integer> allowedPfntypes = new HashSet<Integer>();
+		allowedPfntypes.add(2);
+		if ( ! getContext().getLinterPFNminusM().isEmpty() )
+		{
+			allowedPfntypes.add(1);
+		}
+		StringBuffer constraint = new StringBuffer("(or false ");
+		for( int pfnType : allowedPfntypes )
+		{
+			constraint.append("(= (pfntype ").append( getCommand().getTagset() )
+			.append(") ").append(pfnType).append(")");
+		}
+		getContext().postAssert( constraint.append(")").toString() );
+		
+		// constraints on previous evictings from TLB
+		for( MemoryCommand cmd : range.getEvictings() )
+		{
+			constraint = new StringBuffer("(=> (= (pfntype ")
+			.append( getCommand().getTagset() ).append(") (pfntype ")
+			.append( cmd.getTagset() ).append(")) (or false ")
+			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
+			.append(") 2) (not (pfneq ").append( getCommand().getTagset() )
+			.append(" " ).append( cmd.getTagset()).append(")))")
+			.append( "(and (= pfntype ").append( getCommand().getTagset() )
+			.append(") 1 (value_ts ").append( getCommand().getTagset() )
+			.append(" " ).append( getCommand().getValueOfTagset() ).append(")")
+			.append(" (/= (getPfn ").append( getCommand().getTagset() )
+			.append(") (getPfn ").append(cmd.getTagset()).append(")))")
+			.append("))");
+			
+			getContext().postAssert( constraint.toString() );
+		}
+	}
+
+	@Override
+	public void visit1UnusefulTlbMiss(UnusefulTlbMiss range)
+			throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visit1UsefulTlbMiss(UsefulTlbMiss range) throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
 }

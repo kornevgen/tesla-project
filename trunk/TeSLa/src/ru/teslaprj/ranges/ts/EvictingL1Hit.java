@@ -286,4 +286,35 @@ public class EvictingL1Hit extends L1Range
 		}
 	}
 
+	@Override
+	public void visit1EvictingTlbHit(EvictingTlbHit range) throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visit1InitialTlbHit(InitialTlbHit range) throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visit1InitialTlbMiss(InitialTlbMiss range) throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visit1UnusefulTlbMiss(UnusefulTlbMiss range)
+			throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visit1UsefulTlbMiss(UsefulTlbMiss range) throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

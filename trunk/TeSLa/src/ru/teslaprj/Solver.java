@@ -10,7 +10,14 @@ import org.antlr.runtime.RecognitionException;
 import ru.teslaprj.ranges.Inconsistent;
 import ru.teslaprj.ranges.RangeIterator;
 import ru.teslaprj.ranges.Ranges;
+import ru.teslaprj.ranges.ts.EvictingTlbHit;
+import ru.teslaprj.ranges.ts.InitialL1Hit;
+import ru.teslaprj.ranges.ts.InitialL1Miss;
+import ru.teslaprj.ranges.ts.InitialTlbMiss;
+import ru.teslaprj.ranges.ts.UsefulL1Miss;
+import ru.teslaprj.ranges.ts.UsefulTlbMiss;
 import ru.teslaprj.scheme.Command;
+import ru.teslaprj.scheme.MemoryCommand;
 import ru.teslaprj.scheme.Scheme;
 import ru.teslaprj.scheme.SchemeDefinitionError;
 import ru.teslaprj.syntax.SemanticException;
@@ -99,14 +106,93 @@ public class Solver
 			}
 		}
 		
-		RangeIterator it = new RangeIterator( tlb, cacheState, scheme );
-		while( it.hasNext() )
+//		RangeIterator it = new RangeIterator( tlb, cacheState, scheme );
+//		while( it.hasNext() )
+//		{
+//			Ranges ranges = it.next();
+//			
+//			try
+//			{
+//				if ( ranges.isConsistency0() == null )
+//				{
+//					System.out.println("inconsistent :(");
+//					continue;
+//				}
+//			}
+//			catch(Inconsistent e )
+//			{
+//				System.out.println("inconsistent :(");
+//				continue;
+//			}
+//			
+//			System.out.println("consistent!");
+//			return true;
+//			
+////			File tmp;
+////			CompoundTerm result = null;
+////			try
+////			{
+////				String moduleName = createTempModuleName();
+////				tmp = File.createTempFile(moduleName, ".ecl", libPath);
+////				moduleName = tmp.getName();
+////				moduleName = moduleName.substring(0, moduleName
+////						.length() - 4);
+////
+////				// TODO построение прологовской программы
+////				// из каждого тегсета транслируется его ограничение
+////				writeFile(tmp, newTranslate(scheme, moduleName, cacheState, tlb) );
+////
+////				// run ECLiPSe and get results
+////				result = callECLiPSe(tmp, moduleName, scheme
+////						.getDefinedNames(), cacheState);
+////
+////				// TODO print current result with current newCount
+////
+////				// analyze results
+////				return generateValues( result, scheme, cacheState ) ;
+//////					return new Verdict(new HashMap<Definition, BigInteger>(), null );
+////
+////			}
+////			finally
+////			{
+////				if (tmp != null) tmp.delete();
+////			}
+//		}
+		
+		/// все построенные системы оказались несовместными -- пытаемся что-то добавить в TLB
+		RangeIterator it1 = new RangeIterator( tlb, cacheState, scheme );
+		while( it1.hasNext() )
 		{
-			Ranges ranges = it.next();
+			Ranges ranges = it1.next();
+
+			if ( ! (ranges.getL1Range( (MemoryCommand)scheme.getCommands().get(0) ) instanceof InitialL1Hit ) )
+				continue;
+			if ( ! (ranges.getTLBRange( (MemoryCommand)scheme.getCommands().get(0) ) instanceof InitialTlbMiss ) )
+				continue;
+			
+			if ( ! (ranges.getL1Range( (MemoryCommand)scheme.getCommands().get(1) ) instanceof InitialL1Hit ) )
+				continue;
+			if ( ! (ranges.getTLBRange( (MemoryCommand)scheme.getCommands().get(1) ) instanceof InitialTlbMiss ) )
+				continue;
+			
+			if ( ! (ranges.getL1Range( (MemoryCommand)scheme.getCommands().get(2) ) instanceof InitialL1Hit ) )
+				continue;
+			if ( ! (ranges.getTLBRange( (MemoryCommand)scheme.getCommands().get(2) ) instanceof EvictingTlbHit ) )
+				continue;
+
+			if ( ! (ranges.getL1Range( (MemoryCommand)scheme.getCommands().get(3) ) instanceof InitialL1Miss ) )
+				continue;
+			if ( ! (ranges.getTLBRange( (MemoryCommand)scheme.getCommands().get(3) ) instanceof InitialTlbMiss ) )
+				continue;
+			
+			if ( ! (ranges.getL1Range( (MemoryCommand)scheme.getCommands().get(4) ) instanceof UsefulL1Miss ) )
+				continue;
+			if ( ! (ranges.getTLBRange( (MemoryCommand)scheme.getCommands().get(4) ) instanceof EvictingTlbHit ) )
+				continue;
 			
 			try
 			{
-				if ( ranges.isConsistency() == null )
+				if ( ranges.isConsistency1() == null )
 				{
 					System.out.println("inconsistent :(");
 					continue;
@@ -120,39 +206,8 @@ public class Solver
 			
 			System.out.println("consistent!");
 			return true;
-			
-//			File tmp;
-//			CompoundTerm result = null;
-//			try
-//			{
-//				String moduleName = createTempModuleName();
-//				tmp = File.createTempFile(moduleName, ".ecl", libPath);
-//				moduleName = tmp.getName();
-//				moduleName = moduleName.substring(0, moduleName
-//						.length() - 4);
-//
-//				// TODO построение прологовской программы
-//				// из каждого тегсета транслируется его ограничение
-//				writeFile(tmp, newTranslate(scheme, moduleName, cacheState, tlb) );
-//
-//				// run ECLiPSe and get results
-//				result = callECLiPSe(tmp, moduleName, scheme
-//						.getDefinedNames(), cacheState);
-//
-//				// TODO print current result with current newCount
-//
-//				// analyze results
-//				return generateValues( result, scheme, cacheState ) ;
-////					return new Verdict(new HashMap<Definition, BigInteger>(), null );
-//
-//			}
-//			finally
-//			{
-//				if (tmp != null) tmp.delete();
-//			}
 		}
-		
-		/// все построенные системы оказались несовместными -- пытаемся что-то добавить в TLB
+
 		
 		return false;
 	}

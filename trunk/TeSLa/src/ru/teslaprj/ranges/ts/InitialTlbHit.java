@@ -23,4 +23,10 @@ public class InitialTlbHit extends TLBRange {
 		return "TLBHit( " + getCommand().getTagset() + " ) to the initial DTLB";
 	}
 
+	@Override
+	public void visit1(L1Range r) throws Inconsistent
+	{
+		r.visit1InitialTlbHit( this );
+	}
+
 }
