@@ -288,7 +288,14 @@ public class Ranges
 			yl.yicesl_read( context, "(define-type virtualAddress (bitvector " + virtualAddressLength + "))" );
 			yl.yicesl_read( context, "(define-type cacheOffset (bitvector " + cacheOffsetLength + "))" );
 			yl.yicesl_read( context, "(define-type vpn (bitvector " + vpnLength + "))" );
-			
+
+			yl.yicesl_read( context, "(define pfntype::(-> Tagset (subrange 0 3)))" );
+			yl.yicesl_read( context, "(define pfneq::(-> Tagset Tagset bool))" );
+			yl.yicesl_read( context, "(define regioneq::(-> Tagset Tagset bool))" );
+			yl.yicesl_read( context, "(define section::(-> Tagset int bool))" );
+			yl.yicesl_read( context, "(define among-section::(-> Tagset int int bool))" );
+			yl.yicesl_read( context, "(define value_ts::(-> Tagset tagset bool))" );
+						
 			yl.yicesl_read( context, "(define getPfn :: (-> tagset pfn) " +
 					"(lambda " +
 						"(x :: tagset) " +
@@ -309,6 +316,16 @@ public class Ranges
 						"(x :: virtualAddress) " +
 						"(bv-extract " + (dtlb.getSEGBITS() - 1) + " " + (dtlb.getPABITS() - pfnLength) + " x)" +
 					"))" );
+			
+			//axioms
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (= x y) (pfneq x y))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (= x y) (regioneq x y))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (and (pfneq x y) (regioneq x y)) (= x y))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (pfneq x y) (= (pfntype x) (pfntype y) ))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (pfneq x y) (regioneq x y))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(= (regioneq x y) (regioneq y x))))" );
+
+
 			
 			for( MemoryCommand cmd : l1Ranges.keySet() )
 			{
@@ -937,7 +954,7 @@ public class Ranges
 		
 		for( int p : dtlb.getDTLB() )
 		{
-			result.putAll( getLindexInterMindex(section, p) );
+			result.putAll( getLindexInterPFNindex(section, p) );
 		}
 		
 		return result;		
@@ -969,7 +986,7 @@ public class Ranges
 		
 		for( int p = 0; p < dtlb.getJTLBSize(); p++ )
 		{
-			result.putAll( getLindexInterMindex(section, p) );
+			result.putAll( getLindexInterPFNindex(section, p) );
 		}
 		
 		return result;		
@@ -983,7 +1000,7 @@ public class Ranges
 		{
 			if ( dtlb.getDTLB().contains(p) )
 				continue;
-			result.putAll( getLindexInterMindex(section, p) );
+			result.putAll( getLindexInterPFNindex(section, p) );
 		}
 		
 		return result;		
@@ -993,15 +1010,15 @@ public class Ranges
 	{
 		Map<Long, Set<Long>> result = new HashMap<Long, Set<Long>>();
 		
-		for( int p = minM; p < maxM; p++ )
+		for( int p = minM; p < maxM; p++ )////TODO may be `<=' ?
 		{
-			result.putAll( getLindexInterMindex(section, p) );
+			result.putAll( getLindexInterPFNindex(section, p) );
 		}
 		
 		return result;		
 	}
 
-	public Map<Long, Set<Long>> getLindexInterMindex(int cacheSection, int tlbIndex)
+	public Map<Long, Set<Long>> getLindexInterPFNindex(int cacheSection, int tlbIndex)
 	{
 		Map<Long, Set<Long>> result = new HashMap<Long, Set<Long>>();
 		
@@ -1026,6 +1043,24 @@ public class Ranges
 	public L1Range getL1Range( MemoryCommand cmd )
 	{
 		return l1Ranges.get(cmd);
+	}
+
+	public Map<Long, Set<Long>> getLinterPFNminusMrange(int i1, int i2)
+	{
+		Map<Long, Set<Long>> result = new HashMap<Long, Set<Long>>();
+		
+		for( int p = 0; p < dtlb.getJTLBSize(); p++ )
+		{
+			if ( dtlb.getDTLB().contains(p) )
+				continue;
+			
+			for( int section = i1; section <= i2 ; section++ )
+			{
+				result.putAll( getLindexInterPFNindex(section, p) );
+			}
+		}
+		
+		return result;		
 	}
 
 }

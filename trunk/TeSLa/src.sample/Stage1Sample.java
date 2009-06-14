@@ -72,8 +72,8 @@ public class Stage1Sample
 			}
 
 			@Override
-			public long getTag(int section, int row) {
-				return tags1[section][row];
+			public long getTag(int section, int set) {
+				return tags1[set][section];
 			}
 
 			@Override

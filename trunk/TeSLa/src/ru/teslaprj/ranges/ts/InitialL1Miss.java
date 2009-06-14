@@ -265,6 +265,63 @@ public class InitialL1Miss extends L1Range
 	{
 		getContext().postDefine(getCommand().getTagset(), "Tagset", "");
 		getContext().postDefine(getCommand().getValueOfTagset(), "tagset", "");
+		
+		StringBuffer constraint = new StringBuffer("(or ")
+		.append( "(and (= 1 (pfntype ").append(getCommand().getTagset()).append("))")
+		.append("(value_ts ").append(getCommand().getTagset()).append(" ")
+		.append( getCommand().getValueOfTagset() ).append(")");
+		for( long l : getContext().getLinterM() )
+		{
+			constraint.append("(/= ").append(getCommand().getValueOfTagset() )
+			.append(" ").append(l).append(")");
+		}
+		constraint.append("(or ");
+		for( long l : getContext().getPFNminusMfull() )
+		{
+			constraint.append("(= (getPfn ").append(getCommand().getValueOfTagset())
+			.append(") ").append(l).append(")");
+		}
+		constraint.append("))")
+		.append("(and (= 3 (pfntype ").append(getCommand().getTagset()).append("))")
+		.append("))");
+		
+		getContext().postAssert( constraint.toString() );
+		
+		Set<MemoryCommand> evs = new HashSet<MemoryCommand>( evictings );
+		evs.removeAll( range.ev );
+		if ( ! evs.isEmpty() )
+		{
+			constraint = new StringBuffer("(or false ");
+			for( MemoryCommand cmd : evs )
+			{
+				constraint.append("(/= ").append(getCommand().getTagset())
+				.append(" ").append( cmd.getTagset() ).append(")");
+				//TODO надо ли тут дополнительно рассматривать случай
+				// (= (pfntype ts) 1 ) и неравество v_ts и v_ts1 ?
+			}
+			constraint.append(")");
+			
+			getContext().postAssert( constraint.toString() );
+		}
+		
+		// constraints on previous evictings from TLB
+		for( MemoryCommand cmd : range.getEvictings() )
+		{
+			constraint = new StringBuffer("(=> (= (pfntype ")
+			.append( getCommand().getTagset() ).append(") (pfntype ")
+			.append( cmd.getTagset() ).append(")) (or false ")
+			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
+			.append(") 3) (not (pfneq ").append( getCommand().getTagset() )
+			.append(" " ).append( cmd.getTagset()).append(")))")
+			.append( "(and (= pfntype ").append( getCommand().getTagset() )
+			.append(") 1 (value_ts ").append( getCommand().getTagset() )
+			.append(" " ).append( getCommand().getValueOfTagset() ).append(")")
+			.append(" (/= (getPfn ").append( getCommand().getTagset() )
+			.append(") (getPfn ").append(cmd.getTagset()).append(")))")
+			.append("))");
+			
+			getContext().postAssert( constraint.toString() );
+		}
 	}
 
 	@Override
