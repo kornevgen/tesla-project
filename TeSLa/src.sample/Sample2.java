@@ -1,14 +1,10 @@
 import java.io.File;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Map;
 
 import ru.teslaprj.Cache;
 import ru.teslaprj.Solver;
-import ru.teslaprj.Verdict;
 import ru.teslaprj.scheme.Command;
-import ru.teslaprj.scheme.Definition;
 import ru.teslaprj.scheme.RegisterDefinition;
 import ru.teslaprj.scheme.Scheme;
 
@@ -43,18 +39,18 @@ public class Sample2
 				//WORD_VALUE = 50 => max = 12
 				scheme.addCommand( 
 						new Command(
-								  "ADD"
+								  scheme
+								, "ADD"
 								, Arrays.asList( "x", "x", "x" )
 								, "nover"
-								, null
 							) );
 			}
 			scheme.addCommand( 
 					new Command(
-							  "ADD"
+							  scheme
+							, "ADD"
 							, Arrays.asList( "x", "x", "x" )
 							, "over"
-							, null
 						) );
 					
 			// 2. вызвать решатель
@@ -62,14 +58,15 @@ public class Sample2
 					new File("src.sample" )
 					, new File("clp")
 				);
-			Verdict verdict = solver.solve(scheme, new ArrayList<Cache>(), null );
+			//Verdict verdict = 
+				solver.solve(scheme, new ArrayList<Cache>(), null );
 			
-			// 3. распечатать ответ
-			Map<Definition, BigInteger> values = verdict.getDefinitionValues();
-			for( Definition def : values.keySet() )
-			{
-				System.out.println( def + " = " + values.get( def ) );	
-			}
+//			// 3. распечатать ответ
+//			Map<Definition, BigInteger> values = verdict.getDefinitionValues();
+//			for( Definition def : values.keySet() )
+//			{
+//				System.out.println( def + " = " + values.get( def ) );	
+//			}
 		}
 		catch( Exception e )
 		{
