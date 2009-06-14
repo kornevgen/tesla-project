@@ -430,7 +430,7 @@ public class UsefulL1Miss extends L1Range
 	@Override
 	public void visitUsefulTlbMiss(UsefulTlbMiss range) throws Inconsistent
 	{
-		Map<Long, Set<Long>> domain = getContext().getLindexInterMindex( m - 1, range.m - 1 );
+		Map<Long, Set<Long>> domain = getContext().getLindexInterPFNindex( m - 1, range.m - 1 );
 		if ( domain.isEmpty() )
 		{
 			throw new Inconsistent();
@@ -578,9 +578,186 @@ public class UsefulL1Miss extends L1Range
 	}
 
 	@Override
-	public void visit1EvictingTlbHit(EvictingTlbHit range) throws Inconsistent {
-		// TODO Auto-generated method stub
+	public void visit1EvictingTlbHit(EvictingTlbHit range) throws Inconsistent
+	{
+		if ( range.getEvictings().isEmpty() )
+		{
+			throw new Inconsistent();
+		}
 		
+		getContext().postDefine(getCommand().getTagset(), "Tagset", "");
+		getContext().postDefine(getCommand().getValueOfTagset(), "tagset", "");
+		
+		// pfntype constraints
+		Set<Integer> allowedPfntypes = new HashSet<Integer>();
+		allowedPfntypes.add(2);
+		if ( ! getContext().getLinterM().isEmpty() )
+		{
+			allowedPfntypes.add(0);
+		}
+		if ( ! getContext().getLinterPFNminusM().isEmpty() )
+		{
+			allowedPfntypes.add(1);
+		}
+		StringBuffer constraint = new StringBuffer("(or false ");
+		for( int pfnType : allowedPfntypes )
+		{
+			constraint.append("(= (pfntype ").append( getCommand().getTagset() )
+			.append(") ").append(pfnType).append(")");
+		}
+		getContext().postAssert( constraint.append(")").toString() );
+		
+		// evictings from L1
+		for( MemoryCommand cmd: evictings )
+		{
+			getContext().postAssert( new StringBuffer("(/= ")
+			.append( getCommand().getTagset() ).append(" ")
+			.append(cmd.getTagset()).append(")").toString() );
+		}
+		
+		StringBuffer flagsSum = new StringBuffer();
+		for( MemoryCommand cmd : previousMisses )
+		{
+			//TODO
+		}
+		Map<MemoryCommand, String> hitFlags = new HashMap<MemoryCommand, String>();
+		for( MemoryCommand cmd : previousHits )
+		{
+			String flagName = "b" + getContext().getUniqueNumber();
+			getContext().postDefine(flagName, "(subrange 0 1)", "");
+			flagsSum.append(" " ).append( flagName );
+			hitFlags.put(cmd, flagName);
+		}
+		
+
+		
+		// constraints on previous evictings from TLB 
+		constraint = new StringBuffer("(or false ");
+		for( MemoryCommand cmd : range.getEvictings() )
+		{
+			constraint.append("(and true ");
+			constraint.append("(= (pfntype " ).append( getCommand().getTagset() )
+				.append(") (pfntype ").append( cmd.getTagset() ).append("))");
+			constraint.append("(or false ");
+			if ( allowedPfntypes.contains(2) )
+			{
+				constraint.append("(and (= (pfntype ").append(cmd.getTagset())
+				.append(") 2) (pfneq " ).append(cmd.getTagset())
+				.append(" ").append(getCommand().getTagset()).append("))");
+			}
+			if ( allowedPfntypes.contains(0) || allowedPfntypes.contains(1))
+			{
+				constraint.append("(and (< (pfntype ").append(cmd.getTagset())
+				.append(") 2) (value_ts " ).append(getCommand().getTagset())
+				.append(" ").append(getCommand().getValueOfTagset()).append(")")
+				.append(" (getPfn " ).append(getCommand().getValueOfTagset())
+				.append(") (getPfn ").append(cmd.getValueOfTagset()).append("))");
+			}
+			constraint.append("))");
+		}
+		getContext().postAssert( constraint.append(")").toString() );
+
+		// usefulness constraints
+		if ( allowedPfntypes.contains(0) )
+		{
+			constraint = new StringBuffer("(=> (= (pfntype ")
+			.append( getCommand().getTagset() ).append(") 0) ");
+
+			//TODO
+
+			getContext().postAssert( constraint.append(")").toString() );
+		}
+		if ( allowedPfntypes.contains(1) )
+		{
+			constraint = new StringBuffer("(=> (= (pfntype ")
+			.append( getCommand().getTagset() ).append(") 1) ");
+
+			//TODO
+
+			getContext().postAssert( constraint.append(")").toString() );
+		}
+		if ( allowedPfntypes.contains(2) )
+		{
+			constraint = new StringBuffer("(=> (= (pfntype ")
+			.append( getCommand().getTagset() ).append(") 2) (section " )
+			.append( getCommand().getTagset() ).append( " " ).append(m-1)
+			.append(") (and true ");
+			
+			Set<MemoryCommand> viewedHits = new HashSet<MemoryCommand>();
+			for( MemoryCommand cmd : previousHits )
+			{
+				constraint.append("(or false ");
+				// cmd : 0
+				constraint.append("(and (= (pfntype ").append(cmd.getTagset()).append(") 0)")
+				.append("(= ").append( hitFlags.get(cmd) ).append(" (ite (and true ");
+				for ( MemoryCommand h : viewedHits )
+				{
+					constraint.append("(/= ").append(getCommand().getTagset()).append(" ")
+					.append(h.getTagset()).append(")");
+				}
+				
+				constraint.append("(regioneq ").append(getCommand().getTagset())
+				.append(" ").append(cmd.getTagset()).append(")");
+				
+				constraint.append("(or false ");
+				for( long l : getContext().getLinterMrange(m, w-1) )
+				{
+					constraint.append("(= ").append(cmd.getValueOfTagset())
+					.append(" ").append(l).append(")");
+				}
+				constraint.append(")");
+				constraint.append(") 1 0) ))");
+				
+				// cmd : 1
+				constraint.append("(and (= (pfntype ").append(cmd.getTagset()).append(") 1)")
+				.append("(= ").append( hitFlags.get(cmd) ).append(" (ite (and true ");
+				for ( MemoryCommand h : viewedHits )
+				{
+					constraint.append("(/= ").append(getCommand().getTagset()).append(" ")
+					.append(h.getTagset()).append(")");
+				}
+				
+				constraint.append("(regioneq ").append(getCommand().getTagset())
+				.append(" ").append(cmd.getTagset()).append(")");
+				
+				constraint.append("(or false ");
+				for( Set<Long> ls : getContext().getLinterPFNminusMrange(m, w-1).values() )
+				for( long l : ls )
+				{
+					constraint.append("(= ").append(cmd.getValueOfTagset())
+					.append(" ").append(l).append(")");
+				}
+				constraint.append(")");
+				
+				constraint.append(") 1 0) ))");
+
+				// cmd : 2
+				constraint.append("(and (= (pfntype ").append(cmd.getTagset()).append(") 2)")
+				.append("(= ").append( hitFlags.get(cmd) ).append(" (ite (and true ");
+				for ( MemoryCommand h : viewedHits )
+				{
+					constraint.append("(/= ").append(getCommand().getTagset()).append(" ")
+					.append(h.getTagset()).append(")");
+				}
+				
+				constraint.append("(regioneq ").append(getCommand().getTagset())
+				.append(" ").append(cmd.getTagset()).append(")");
+
+				constraint.append("(among-section ").append( cmd.getTagset() )
+				.append(" ").append( m ).append(" " ).append( w-1 ).append(")");
+				
+				constraint.append(") 1 0) ))");
+				
+				constraint.append(")");
+				
+				viewedHits.add(cmd);
+			}
+
+			getContext().postAssert( constraint.append("))").toString() );			
+		}
+		
+		getContext().postAssert( new StringBuffer( "(>= (+ 0 " ).append( flagsSum ).append(") ")
+				.append( w - m ).append(" )").toString() );	
 	}
 
 	@Override
