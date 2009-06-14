@@ -7,6 +7,7 @@ import ru.teslaprj.scheme.ts.TLBSituation;
 interface MemoryAccessInstruction
 {
 	String getTagset();
+	String getValueOfTagset();
 	String getVirtualAddress();
 	String getResult();
 	

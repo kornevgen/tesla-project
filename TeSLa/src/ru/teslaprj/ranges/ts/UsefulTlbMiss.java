@@ -55,4 +55,9 @@ public class UsefulTlbMiss extends TLBRange {
 		return wMinusK;
 	}
 
+	@Override
+	public void visit1(L1Range r) throws Inconsistent {
+		r.visit1UsefulTlbMiss(this);
+	}
+
 }

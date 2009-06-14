@@ -116,5 +116,10 @@ public class MemoryCommand extends Command implements MemoryAccessInstruction
 	public String getResult() {
 		return getArgs().get(0);
 	}
+
+	@Override
+	public String getValueOfTagset() {
+		return "v_" + getTagset();
+	}
 	
 }

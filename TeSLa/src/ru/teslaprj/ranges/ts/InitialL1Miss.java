@@ -3,6 +3,7 @@ package ru.teslaprj.ranges.ts;
 import java.util.HashSet;
 import java.util.Set;
 
+import ru.teslaprj.ranges.Inconsistent;
 import ru.teslaprj.ranges.L1Range;
 import ru.teslaprj.scheme.MemoryCommand;
 
@@ -245,6 +246,38 @@ public class InitialL1Miss extends L1Range
 				.append(")").toString() );
 		}
 
+	}
+
+	@Override
+	public void visit1EvictingTlbHit(EvictingTlbHit range) throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visit1InitialTlbHit(InitialTlbHit range) throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visit1InitialTlbMiss(InitialTlbMiss range) throws Inconsistent
+	{
+		getContext().postDefine(getCommand().getTagset(), "Tagset", "");
+		getContext().postDefine(getCommand().getValueOfTagset(), "tagset", "");
+	}
+
+	@Override
+	public void visit1UnusefulTlbMiss(UnusefulTlbMiss range)
+			throws Inconsistent {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void visit1UsefulTlbMiss(UsefulTlbMiss range) throws Inconsistent {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

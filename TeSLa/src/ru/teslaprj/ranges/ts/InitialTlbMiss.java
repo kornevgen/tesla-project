@@ -38,4 +38,9 @@ public class InitialTlbMiss extends TLBRange
 		}
 		return result.append(")").toString();
 	}
+
+	@Override
+	public void visit1(L1Range r) throws Inconsistent {
+		r.visit1InitialTlbMiss(this);
+	}
 }

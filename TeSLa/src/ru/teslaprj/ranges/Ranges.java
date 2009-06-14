@@ -18,7 +18,6 @@ import java.util.Set;
 import ru.teslaprj.Cache;
 import ru.teslaprj.TLB;
 import ru.teslaprj.TLBRow;
-import ru.teslaprj.ranges.ts.EvictingL1Hit;
 import ru.teslaprj.ranges.ts.EvictingTlbHit;
 import ru.teslaprj.ranges.ts.InitialTlbHit;
 import ru.teslaprj.ranges.ts.InitialTlbMiss;
@@ -75,7 +74,7 @@ public class Ranges
 	}
 
 	static int nnn = 0;
-	public Map<String, Long> isConsistency() throws Inconsistent
+	public Map<String, Long> isConsistency0() throws Inconsistent
 	{
 		yl = new YicesLite();
 		yl.yicesl_enable_log_file("system" + (++nnn) + ".txt" );
@@ -156,6 +155,9 @@ public class Ranges
 			postDefine("t2", "(bitvector 64)", "");
 			postDefine("cc", "(bitvector 64)", "");
 			postDefine("ccc", "(bitvector 64)", "");
+			postDefine("cccc", "(bitvector 64)", "");
+			postDefine("ccccc", "(bitvector 64)", "");
+			postDefine("cccccc", "(bitvector 64)", "");
 			for( MemoryCommand cmd : commands )
 			{
 				postDefine( 
@@ -250,6 +252,200 @@ public class Ranges
 		        			}
 		        			i++;
 	        			}
+	        		}
+	        		return result;
+	        	}
+	        	catch(FileNotFoundException e ){}
+	        	catch(IOException e){}
+	        }
+	        
+	        return null;
+		}
+		finally
+		{
+	        yl.yicesl_del_context(context);
+		}
+	}
+
+	public Map<String, Long> isConsistency1() throws Inconsistent
+	{
+		yl = new YicesLite();
+		yl.yicesl_enable_log_file("system-1-" + (++nnn) + ".txt" );
+		System.out.print("system" + nnn + ": ");
+		yl.yicesl_set_verbosity((short)0);
+		yl.yicesl_enable_type_checker((short)1);
+		yl.yicesl_set_output_file("system-1-output" + nnn + ".txt");
+		context = yl.yicesl_mk_context();
+		
+		try
+		{
+			yl.yicesl_read(context, "(set-evidence! true)");
+			
+			yl.yicesl_read( context, "(define-type Tagset)" );
+			yl.yicesl_read( context, "(define-type tagset (bitvector " + tagsetLength + "))" );
+			yl.yicesl_read( context, "(define-type pfn (bitvector " + pfnLength + "))" );
+			yl.yicesl_read( context, "(define-type set1 (bitvector " + set1Length + "))" );
+			yl.yicesl_read( context, "(define-type virtualAddress (bitvector " + virtualAddressLength + "))" );
+			yl.yicesl_read( context, "(define-type cacheOffset (bitvector " + cacheOffsetLength + "))" );
+			yl.yicesl_read( context, "(define-type vpn (bitvector " + vpnLength + "))" );
+			
+			yl.yicesl_read( context, "(define getPfn :: (-> tagset pfn) " +
+					"(lambda " +
+						"(x :: tagset) " +
+						"(bv-extract " + (tagsetLength-1) + " " + (tagsetLength-pfnLength) + " x)" +
+					"))" );
+			yl.yicesl_read( context, "(define getRegion1 :: (-> tagset set1) " +
+					"(lambda " +
+						"(x :: tagset) " +
+						"(bv-extract " + (set1Length-1) + " 0 x)" +
+					"))" );
+			yl.yicesl_read( context, "(define getCacheOffset :: (-> virtualAddress cacheOffset) " +
+					"(lambda " +
+						"(x :: virtualAddress) " +
+						"(bv-extract " + (cacheOffsetLength-1) + " 0 x)" +
+					"))" );
+			yl.yicesl_read( context, "(define getVPN :: (-> virtualAddress vpn) " +
+					"(lambda " +
+						"(x :: virtualAddress) " +
+						"(bv-extract " + (dtlb.getSEGBITS() - 1) + " " + (dtlb.getPABITS() - pfnLength) + " x)" +
+					"))" );
+			
+			for( MemoryCommand cmd : l1Ranges.keySet() )
+			{
+				yl.yicesl_read( context, "(define " + cmd.getTagset() + " :: tagset)" );
+			}
+			
+	        Scheme scheme = null;
+	        for(MemoryCommand cmd : l1Ranges.keySet() )
+	        {
+	        	scheme = cmd.getScheme();
+	        	break;
+	        }
+	        List<MemoryCommand> commands = new ArrayList<MemoryCommand>();
+			for( Command cmd : scheme.getCommands() )
+			{
+				if ( l1Ranges.containsKey(cmd) && tlbRanges.containsKey(cmd) )
+				{
+					// `Cached Mapped' case
+					tlbRanges.get(cmd).visit1( l1Ranges.get(cmd) );
+					commands.add((MemoryCommand)cmd);
+				}
+				//TODO else - остальные случаи
+			}
+			
+//TODO без этого появляются ложные consistent!	yl.yicesl_read(context, "(check)");
+			
+//			postDefine("x0", "(bitvector 64)", "");
+//			postDefine("x1", "(bitvector 64)", "");
+//			postDefine("x2", "(bitvector 64)", "");
+//			postDefine("y0", "(bitvector 64)", "");
+//			postDefine("y1", "(bitvector 64)", "");
+//			postDefine("y2", "(bitvector 64)", "");
+//			postDefine("s0", "(bitvector 64)", "");
+//			postDefine("s1", "(bitvector 64)", "");
+//			postDefine("s2", "(bitvector 64)", "");
+//			postDefine("t0", "(bitvector 64)", "");
+//			postDefine("t1", "(bitvector 64)", "");
+//			postDefine("t2", "(bitvector 64)", "");
+//			postDefine("cc", "(bitvector 64)", "");
+//			postDefine("ccc", "(bitvector 64)", "");
+//			postDefine("cccc", "(bitvector 64)", "");
+//			postDefine("ccccc", "(bitvector 64)", "");
+//			postDefine("cccccc", "(bitvector 64)", "");
+//			for( MemoryCommand cmd : commands )
+//			{
+//				postDefine( 
+//						cmd.getVirtualAddress(), 
+//						"virtualAddress", 
+//						"(bv-add " + cmd.getArgs().get(1) + "0 " + cmd.getArgs().get(2) + ")"
+//					);
+//			}
+//			
+//
+//			
+//			//TODO сделать полный вариант
+//			//тут лишь частный случай для двух инструкций
+//			if ( yl.yicesl_inconsistent(context) == 0)
+//				loadstore2Constraints(commands);
+//			
+//			// ограничения на теговую часть строки TLB и виртуального адреса
+//			// (ограничение на номер виртуальной страницы по pfn)
+//			if ( yl.yicesl_inconsistent(context) == 0)
+//				virtualAddresses2TLBlinesConstraints(commands);
+//
+//			// ограничения виртуального адреса, задающие его сегмент:
+//			if ( yl.yicesl_inconsistent(context) == 0)	
+//			for( MemoryCommand cmd : commands )
+//			{
+//				//TODO this only for `Mapped' case and SEGBITS=40, PABITS=36
+//				postAssert( new StringBuffer( "(= (bv-extract 63 30 ")
+//					.append( cmd.getVirtualAddress() ).append(") (mk-bv 34 17179869183))")
+//						.toString() );
+//			}
+//			
+//			// часть тегсета -- это часть виртуального адреса
+//			if ( yl.yicesl_inconsistent(context) == 0 )
+//				for( MemoryCommand cmd : commands )
+//				{
+//					postAssert( new StringBuffer( "(= (bv-extract " ).append( tagsetLength - pfnLength - 1)
+//							.append( " 0 " ).append( cmd.getTagset() ).append(") (bv-extract ")
+//							.append( dtlb.getPABITS() - pfnLength - 1 ).append(" " ).append( dtlb.getPABITS() - tagsetLength )
+//							.append(" " ).append( cmd.getVirtualAddress() ).append("))" ).toString() );
+//				}
+			
+			yl.yicesl_read(context, "(check)");// без этого не появляется модель...
+			boolean consistent = (yl.yicesl_inconsistent(context) == 0);
+	
+//	        try
+//	        {
+//		        BufferedWriter w = new BufferedWriter( 
+//		        		new FileWriter( new File( "system-1-" + nnn + ".txt" ), true ) );
+//		        for( Command cmd : scheme.getCommands() )
+//		        {
+//		        	if ( l1Ranges.containsKey(cmd) && tlbRanges.containsKey(cmd) )
+//		        	{
+//		        		w.write("[ " + l1Ranges.get(cmd).print() + " || " +
+//		        				tlbRanges.get(cmd).print() + " ]" );
+//		        		w.newLine();
+//		        	}
+//		        }
+//		        
+//		        w.close();
+//	        }
+//	        catch( IOException e )
+//	        {
+//	        	System.out.println(e.getStackTrace());
+//	        }
+	        
+	        if ( consistent )
+	        {
+	        	try
+	        	{
+	        		BufferedReader r = new BufferedReader( new FileReader( new File("system-output" + nnn + ".txt")));
+	        		String line = r.readLine(); System.out.println("model:");
+	    			Map<String, Long> result = new HashMap<String, Long>();
+	        		while( (line = r.readLine()) != null )
+	        		{
+	        			System.out.println(line);
+//	        			String[] parts = line.split(" ");
+//	        			if ( parts.length < 3 )
+//	        				continue;
+//	        			int i = 0;
+//	        			while( i < parts.length )
+//	        			{
+//	        				i++;
+//		        			String name = parts[i++];
+//		        			if ( ! name.endsWith("1") && ! name.endsWith("2") || name.startsWith("ts") )
+//		        			{
+//			        			if ( name.endsWith("0") )
+//			        				name = name.substring(0, name.length() - 1 );
+//			        			String bitvalue = parts[i].substring(2, parts[i].length() - 1 );
+//			        			BigInteger v = new BigInteger(bitvalue, 2);
+//			        			System.out.println(name + " = " + v.longValue());
+//			        			result.put(name, v.longValue());
+//		        			}
+//		        			i++;
+//	        			}
 	        		}
 	        		return result;
 	        	}
@@ -825,6 +1021,11 @@ public class Ranges
 	public TLBRange getTLBRange(MemoryCommand cmd)
 	{
 		return tlbRanges.get(cmd);
+	}
+	
+	public L1Range getL1Range( MemoryCommand cmd )
+	{
+		return l1Ranges.get(cmd);
 	}
 
 }
