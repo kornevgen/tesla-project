@@ -679,9 +679,9 @@ public class UsefulL1Miss extends L1Range
 		if ( allowedPfntypes.contains(2) )
 		{
 			constraint = new StringBuffer("(=> (= (pfntype ")
-			.append( getCommand().getTagset() ).append(") 2) (section " )
+			.append( getCommand().getTagset() ).append(") 2) (and (section " )
 			.append( getCommand().getTagset() ).append( " " ).append(m-1)
-			.append(") (and true ");
+			.append(") ");
 			
 			Set<MemoryCommand> viewedHits = new HashSet<MemoryCommand>();
 			for( MemoryCommand cmd : previousHits )
