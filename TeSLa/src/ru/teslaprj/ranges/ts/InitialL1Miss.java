@@ -267,9 +267,7 @@ public class InitialL1Miss extends L1Range
 		getContext().postDefine(getCommand().getValueOfTagset(), "tagset", "");
 		
 		StringBuffer constraint = new StringBuffer("(or ")
-		.append( "(and (= 1 (pfntype ").append(getCommand().getTagset()).append("))")
-		.append("(value_ts ").append(getCommand().getTagset()).append(" ")
-		.append( getCommand().getValueOfTagset() ).append(")");
+		.append( "(and (= 1 (pfntype ").append(getCommand().getTagset()).append("))");
 		for( long l : getContext().getLinterM() )
 		{
 			constraint.append("(/= ").append(getCommand().getValueOfTagset() )
@@ -316,9 +314,7 @@ public class InitialL1Miss extends L1Range
 			.append(") 3) (not (pfneq ").append( getCommand().getTagset() )
 			.append(" " ).append( cmd.getTagset()).append(")))")
 			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
-			.append(") 1) (value_ts ").append( getCommand().getTagset() )
-			.append(" " ).append( getCommand().getValueOfTagset() ).append(")")
-			.append(" (/= (getPfn ").append( getCommand().getValueOfTagset() )
+			.append(") 1) (/= (getPfn ").append( getCommand().getValueOfTagset() )
 			.append(") (getPfn ").append(cmd.getValueOfTagset()).append(")))")
 			.append("))");
 			

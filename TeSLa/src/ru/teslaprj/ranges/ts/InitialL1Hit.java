@@ -249,9 +249,7 @@ public class InitialL1Hit extends L1Range
 			if ( allowedPfntypes.contains(0) || allowedPfntypes.contains(1))
 			{
 				constraint.append("(and (< (pfntype ").append(cmd.getTagset())
-				.append(") 2) (value_ts " ).append(getCommand().getTagset())
-				.append(" ").append(getCommand().getValueOfTagset()).append(")")
-				.append(" (getPfn " ).append(getCommand().getValueOfTagset())
+				.append(") 2) (getPfn " ).append(getCommand().getValueOfTagset())
 				.append(") (getPfn ").append(cmd.getValueOfTagset()).append("))");
 			}
 			constraint.append("))");
@@ -296,9 +294,7 @@ public class InitialL1Hit extends L1Range
 			.append(") 2) (not (pfneq ").append( getCommand().getTagset() )
 			.append(" " ).append( cmd.getTagset()).append(")))")
 			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
-			.append(") 1) (value_ts ").append( getCommand().getTagset() )
-			.append(" " ).append( getCommand().getValueOfTagset() ).append(")")
-			.append(" (/= (getPfn ").append( getCommand().getValueOfTagset() )
+			.append(") 1) (/= (getPfn ").append( getCommand().getValueOfTagset() )
 			.append(") (getPfn ").append(cmd.getValueOfTagset()).append(")))")
 			.append("))");
 			
