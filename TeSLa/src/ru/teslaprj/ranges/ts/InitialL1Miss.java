@@ -273,13 +273,15 @@ public class InitialL1Miss extends L1Range
 		for( long l : getContext().getLinterM() )
 		{
 			constraint.append("(/= ").append(getCommand().getValueOfTagset() )
-			.append(" ").append(l).append(")");
+			.append(" (mk-bv ").append( getContext().getTagsetLength() )
+			.append(" ").append(l).append("))");
 		}
 		constraint.append("(or ");
 		for( long l : getContext().getPFNminusMfull() )
 		{
 			constraint.append("(= (getPfn ").append(getCommand().getValueOfTagset())
-			.append(") ").append(l).append(")");
+			.append(") (mk-bv ").append( getContext().getPfnLength() )
+			.append(" ").append(l).append("))");
 		}
 		constraint.append("))")
 		.append("(and (= 3 (pfntype ").append(getCommand().getTagset()).append("))")
@@ -313,11 +315,11 @@ public class InitialL1Miss extends L1Range
 			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
 			.append(") 3) (not (pfneq ").append( getCommand().getTagset() )
 			.append(" " ).append( cmd.getTagset()).append(")))")
-			.append( "(and (= pfntype ").append( getCommand().getTagset() )
-			.append(") 1 (value_ts ").append( getCommand().getTagset() )
+			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
+			.append(") 1) (value_ts ").append( getCommand().getTagset() )
 			.append(" " ).append( getCommand().getValueOfTagset() ).append(")")
-			.append(" (/= (getPfn ").append( getCommand().getTagset() )
-			.append(") (getPfn ").append(cmd.getTagset()).append(")))")
+			.append(" (/= (getPfn ").append( getCommand().getValueOfTagset() )
+			.append(") (getPfn ").append(cmd.getValueOfTagset()).append(")))")
 			.append("))");
 			
 			getContext().postAssert( constraint.toString() );

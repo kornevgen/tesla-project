@@ -327,11 +327,6 @@ public class Ranges
 
 
 			
-			for( MemoryCommand cmd : l1Ranges.keySet() )
-			{
-				yl.yicesl_read( context, "(define " + cmd.getTagset() + " :: tagset)" );
-			}
-			
 	        Scheme scheme = null;
 	        for(MemoryCommand cmd : l1Ranges.keySet() )
 	        {
@@ -411,7 +406,8 @@ public class Ranges
 //				}
 			
 			yl.yicesl_read(context, "(check)");// без этого не появляется модель...
-			boolean consistent = (yl.yicesl_inconsistent(context) == 0);
+			int ttt = yl.yicesl_inconsistent(context);
+			boolean consistent = (ttt == 0);
 	
 //	        try
 //	        {
@@ -438,7 +434,7 @@ public class Ranges
 	        {
 	        	try
 	        	{
-	        		BufferedReader r = new BufferedReader( new FileReader( new File("system-output" + nnn + ".txt")));
+	        		BufferedReader r = new BufferedReader( new FileReader( new File("system-1-output" + nnn + ".txt")));
 	        		String line = r.readLine(); System.out.println("model:");
 	    			Map<String, Long> result = new HashMap<String, Long>();
 	        		while( (line = r.readLine()) != null )

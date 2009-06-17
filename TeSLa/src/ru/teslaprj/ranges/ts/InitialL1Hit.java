@@ -295,11 +295,11 @@ public class InitialL1Hit extends L1Range
 			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
 			.append(") 2) (not (pfneq ").append( getCommand().getTagset() )
 			.append(" " ).append( cmd.getTagset()).append(")))")
-			.append( "(and (= pfntype ").append( getCommand().getTagset() )
-			.append(") 1 (value_ts ").append( getCommand().getTagset() )
+			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
+			.append(") 1) (value_ts ").append( getCommand().getTagset() )
 			.append(" " ).append( getCommand().getValueOfTagset() ).append(")")
-			.append(" (/= (getPfn ").append( getCommand().getTagset() )
-			.append(") (getPfn ").append(cmd.getTagset()).append(")))")
+			.append(" (/= (getPfn ").append( getCommand().getValueOfTagset() )
+			.append(") (getPfn ").append(cmd.getValueOfTagset()).append(")))")
 			.append("))");
 			
 			getContext().postAssert( constraint.toString() );
