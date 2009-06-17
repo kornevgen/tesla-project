@@ -294,7 +294,7 @@ public class Ranges
 			yl.yicesl_read( context, "(define regioneq::(-> Tagset Tagset bool))" );
 			yl.yicesl_read( context, "(define section::(-> Tagset int bool))" );
 			yl.yicesl_read( context, "(define among-section::(-> Tagset int int bool))" );
-			yl.yicesl_read( context, "(define value_ts::(-> Tagset tagset bool))" );
+//			yl.yicesl_read( context, "(define value_ts::(-> Tagset tagset bool))" );
 						
 			yl.yicesl_read( context, "(define getPfn :: (-> tagset pfn) " +
 					"(lambda " +
@@ -317,14 +317,14 @@ public class Ranges
 						"(bv-extract " + (dtlb.getSEGBITS() - 1) + " " + (dtlb.getPABITS() - pfnLength) + " x)" +
 					"))" );
 			
-			//axioms
-			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (= x y) (pfneq x y))))" );
-			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (= x y) (regioneq x y))))" );
-			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (and (pfneq x y) (regioneq x y)) (= x y))))" );
-			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (pfneq x y) (= (pfntype x) (pfntype y) ))))" );
-			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (pfneq x y) (regioneq x y))))" );
-			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(= (regioneq x y) (regioneq y x))))" );
-
+//			//axioms
+//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (= x y) (pfneq x y))))" );
+//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (= x y) (regioneq x y))))" );
+//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (and (pfneq x y) (regioneq x y)) (= x y))))" );
+//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (pfneq x y) (= (pfntype x) (pfntype y) ))))" );
+//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (pfneq x y) (regioneq x y))))" );
+//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(= (regioneq x y) (regioneq y x))))" );
+//			addition axiom: if type(ts1)=type(ts2) and (ts1:0 \/ ts1:1) -> (value_ts(ts1) = value_ts(ts2) <=> ts1 = ts2)
 
 			
 	        Scheme scheme = null;
@@ -344,6 +344,124 @@ public class Ranges
 				}
 				//TODO else - остальные случаи
 			}
+			
+			// лишняя работа, но это способ избавиться от кванторов; видимо, из-за них ошибка
+			// (forall (x::Tagset y::Tagset)  (=> (= x y) (pfneq x y)))   )
+			Set<MemoryCommand> viewed = new HashSet<MemoryCommand>();
+			for( MemoryCommand c1 : commands )
+			{
+				for( MemoryCommand c2 : commands )
+				{
+					if ( c2 == c1 )
+						continue;
+					if ( viewed.contains(c2) )
+						continue;
+					postAssert("(=> (= " + c1.getTagset() + " " + c2.getTagset() + ")" +
+							" (pfneq " + c1.getTagset() + " " + c2.getTagset() +"))");
+				}
+				viewed.add(c1);
+			}
+			viewed.clear();
+			
+			// (forall (x::Tagset y::Tagset)   (=> (= x y) (regioneq x y))  )
+			for( MemoryCommand c1 : commands )
+			{
+				for( MemoryCommand c2 : commands )
+				{
+					if ( c2 == c1 )
+						continue;
+					if ( viewed.contains(c2) )
+						continue;
+					postAssert("(=> (= " + c1.getTagset() + " " + c2.getTagset() + ")" +
+							" (regioneq " + c1.getTagset() + " " + c2.getTagset() +"))");
+				}
+				viewed.add(c1);
+			}
+			viewed.clear();
+			
+			// (forall (x::Tagset y::Tagset)  (=> (and (pfneq x y) (regioneq x y)) (= x y))   )
+			for( MemoryCommand c1 : commands )
+			{
+				for( MemoryCommand c2 : commands )
+				{
+					if ( c2 == c1 )
+						continue;
+					if ( viewed.contains(c2) )
+						continue;
+					postAssert("(=> (and (pfneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
+							"(regioneq " + c1.getTagset() + " " + c2.getTagset() + "))" +
+							" (= " + c1.getTagset() + " " + c2.getTagset() +"))");
+				}
+				viewed.add(c1);
+			}
+			viewed.clear();
+			
+			// (forall (x::Tagset y::Tagset)   (=> (pfneq x y) (= (pfntype x) (pfntype y) ))   )
+			for( MemoryCommand c1 : commands )
+			{
+				for( MemoryCommand c2 : commands )
+				{
+					if ( c2 == c1 )
+						continue;
+					if ( viewed.contains(c2) )
+						continue;
+					postAssert("(=> (pfneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
+							" (= (pfntype " + c1.getTagset() + ") (pfntype " + c2.getTagset() +")))");
+				}
+				viewed.add(c1);
+			}
+			viewed.clear();
+			
+			// (forall (x::Tagset y::Tagset)   (=> (pfneq x y) (regioneq x y))    )
+			for( MemoryCommand c1 : commands )
+			{
+				for( MemoryCommand c2 : commands )
+				{
+					if ( c2 == c1 )
+						continue;
+					if ( viewed.contains(c2) )
+						continue;
+					postAssert("(=> (pfneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
+							" (regioneq " + c1.getTagset() + " " + c2.getTagset() +"))");
+				}
+				viewed.add(c1);
+			}
+			viewed.clear();
+			
+			// (forall (x::Tagset y::Tagset)   (= (regioneq x y) (regioneq y x))   )
+			for( MemoryCommand c1 : commands )
+			{
+				for( MemoryCommand c2 : commands )
+				{
+					if ( c2 == c1 )
+						continue;
+					if ( viewed.contains(c2) )
+						continue;
+					postAssert("(= (regioneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
+							" (regioneq " + c2.getTagset() + " " + c1.getTagset() +"))");
+				}
+				viewed.add(c1);
+			}
+			viewed.clear();
+			
+//			addition axiom: if type(ts1)=type(ts2) and (ts1:0 \/ ts1:1) -> (value_ts(ts1) = value_ts(ts2) <=> ts1 = ts2)
+			for( MemoryCommand c1 : commands )
+			{
+				for( MemoryCommand c2 : commands )
+				{
+					if ( c2 == c1 )
+						continue;
+					if ( viewed.contains(c2) )
+						continue;
+					postAssert("(=> (and (= (pfntype " + c1.getTagset() + ") (pfntype " + c2.getTagset() + "))" + 
+							"(< (pfntype " + c1.getTagset() + ") 2))" +
+							"(= (= " + c1.getTagset() + " " + c2.getTagset() + ") " +
+							"(= " + c1.getValueOfTagset() + " " + c2.getValueOfTagset() +")))");
+				}
+				viewed.add(c1);
+			}
+			viewed.clear();
+			
 			
 //TODO без этого появляются ложные consistent!	yl.yicesl_read(context, "(check)");
 			

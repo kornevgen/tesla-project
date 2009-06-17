@@ -648,9 +648,7 @@ public class UsefulL1Miss extends L1Range
 			if ( allowedPfntypes.contains(0) || allowedPfntypes.contains(1))
 			{
 				constraint.append("(and (< (pfntype ").append(cmd.getTagset())
-				.append(") 2) (value_ts " ).append(getCommand().getTagset())
-				.append(" ").append(getCommand().getValueOfTagset()).append(")")
-				.append(" (getPfn " ).append(getCommand().getValueOfTagset())
+				.append(") 2) (getPfn " ).append(getCommand().getValueOfTagset())
 				.append(") (getPfn ").append(cmd.getValueOfTagset()).append("))");
 			}
 			constraint.append("))");
