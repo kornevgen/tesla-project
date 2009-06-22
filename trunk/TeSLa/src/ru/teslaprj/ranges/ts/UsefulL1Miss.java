@@ -635,23 +635,21 @@ public class UsefulL1Miss extends L1Range
 		constraint = new StringBuffer("(or false ");
 		for( MemoryCommand cmd : range.getEvictings() )
 		{
-			constraint.append("(and true ");
-			constraint.append("(= (pfntype " ).append( getCommand().getTagset() )
-				.append(") (pfntype ").append( cmd.getTagset() ).append("))");
-			constraint.append("(or false ");
 			if ( allowedPfntypes.contains(2) )
 			{
-				constraint.append("(and (= (pfntype ").append(cmd.getTagset())
-				.append(") 2) (pfneq " ).append(cmd.getTagset())
+				constraint.append("(and (= (pfntype ").append(getCommand().getTagset())
+				.append(") 2) (> (pfntype ").append(cmd.getTagset())
+				.append(") 1) (pfneq " ).append(cmd.getTagset())
 				.append(" ").append(getCommand().getTagset()).append("))");
 			}
 			if ( allowedPfntypes.contains(0) || allowedPfntypes.contains(1))
 			{
 				constraint.append("(and (< (pfntype ").append(cmd.getTagset())
-				.append(") 2) (getPfn " ).append(getCommand().getValueOfTagset())
-				.append(") (getPfn ").append(cmd.getValueOfTagset()).append("))");
+				.append(") 2) (= (pfntype ").append( cmd.getTagset() )
+				.append(")(pfntype ").append( getCommand().getTagset())
+				.append(") ) (= (getPfn " ).append(getCommand().getValueOfTagset())
+				.append(") (getPfn ").append(cmd.getValueOfTagset()).append(")))");
 			}
-			constraint.append("))");
 		}
 		getContext().postAssert( constraint.append(")").toString() );
 

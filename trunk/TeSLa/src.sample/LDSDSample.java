@@ -82,7 +82,7 @@ public class LDSDSample
 
 			@Override
 			public long getTag(int section, int row) {
-				return tags1[section][row];
+				return tags1[row][section];
 			}
 
 			@Override

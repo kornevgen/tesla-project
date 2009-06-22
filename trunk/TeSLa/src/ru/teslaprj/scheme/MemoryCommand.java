@@ -122,4 +122,12 @@ public class MemoryCommand extends Command implements MemoryAccessInstruction
 		return "v_" + getTagset();
 	}
 	
+	//TODO эти методы лишние - это должно вычисляться автоматически
+	private String value;
+	public String getValue() { return value;}
+	public void setValue( String value )
+	{
+		this.value = value;
+	}
+	
 }

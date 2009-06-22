@@ -115,6 +115,9 @@ public class Ranges
 						"(x :: virtualAddress) " +
 						"(bv-extract " + (dtlb.getSEGBITS() - 1) + " " + (dtlb.getPABITS() - pfnLength) + " x)" +
 					"))" );
+			yl.yicesl_read( context, "(define pfntype :: (-> tagset int) " +
+					"(lambda " +
+						"(x :: tagset) 0))");
 			
 			for( MemoryCommand cmd : l1Ranges.keySet() )
 			{
@@ -171,16 +174,17 @@ public class Ranges
 			
 			//TODO сделать полный вариант
 			//тут лишь частный случай для двух инструкций
-			if ( yl.yicesl_inconsistent(context) == 0)
-				loadstore2Constraints(commands);
+//			if ( yl.yicesl_inconsistent(context) == 0)
+				loadstore2Constraints0(commands);
 			
 			// ограничения на теговую часть строки TLB и виртуального адреса
 			// (ограничение на номер виртуальной страницы по pfn)
-			if ( yl.yicesl_inconsistent(context) == 0)
-				virtualAddresses2TLBlinesConstraints(commands);
+//			if ( yl.yicesl_inconsistent(context) == 0)
+				for( MemoryCommand cmd : commands )
+					virtualAddresses2TLBlinesConstraints(cmd);
 
 			// ограничения виртуального адреса, задающие его сегмент:
-			if ( yl.yicesl_inconsistent(context) == 0)	
+//			if ( yl.yicesl_inconsistent(context) == 0)	
 			for( MemoryCommand cmd : commands )
 			{
 				//TODO this only for `Mapped' case and SEGBITS=40, PABITS=36
@@ -190,7 +194,7 @@ public class Ranges
 			}
 			
 			// часть тегсета -- это часть виртуального адреса
-			if ( yl.yicesl_inconsistent(context) == 0 )
+//			if ( yl.yicesl_inconsistent(context) == 0 )
 				for( MemoryCommand cmd : commands )
 				{
 					postAssert( new StringBuffer( "(= (bv-extract " ).append( tagsetLength - pfnLength - 1)
@@ -200,7 +204,10 @@ public class Ranges
 				}
 			
 			yl.yicesl_read(context, "(check)");// без этого не появляется модель...
+			float t1 = System.currentTimeMillis();
 			boolean consistent = (yl.yicesl_inconsistent(context) == 0);
+			float t2 = System.currentTimeMillis();
+			
 	
 //	        try
 //	        {
@@ -253,6 +260,12 @@ public class Ranges
 		        			i++;
 	        			}
 	        		}
+	        		
+	        		System.out.println("t1 = " + t1);
+	        		System.out.println("t2 = " + t2);
+	        		System.out.println("TIME: " + (t2 - t1)/1000.0 + "s");
+	        		System.gc();
+	        		
 	        		return result;
 	        	}
 	        	catch(FileNotFoundException e ){}
@@ -279,7 +292,7 @@ public class Ranges
 		
 		try
 		{
-			yl.yicesl_read(context, "(set-evidence! true)");
+			yl.yicesl_read( context, "(set-evidence! true)" );
 			
 			yl.yicesl_read( context, "(define-type Tagset)" );
 			yl.yicesl_read( context, "(define-type tagset (bitvector " + tagsetLength + "))" );
@@ -294,7 +307,6 @@ public class Ranges
 			yl.yicesl_read( context, "(define regioneq::(-> Tagset Tagset bool))" );
 			yl.yicesl_read( context, "(define section::(-> Tagset int bool))" );
 			yl.yicesl_read( context, "(define among-section::(-> Tagset int int bool))" );
-//			yl.yicesl_read( context, "(define value_ts::(-> Tagset tagset bool))" );
 						
 			yl.yicesl_read( context, "(define getPfn :: (-> tagset pfn) " +
 					"(lambda " +
@@ -316,15 +328,24 @@ public class Ranges
 						"(x :: virtualAddress) " +
 						"(bv-extract " + (dtlb.getSEGBITS() - 1) + " " + (dtlb.getPABITS() - pfnLength) + " x)" +
 					"))" );
+			if ( tagsetLength > pfnLength )
+				yl.yicesl_read( context, "(define rangeeq :: (-> int int Tagset (bitvector "
+						+ (tagsetLength - pfnLength) + ") bool))");
 			
-//			//axioms
-//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (= x y) (pfneq x y))))" );
-//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (= x y) (regioneq x y))))" );
-//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (and (pfneq x y) (regioneq x y)) (= x y))))" );
-//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (pfneq x y) (= (pfntype x) (pfntype y) ))))" );
-//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (pfneq x y) (regioneq x y))))" );
-//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(= (regioneq x y) (regioneq y x))))" );
-//			addition axiom: if type(ts1)=type(ts2) and (ts1:0 \/ ts1:1) -> (value_ts(ts1) = value_ts(ts2) <=> ts1 = ts2)
+			//axioms
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (and (= x y)(> (pfntype x) 1)) (pfneq x y))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (and (= x y)(> (pfntype x) 1)) (regioneq x y))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (and (pfneq x y)(> (pfntype x) 1)(regioneq x y)) (= x y))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (pfneq x y) (or (and (< (pfntype x) 2) (= (pfntype x) (pfntype y))) (and (> (pfntype x) 1)(> (pfntype y) 1))))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(=> (and (pfneq x y) (> (pfntype x) 1)) (regioneq x y))))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset)(= (regioneq x y) (regioneq y x))))" );
+//			yl.yicesl_read( context, "(assert (forall (x::Tagset y::Tagset v::(bitvector 7) end::int start::int)" +
+//			"(=> (and (= x y)  (rangeeq end start x v)) (rangeeq end start y v))  ))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset v1::(bitvector 7) v2::(bitvector 7) end::int start::int)" +
+			"(=> (and (rangeeq end start x v1)  (rangeeq end start x v2)) (= v1 v2))  ))" );
+			yl.yicesl_read( context, "(assert (forall (x::Tagset s::int e::int m::int) " +
+					"(= (and (section x m) (among-section x s e)) (and (<= s m) (<= m e)))))" );
+///////		addition axiom: if type(ts1)=type(ts2) and (ts1:0 \/ ts1:1) -> (value_ts(ts1) = value_ts(ts2) <=> ts1 = ts2)
 
 			
 	        Scheme scheme = null;
@@ -345,183 +366,210 @@ public class Ranges
 				//TODO else - остальные случаи
 			}
 			
-			// лишняя работа, но это способ избавиться от кванторов; видимо, из-за них ошибка
-			// (forall (x::Tagset y::Tagset)  (=> (= x y) (pfneq x y)))   )
-			Set<MemoryCommand> viewed = new HashSet<MemoryCommand>();
-			for( MemoryCommand c1 : commands )
-			{
-				for( MemoryCommand c2 : commands )
-				{
-					if ( c2 == c1 )
-						continue;
-					if ( viewed.contains(c2) )
-						continue;
-					postAssert("(=> (= " + c1.getTagset() + " " + c2.getTagset() + ")" +
-							" (pfneq " + c1.getTagset() + " " + c2.getTagset() +"))");
-				}
-				viewed.add(c1);
-			}
-			viewed.clear();
-			
-			// (forall (x::Tagset y::Tagset)   (=> (= x y) (regioneq x y))  )
-			for( MemoryCommand c1 : commands )
-			{
-				for( MemoryCommand c2 : commands )
-				{
-					if ( c2 == c1 )
-						continue;
-					if ( viewed.contains(c2) )
-						continue;
-					postAssert("(=> (= " + c1.getTagset() + " " + c2.getTagset() + ")" +
-							" (regioneq " + c1.getTagset() + " " + c2.getTagset() +"))");
-				}
-				viewed.add(c1);
-			}
-			viewed.clear();
-			
-			// (forall (x::Tagset y::Tagset)  (=> (and (pfneq x y) (regioneq x y)) (= x y))   )
-			for( MemoryCommand c1 : commands )
-			{
-				for( MemoryCommand c2 : commands )
-				{
-					if ( c2 == c1 )
-						continue;
-					if ( viewed.contains(c2) )
-						continue;
-					postAssert("(=> (and (pfneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
-							"(regioneq " + c1.getTagset() + " " + c2.getTagset() + "))" +
-							" (= " + c1.getTagset() + " " + c2.getTagset() +"))");
-				}
-				viewed.add(c1);
-			}
-			viewed.clear();
-			
-			// (forall (x::Tagset y::Tagset)   (=> (pfneq x y) (= (pfntype x) (pfntype y) ))   )
-			for( MemoryCommand c1 : commands )
-			{
-				for( MemoryCommand c2 : commands )
-				{
-					if ( c2 == c1 )
-						continue;
-					if ( viewed.contains(c2) )
-						continue;
-					postAssert("(=> (pfneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
-							" (= (pfntype " + c1.getTagset() + ") (pfntype " + c2.getTagset() +")))");
-				}
-				viewed.add(c1);
-			}
-			viewed.clear();
-			
-			// (forall (x::Tagset y::Tagset)   (=> (pfneq x y) (regioneq x y))    )
-			for( MemoryCommand c1 : commands )
-			{
-				for( MemoryCommand c2 : commands )
-				{
-					if ( c2 == c1 )
-						continue;
-					if ( viewed.contains(c2) )
-						continue;
-					postAssert("(=> (pfneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
-							" (regioneq " + c1.getTagset() + " " + c2.getTagset() +"))");
-				}
-				viewed.add(c1);
-			}
-			viewed.clear();
-			
-			// (forall (x::Tagset y::Tagset)   (= (regioneq x y) (regioneq y x))   )
-			for( MemoryCommand c1 : commands )
-			{
-				for( MemoryCommand c2 : commands )
-				{
-					if ( c2 == c1 )
-						continue;
-					if ( viewed.contains(c2) )
-						continue;
-					postAssert("(= (regioneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
-							" (regioneq " + c2.getTagset() + " " + c1.getTagset() +"))");
-				}
-				viewed.add(c1);
-			}
-			viewed.clear();
-			
-//			addition axiom: if type(ts1)=type(ts2) and (ts1:0 \/ ts1:1) -> (value_ts(ts1) = value_ts(ts2) <=> ts1 = ts2)
-			for( MemoryCommand c1 : commands )
-			{
-				for( MemoryCommand c2 : commands )
-				{
-					if ( c2 == c1 )
-						continue;
-					if ( viewed.contains(c2) )
-						continue;
-					postAssert("(=> (and (= (pfntype " + c1.getTagset() + ") (pfntype " + c2.getTagset() + "))" + 
-							"(< (pfntype " + c1.getTagset() + ") 2))" +
-							"(= (= " + c1.getTagset() + " " + c2.getTagset() + ") " +
-							"(= " + c1.getValueOfTagset() + " " + c2.getValueOfTagset() +")))");
-				}
-				viewed.add(c1);
-			}
-			viewed.clear();
+//			// лишняя работа, но это способ избавиться от кванторов; видимо, из-за них ошибка
+//			// (forall (x::Tagset y::Tagset)  (=> (= x y) (pfneq x y)))   )
+//			Set<MemoryCommand> viewed = new HashSet<MemoryCommand>();
+//			for( MemoryCommand c1 : commands )
+//			{
+//				for( MemoryCommand c2 : commands )
+//				{
+//					if ( c2 == c1 )
+//						continue;
+//					if ( viewed.contains(c2) )
+//						continue;
+//					postAssert("(=> (= " + c1.getTagset() + " " + c2.getTagset() + ")" +
+//							" (pfneq " + c1.getTagset() + " " + c2.getTagset() +"))");
+//				}
+//				viewed.add(c1);
+//			}
+//			viewed.clear();
+//			
+//			// (forall (x::Tagset y::Tagset)   (=> (= x y) (regioneq x y))  )
+//			for( MemoryCommand c1 : commands )
+//			{
+//				for( MemoryCommand c2 : commands )
+//				{
+//					if ( c2 == c1 )
+//						continue;
+//					if ( viewed.contains(c2) )
+//						continue;
+//					postAssert("(=> (= " + c1.getTagset() + " " + c2.getTagset() + ")" +
+//							" (regioneq " + c1.getTagset() + " " + c2.getTagset() +"))");
+//				}
+//				viewed.add(c1);
+//			}
+//			viewed.clear();
+//			
+//			// (forall (x::Tagset y::Tagset)  (=> (and (pfneq x y) (regioneq x y)) (= x y))   )
+//			for( MemoryCommand c1 : commands )
+//			{
+//				for( MemoryCommand c2 : commands )
+//				{
+//					if ( c2 == c1 )
+//						continue;
+//					if ( viewed.contains(c2) )
+//						continue;
+//					postAssert("(=> (and (pfneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
+//							"(regioneq " + c1.getTagset() + " " + c2.getTagset() + "))" +
+//							" (= " + c1.getTagset() + " " + c2.getTagset() +"))");
+//				}
+//				viewed.add(c1);
+//			}
+//			viewed.clear();
+//			
+//			// (forall (x::Tagset y::Tagset)   (=> (pfneq x y) (= (pfntype x) (pfntype y) ))   )
+//			for( MemoryCommand c1 : commands )
+//			{
+//				for( MemoryCommand c2 : commands )
+//				{
+//					if ( c2 == c1 )
+//						continue;
+//					if ( viewed.contains(c2) )
+//						continue;
+//					postAssert("(=> (pfneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
+//							" (= (pfntype " + c1.getTagset() + ") (pfntype " + c2.getTagset() +")))");
+//				}
+//				viewed.add(c1);
+//			}
+//			viewed.clear();
+//			
+//			// (forall (x::Tagset y::Tagset)   (=> (pfneq x y) (regioneq x y))    )
+//			for( MemoryCommand c1 : commands )
+//			{
+//				for( MemoryCommand c2 : commands )
+//				{
+//					if ( c2 == c1 )
+//						continue;
+//					if ( viewed.contains(c2) )
+//						continue;
+//					postAssert("(=> (pfneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
+//							" (regioneq " + c1.getTagset() + " " + c2.getTagset() +"))");
+//				}
+//				viewed.add(c1);
+//			}
+//			viewed.clear();
+//			
+//			// (forall (x::Tagset y::Tagset)   (= (regioneq x y) (regioneq y x))   )
+//			for( MemoryCommand c1 : commands )
+//			{
+//				for( MemoryCommand c2 : commands )
+//				{
+//					if ( c2 == c1 )
+//						continue;
+//					if ( viewed.contains(c2) )
+//						continue;
+//					postAssert("(= (regioneq " + c1.getTagset() + " " + c2.getTagset() + ")" +
+//							" (regioneq " + c2.getTagset() + " " + c1.getTagset() +"))");
+//				}
+//				viewed.add(c1);
+//			}
+//			viewed.clear();
+//			
+////			addition axiom: if type(ts1)=type(ts2) and (ts1:0 \/ ts1:1) -> (value_ts(ts1) = value_ts(ts2) <=> ts1 = ts2)
+//			for( MemoryCommand c1 : commands )
+//			{
+//				for( MemoryCommand c2 : commands )
+//				{
+//					if ( c2 == c1 )
+//						continue;
+//					if ( viewed.contains(c2) )
+//						continue;
+//					postAssert("(=> (and (= (pfntype " + c1.getTagset() + ") (pfntype " + c2.getTagset() + "))" + 
+//							"(< (pfntype " + c1.getTagset() + ") 2))" +
+//							"(= (= " + c1.getTagset() + " " + c2.getTagset() + ") " +
+//							"(= " + c1.getValueOfTagset() + " " + c2.getValueOfTagset() +")))");
+//				}
+//				viewed.add(c1);
+//			}
+//			viewed.clear();
 			
 			
 //TODO без этого появляются ложные consistent!	yl.yicesl_read(context, "(check)");
 			
-//			postDefine("x0", "(bitvector 64)", "");
-//			postDefine("x1", "(bitvector 64)", "");
-//			postDefine("x2", "(bitvector 64)", "");
-//			postDefine("y0", "(bitvector 64)", "");
-//			postDefine("y1", "(bitvector 64)", "");
-//			postDefine("y2", "(bitvector 64)", "");
-//			postDefine("s0", "(bitvector 64)", "");
-//			postDefine("s1", "(bitvector 64)", "");
-//			postDefine("s2", "(bitvector 64)", "");
-//			postDefine("t0", "(bitvector 64)", "");
-//			postDefine("t1", "(bitvector 64)", "");
-//			postDefine("t2", "(bitvector 64)", "");
-//			postDefine("cc", "(bitvector 64)", "");
-//			postDefine("ccc", "(bitvector 64)", "");
-//			postDefine("cccc", "(bitvector 64)", "");
-//			postDefine("ccccc", "(bitvector 64)", "");
-//			postDefine("cccccc", "(bitvector 64)", "");
-//			for( MemoryCommand cmd : commands )
-//			{
-//				postDefine( 
-//						cmd.getVirtualAddress(), 
-//						"virtualAddress", 
-//						"(bv-add " + cmd.getArgs().get(1) + "0 " + cmd.getArgs().get(2) + ")"
-//					);
-//			}
-//			
-//
-//			
-//			//TODO сделать полный вариант
-//			//тут лишь частный случай для двух инструкций
-//			if ( yl.yicesl_inconsistent(context) == 0)
-//				loadstore2Constraints(commands);
-//			
-//			// ограничения на теговую часть строки TLB и виртуального адреса
-//			// (ограничение на номер виртуальной страницы по pfn)
-//			if ( yl.yicesl_inconsistent(context) == 0)
-//				virtualAddresses2TLBlinesConstraints(commands);
-//
-//			// ограничения виртуального адреса, задающие его сегмент:
-//			if ( yl.yicesl_inconsistent(context) == 0)	
-//			for( MemoryCommand cmd : commands )
-//			{
-//				//TODO this only for `Mapped' case and SEGBITS=40, PABITS=36
-//				postAssert( new StringBuffer( "(= (bv-extract 63 30 ")
-//					.append( cmd.getVirtualAddress() ).append(") (mk-bv 34 17179869183))")
-//						.toString() );
-//			}
-//			
-//			// часть тегсета -- это часть виртуального адреса
-//			if ( yl.yicesl_inconsistent(context) == 0 )
-//				for( MemoryCommand cmd : commands )
-//				{
-//					postAssert( new StringBuffer( "(= (bv-extract " ).append( tagsetLength - pfnLength - 1)
-//							.append( " 0 " ).append( cmd.getTagset() ).append(") (bv-extract ")
-//							.append( dtlb.getPABITS() - pfnLength - 1 ).append(" " ).append( dtlb.getPABITS() - tagsetLength )
-//							.append(" " ).append( cmd.getVirtualAddress() ).append("))" ).toString() );
-//				}
+			postDefine("x0", "(bitvector 64)", "");
+			postDefine("x1", "(bitvector 64)", "");
+			postDefine("x2", "(bitvector 64)", "");
+			postDefine("x3", "(bitvector 64)", "");
+			postDefine("x4", "(bitvector 64)", "");
+			postDefine("y0", "(bitvector 64)", "");
+			postDefine("cc", "(bitvector 64)", "");
+			postDefine("ccc", "(bitvector 64)", "");
+			postDefine("cccc", "(bitvector 64)", "");
+			postDefine("ccccc", "(bitvector 64)", "");
+			postDefine("cccccc", "(bitvector 64)", "");
+			for( MemoryCommand cmd : commands )
+			{
+				postDefine( 
+						cmd.getVirtualAddress(), 
+						"virtualAddress", 
+						"(bv-add " + cmd.getArgs().get(1) + "0 " + cmd.getArgs().get(2) + ")"
+					);
+			}
+			
+
+			
+			//TODO сделать полный вариант
+			//тут лишь частный случай для двух инструкций
+			if ( yl.yicesl_inconsistent(context) == 0)
+			{
+				MemoryCommand prevCommand = null;
+				for( MemoryCommand cmd : commands )
+				{
+					if ( prevCommand != null )
+						loadstore2Constraints1(prevCommand, cmd);
+					prevCommand = cmd;
+				}
+			}
+			
+			// ограничения на теговую часть строки TLB и виртуального адреса
+			// (ограничение на номер виртуальной страницы по pfn)
+			if ( yl.yicesl_inconsistent(context) == 0)
+				for( MemoryCommand cmd : commands )
+				{
+					virtualAddresses2TLBlinesConstraints(cmd);
+				}
+
+			// ограничения виртуального адреса, задающие его сегмент:
+			if ( yl.yicesl_inconsistent(context) == 0)	
+			for( MemoryCommand cmd : commands )
+			{
+				//TODO this only for `Mapped' case and SEGBITS=40, PABITS=36
+				postAssert( new StringBuffer( "(= (bv-extract 63 30 ")
+					.append( cmd.getVirtualAddress() ).append(") (mk-bv 34 17179869183))")
+						.toString() );
+			}
+			
+			// часть тегсета -- это часть виртуального адреса
+			if ( yl.yicesl_inconsistent(context) == 0 )
+			if ( tagsetLength > pfnLength )
+				for( MemoryCommand cmd : commands )
+				{
+					postAssert( new StringBuffer( "(ite (< (pfntype " )
+							.append( cmd.getTagset()).append(") 2) (= (bv-extract " )
+							.append( tagsetLength - pfnLength - 1)
+							.append( " 0 " ).append( cmd.getValueOfTagset() ).append(") (bv-extract ")
+							.append( dtlb.getPABITS() - pfnLength - 1 ).append(" " )
+							.append( dtlb.getPABITS() - tagsetLength )
+							.append(" " ).append( cmd.getVirtualAddress() ).append(")) (rangeeq " )
+							.append( tagsetLength - pfnLength - 1)
+							.append( " 0 " ).append( cmd.getTagset() ).append(" (bv-extract ")
+							.append( dtlb.getPABITS() - pfnLength - 1 ).append(" " ).append( dtlb.getPABITS() - tagsetLength )
+							.append(" " ).append( cmd.getVirtualAddress() ).append("))  )").toString() );
+					//TODO добавить требование, что этот кусок тегсета при external
+					// должен встречаться среди значений этого куска в ^L^
+					// если таких значений мало, записать их как ts[..] \in {...}
+					// если таких значений много, но НЕ таких значений мало,
+					//		то записать их как ts[..] \notin {...}
+					// если и их много, и не их много, то оставить как есть
+					// 		- на этот случай потом будет разбирательство
+					// TODO наложить на это ограничение часть ограничения из
+					// тестовой ситуации; например, если известна позиция
+					// тегсета среди секций в ^L^, то нужно уже ts[..]
+					// выбирать только из нужной секции
+				}
+			
+			//TODO ограничение, что external тегсеты не могут быть среди
+			// M или PFN\M
 			
 			yl.yicesl_read(context, "(check)");// без этого не появляется модель...
 			int ttt = yl.yicesl_inconsistent(context);
@@ -592,9 +640,9 @@ public class Ranges
 		}
 	}
 
-	private void virtualAddresses2TLBlinesConstraints(
-			List<MemoryCommand> commands) {
-		for( MemoryCommand cmd : commands )
+	private void virtualAddresses2TLBlinesConstraints(MemoryCommand cmd)
+	{
+//		for( MemoryCommand cmd : commands )
 		{
 			//cmd has pfn
 			//cmd has virtualAddress
@@ -606,7 +654,8 @@ public class Ranges
 			if ( tlbRanges.get(cmd) instanceof InitialTlbHit )
 			{
 				// ищем только среди M
-				StringBuffer constraint = new StringBuffer("(or false ");
+				StringBuffer constraint = new StringBuffer("(=> (< (pfntype ")
+				.append( cmd.getTagset() ).append(") 2) (or false ");
 				for( int p : dtlb.getDTLB() )
 				{
 					TLBRow r = dtlb.getRow(p);
@@ -628,7 +677,7 @@ public class Ranges
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
 						.append(" " ).append( r.getPFN0().longValue() ).append(") ")
-						.append( "(getPfn ").append( cmd.getTagset() ).append(")) ")
+						.append( "(getPfn ").append( cmd.getValueOfTagset() ).append(")) ")
 						.append("(= (getVPN ").append( cmd.getVirtualAddress() )
 						.append(") (mk-bv ").append( vpnLength ).append(" " )
 						.append( r.getVPNd2().longValue() * 2 ).append(")))");
@@ -637,33 +686,35 @@ public class Ranges
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
 						.append(" " ).append( r.getPFN1().longValue() ).append(") ")
-						.append( "(getPfn ").append( cmd.getTagset() ).append(")) ")
+						.append( "(getPfn ").append( cmd.getValueOfTagset() ).append(")) ")
 						.append("(= (getVPN ").append( cmd.getVirtualAddress() )
 						.append(") (mk-bv ").append( vpnLength ).append(" " )
 						.append( r.getVPNd2().longValue() * 2 + 1 ).append(")))");
 					}
 				}
-				postAssert( constraint.append(")").toString() );
+				postAssert( constraint.append("))").toString() );
 			}
 			else if ( tlbRanges.get(cmd) instanceof EvictingTlbHit )
 			{
 				// равенство кусков вирт.адресов, т.к. равенство pfn'в
 				Set<MemoryCommand> evictings = ((EvictingTlbHit)tlbRanges.get(cmd)).getEvictings();
 				//(=> (= pfn1 pfn2) (= (vpn va1) (vpn va2)))
-				StringBuffer constraint = new StringBuffer("(or false " );
+				StringBuffer constraint = new StringBuffer("(=> (< (pfntype ")
+				.append( cmd.getTagset() ).append(") 2)  (or false " );
 				for( MemoryCommand ev : evictings )
-				{
-					constraint.append("(=> (= (getPfn ").append( cmd.getTagset() )
-					.append(") (getPfn ").append( ev.getTagset() ).append(")) ")
+				{//TODO check pfntype of `ev' ??
+					constraint.append("(=> (= (getPfn ").append( cmd.getValueOfTagset() )
+					.append(") (getPfn ").append( ev.getValueOfTagset() ).append(")) ")
 					.append("(= (getVPN ").append( cmd.getVirtualAddress() )
 					.append(") (getVPN ").append( ev.getVirtualAddress() ).append(")))");
 				}					
-				postAssert( constraint.append(")").toString() );					
+				postAssert( constraint.append("))").toString() );					
 			}
 			else if ( tlbRanges.get(cmd) instanceof InitialTlbMiss )
 			{
 				// ищем только среди PFN\M
-				StringBuffer constraint = new StringBuffer("(or false ");
+				StringBuffer constraint = new StringBuffer("(=> (< (pfntype ")
+				.append( cmd.getTagset() ).append(") 2) (or false ");
 				for( int p = 0; p < dtlb.getJTLBSize(); p++ )
 				{
 					if ( dtlb.getDTLB().contains(p) )
@@ -691,7 +742,7 @@ public class Ranges
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
 						.append(" " ).append( r.getPFN0().longValue() ).append(") ")
-						.append( "(getPfn ").append( cmd.getTagset() ).append(")) ")
+						.append( "(getPfn ").append( cmd.getValueOfTagset() ).append(")) ")
 						.append("(= (getVPN ").append( cmd.getVirtualAddress() )
 						.append(") (mk-bv ").append( vpnLength ).append(" " )
 						.append( r.getVPNd2().longValue() * 2 ).append(")))");
@@ -700,18 +751,19 @@ public class Ranges
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
 						.append(" " ).append( r.getPFN1().longValue() ).append(") ")
-						.append( "(getPfn ").append( cmd.getTagset() ).append(")) ")
+						.append( "(getPfn ").append( cmd.getValueOfTagset() ).append(")) ")
 						.append("(= (getVPN ").append( cmd.getVirtualAddress() )
 						.append(") (mk-bv ").append( vpnLength ).append(" " )
 						.append( r.getVPNd2().longValue() * 2 + 1 ).append(")))");
 					}
 				}
-				postAssert( constraint.append(")").toString() );
+				postAssert( constraint.append("))").toString() );
 			}
 			else if ( tlbRanges.get(cmd) instanceof UnusefulTlbMiss )
 			{
 				// ищем среди M[m1..m2]
-				StringBuffer constraint = new StringBuffer("(or false ");
+				StringBuffer constraint = new StringBuffer("(=> (< (pfntype ")
+				.append( cmd.getTagset() ).append(") 2) (or false ");
 				for(
 						int p = ((UnusefulTlbMiss)tlbRanges.get(cmd)).getMinimumM() - 1;
 						p < ((UnusefulTlbMiss)tlbRanges.get(cmd)).getMaximumM();
@@ -737,7 +789,7 @@ public class Ranges
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
 						.append(" " ).append( r.getPFN0().longValue() ).append(") ")
-						.append( "(getPfn ").append( cmd.getTagset() ).append(")) ")
+						.append( "(getPfn ").append( cmd.getValueOfTagset() ).append(")) ")
 						.append("(= (getVPN ").append( cmd.getVirtualAddress() )
 						.append(") (mk-bv ").append( vpnLength ).append(" " )
 						.append( r.getVPNd2().longValue() * 2 ).append(")))");
@@ -746,38 +798,39 @@ public class Ranges
 					{
 						constraint.append("(=> (= (mk-bv ").append( pfnLength )
 						.append(" " ).append( r.getPFN1().longValue() ).append(") ")
-						.append( "(getPfn ").append( cmd.getTagset() ).append(")) ")
+						.append( "(getPfn ").append( cmd.getValueOfTagset() ).append(")) ")
 						.append("(= (getVPN ").append( cmd.getVirtualAddress() )
 						.append(") (mk-bv ").append( vpnLength ).append(" " )
 						.append( r.getVPNd2().longValue() * 2 + 1 ).append(")))");
 					}
 				}
-				postAssert( constraint.append(")").toString() );
+				postAssert( constraint.append("))").toString() );
 			}
 			else // tlbRanges.get(cmd) instanceof UsefulTlbMiss
 			{
 				// ищем среди M[m]
-				StringBuffer constraint = new StringBuffer("(or false ");
+				StringBuffer constraint = new StringBuffer("(=> (< (pfntype ")
+				.append( cmd.getTagset() ).append(") 2) (or false ");
 				TLBRow r = dtlb.getRow( ((UsefulTlbMiss)tlbRanges.get(cmd)).getM() - 1 );
 				// TODO отбор только в нужном сегменте
 				if ( dtlb.getPABITS() - pfnLength + 1 >= 30 )
 				{
 					if ( r.getVPNd2().intValue() != (int)Math.pow(2, dtlb.getSEGBITS()
 							- dtlb.getPABITS() + pfnLength) - 1 )
-						continue;
+						return;
 				}
 				else
 				{
 					//старшие 10 бит номера виртуальной страницы == 1023
 					if ( r.getVPNd2().shiftRight(30 - dtlb.getPABITS() + pfnLength).intValue()
 							!= 255 )
-						continue;
+						return;
 				}
 				if ( r.getMask() == pfnLength && r.getValid0() == 1 )
 				{
 					constraint.append("(=> (= (mk-bv ").append( pfnLength )
 					.append(" " ).append( r.getPFN0().longValue() ).append(") ")
-					.append( "(getPfn ").append( cmd.getTagset() ).append(")) ")
+					.append( "(getPfn ").append( cmd.getValueOfTagset() ).append(")) ")
 					.append("(= (getVPN ").append( cmd.getVirtualAddress() )
 					.append(") (mk-bv ").append( vpnLength ).append(" " )
 					.append( r.getVPNd2().longValue() * 2 ).append(")))");
@@ -786,17 +839,17 @@ public class Ranges
 				{
 					constraint.append("(=> (= (mk-bv ").append( pfnLength )
 					.append(" " ).append( r.getPFN1().longValue() ).append(") ")
-					.append( "(getPfn ").append( cmd.getTagset() ).append(")) ")
+					.append( "(getPfn ").append( cmd.getValueOfTagset() ).append(")) ")
 					.append("(= (getVPN ").append( cmd.getVirtualAddress() )
 					.append(") (mk-bv ").append( vpnLength ).append(" " )
 					.append( r.getVPNd2().longValue() * 2 + 1 ).append(")))");
 				}
-				postAssert( constraint.append(")").toString() );
+				postAssert( constraint.append("))").toString() );
 			}
 		}
 	}
 
-	private void loadstore2Constraints(List<MemoryCommand> commands) {
+	private void loadstore2Constraints0(List<MemoryCommand> commands) {
 		if ( commands.get(1).isLOAD() )
 		{
 			// p1 = p2 -> value1 = value2
@@ -827,6 +880,22 @@ public class Ranges
 				.append(") (getCacheOffset ").append( commands.get(1).getVirtualAddress() )
 				.append("))) (= ").append( value1 ).append(" " ).append( value2 )
 				.append("))").toString() );
+		}
+	}
+
+	private void loadstore2Constraints1(MemoryCommand command1, MemoryCommand command2)
+	{
+		if ( command2.isLOAD() )
+		{
+			// p1 = p2 -> value1 = value2
+			postAssert( new StringBuffer( "(=> (and (= ")
+				.append( command1.getTagset() ).append(" ")
+				.append( command2.getTagset() )
+				.append(") (= ")
+				.append( "(getCacheOffset " ).append( command1.getVirtualAddress() )
+				.append(") (getCacheOffset ").append( command2.getVirtualAddress() )
+				.append("))) (= ").append( command1.getValue() ).append(" " )
+				.append( command2.getValue() ).append("))").toString() );
 		}
 	}
 

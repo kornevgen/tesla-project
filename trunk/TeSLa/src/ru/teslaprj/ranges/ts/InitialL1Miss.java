@@ -268,7 +268,7 @@ public class InitialL1Miss extends L1Range
 		
 		StringBuffer constraint = new StringBuffer("(or ")
 		.append( "(and (= 1 (pfntype ").append(getCommand().getTagset()).append("))");
-		for( long l : getContext().getLinterM() )
+		for( long l : getContext().getLinterPFNminusM() )
 		{
 			constraint.append("(/= ").append(getCommand().getValueOfTagset() )
 			.append(" (mk-bv ").append( getContext().getTagsetLength() )
@@ -307,18 +307,17 @@ public class InitialL1Miss extends L1Range
 		// constraints on previous evictings from TLB
 		for( MemoryCommand cmd : range.getEvictings() )
 		{
-			constraint = new StringBuffer("(=> (= (pfntype ")
-			.append( getCommand().getTagset() ).append(") (pfntype ")
-			.append( cmd.getTagset() ).append(")) (or false ")
-			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
-			.append(") 3) (not (pfneq ").append( getCommand().getTagset() )
-			.append(" " ).append( cmd.getTagset()).append(")))")
-			.append( "(and (= (pfntype ").append( getCommand().getTagset() )
-			.append(") 1) (/= (getPfn ").append( getCommand().getValueOfTagset() )
-			.append(") (getPfn ").append(cmd.getValueOfTagset()).append(")))")
-			.append("))");
+			getContext().postAssert( new StringBuffer("(=> (and (= (pfntype " )
+			.append( cmd.getTagset()).append(") 1) (= (pfntype ")
+			.append( getCommand().getTagset() ).append(") 1)) (/= (getPfn ")
+			.append( cmd.getValueOfTagset() ).append(") (getPfn ")
+			.append( getCommand().getValueOfTagset() ).append(")))").toString());
 			
-			getContext().postAssert( constraint.toString() );
+			getContext().postAssert( new StringBuffer("(=> (and (= (pfntype " )
+			.append( getCommand().getTagset()).append(") 3) (> (pfntype " )
+			.append( cmd.getTagset() ).append(") 1)) (not (pfneq ")
+			.append( getCommand().getTagset() ).append(" ")
+			.append( cmd.getTagset()).append(")))").toString() );
 		}
 	}
 
