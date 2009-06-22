@@ -112,7 +112,7 @@ public class Solver
 //			Ranges ranges = it.next();
 //			
 //			try
-//			{
+//			{// эта процедура реализована только для двухинструктных шаблонов!
 //				if ( ranges.isConsistency0() == null )
 //				{
 //					System.out.println("inconsistent :(");
@@ -127,36 +127,36 @@ public class Solver
 //			
 //			System.out.println("consistent!");
 //			return true;
-//			
-////			File tmp;
-////			CompoundTerm result = null;
-////			try
-////			{
-////				String moduleName = createTempModuleName();
-////				tmp = File.createTempFile(moduleName, ".ecl", libPath);
-////				moduleName = tmp.getName();
-////				moduleName = moduleName.substring(0, moduleName
-////						.length() - 4);
-////
-////				// TODO построение прологовской программы
-////				// из каждого тегсета транслируется его ограничение
-////				writeFile(tmp, newTranslate(scheme, moduleName, cacheState, tlb) );
-////
-////				// run ECLiPSe and get results
-////				result = callECLiPSe(tmp, moduleName, scheme
-////						.getDefinedNames(), cacheState);
-////
-////				// TODO print current result with current newCount
-////
-////				// analyze results
-////				return generateValues( result, scheme, cacheState ) ;
-//////					return new Verdict(new HashMap<Definition, BigInteger>(), null );
-////
-////			}
-////			finally
-////			{
-////				if (tmp != null) tmp.delete();
-////			}
+			
+//			File tmp;
+//			CompoundTerm result = null;
+//			try
+//			{
+//				String moduleName = createTempModuleName();
+//				tmp = File.createTempFile(moduleName, ".ecl", libPath);
+//				moduleName = tmp.getName();
+//				moduleName = moduleName.substring(0, moduleName
+//						.length() - 4);
+//
+//				// TODO построение прологовской программы
+//				// из каждого тегсета транслируется его ограничение
+//				writeFile(tmp, newTranslate(scheme, moduleName, cacheState, tlb) );
+//
+//				// run ECLiPSe and get results
+//				result = callECLiPSe(tmp, moduleName, scheme
+//						.getDefinedNames(), cacheState);
+//
+//				// TODO print current result with current newCount
+//
+//				// analyze results
+//				return generateValues( result, scheme, cacheState ) ;
+////					return new Verdict(new HashMap<Definition, BigInteger>(), null );
+//
+//			}
+//			finally
+//			{
+//				if (tmp != null) tmp.delete();
+//			}
 //		}
 		
 		/// все построенные системы оказались несовместными -- пытаемся что-то добавить в TLB
@@ -203,7 +203,7 @@ public class Solver
 				System.out.println("inconsistent :(");
 				continue;
 			}
-			
+				
 			System.out.println("consistent!");
 			return true;
 		}

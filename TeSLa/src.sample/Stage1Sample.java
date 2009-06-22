@@ -262,6 +262,7 @@ public class Stage1Sample
 							new TLBMiss(dtlb.size()),
 							true
 						);
+					command1.setValue("x0");
 					scheme.addCommand( command1 );
 					
 					MemoryCommand command2 = new MemoryCommand(
@@ -273,6 +274,7 @@ public class Stage1Sample
 							new TLBMiss(dtlb.size()),
 							true
 						);
+					command2.setValue("x1");
 					scheme.addCommand( command2 );
 					
 					MemoryCommand command3 = new MemoryCommand(
@@ -284,6 +286,7 @@ public class Stage1Sample
 							new TLBHit(),
 							true
 						);
+					command3.setValue("x2");
 					scheme.addCommand( command3 );
 					
 					MemoryCommand command4 = new MemoryCommand(
@@ -295,6 +298,7 @@ public class Stage1Sample
 							new TLBMiss(dtlb.size()),
 							true
 						);
+					command4.setValue("x3");
 					scheme.addCommand( command4 );
 					
 					MemoryCommand command5 = new MemoryCommand(
@@ -306,6 +310,7 @@ public class Stage1Sample
 							new TLBHit(),
 							true
 						);
+					command5.setValue("x4");
 					scheme.addCommand(command5);
 					
 					//TLB build
