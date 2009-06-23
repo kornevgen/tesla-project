@@ -614,6 +614,12 @@ public class UsefulL1Miss extends L1Range
 			.append( getCommand().getTagset() ).append(" ")
 			.append(cmd.getTagset()).append(")").toString() );
 		}
+		for( MemoryCommand cmd: previousHits )
+		{
+			getContext().postAssert( new StringBuffer("(/= ")
+			.append( getCommand().getTagset() ).append(" ")
+			.append(cmd.getTagset()).append(")").toString() );
+		}
 		
 		StringBuffer flagsSum = new StringBuffer();
 		for( MemoryCommand cmd : previousMisses )
@@ -654,6 +660,7 @@ public class UsefulL1Miss extends L1Range
 		getContext().postAssert( constraint.append(")").toString() );
 
 		// usefulness constraints
+		//TODO!!! добавить сюда полезность последнего miss 
 		if ( allowedPfntypes.contains(0) )
 		{
 			constraint = new StringBuffer("(=> (= (pfntype ")
@@ -753,7 +760,7 @@ public class UsefulL1Miss extends L1Range
 		}
 		
 		getContext().postAssert( new StringBuffer( "(>= (+ 0 " ).append( flagsSum ).append(") ")
-				.append( w - m ).append(" )").toString() );	
+				.append( w - m + 1 ).append(" )").toString() );	
 	}
 
 	@Override
