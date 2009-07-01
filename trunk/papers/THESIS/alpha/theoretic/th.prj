@@ -1,10 +1,10 @@
-275 Patch Control
+247 Patch Control
 
 0
 0
 1
 theor.tex
-4
+2
 2
 0
 
@@ -15,18 +15,9 @@ theor.tex
 
 theor.tex
 TeX
-403714043 0 -1 21426 -1 21426 154 154 667 506 0 22 493 -1 -1 0 0 23 -1 -1 23 1 0 21426 -1   0
+403714043 0 1192 12 1195 33 154 154 667 506 0 278 579 -1 -1 0 0 24 0 0 24 1 0 33 1195   0
 theor.bib
 BibTeX
 1049586 0 7 95 8 1 66 87 898 658 0 22 136 -1 -1 0 0 1 11 11 1 1 0 1 8   0
-theor.bbl
-DATA
-273678578 7 7 84 7 1 88 116 682 396 1 70 119 -1 -1 0 0 -1 -1 -1 -1 1 0 1 7   0
-C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\Programmirovanie\programmirovanie.tex
-TeX
-269496315 1 -1 2506 -1 2448 44 58 876 629 0 22 782 -1 -1 0 0 -1 -1 -1 -1 1 0 2448 -1   0
 
 *theor.tex
->
-*theor.bib
-<
