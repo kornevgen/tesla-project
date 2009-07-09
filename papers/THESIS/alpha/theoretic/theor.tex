@@ -6,6 +6,12 @@
 \usepackage{graphicx}
 \usepackage{amsthm}
 \usepackage{amssymb}
+\usepackage{lscape}
+\usepackage{makecell}
+\usepackage{multirow}
+%\usepackage{bigstrut}
+\usepackage{hhline}
+%\usepackage{longtable}
 
 \title{Основная теоретическая часть диссертации}
 \author{}
@@ -1559,9 +1565,14 @@ $$
 
 \paragraph{Кэш-попадание -- первый случай}
 
-Совместное рассмотрение кэш-попадание и тестовой ситуации в буфере TLB дает систему уравнений, в котором присутствует ограничение вида $x \in \mbox{множество констант}$. Будем называть это множество \emph{доменом} $D$ переменной. Примеры доменов: $L \cap [M]$, $L \cap [PFN\setminus M]$.
+Совместное рассмотрение кэш-попадание и тестовой ситуации в буфере
+TLB дает систему уравнений, в котором присутствует ограничение вида
+$x \in \mbox{множество констант}$. Будем называть это множество
+\emph{доменом} $D$ переменной. Примеры доменов: $L \cap [M]$, $L
+\cap [PFN\setminus M]$.
 
-Исходная система уравнений (уравнения, описывающие тестовую ситуацию в буфере TLB, опущены в виду их малого размера):
+Исходная система уравнений (уравнения, описывающие тестовую ситуацию
+в буфере TLB, опущены в виду их малого размера):
 
 \begin{equation}\label{hit_system}
 \left\{
@@ -1579,13 +1590,18 @@ $$
 инструкций}.
 
 Перебирая элементы домена $D$ (которых обычно существенно меньше,
-чем элементов начального состояния кэш-памяти $L$!), назовем очередной элемент $\lambda_\delta$ ($\delta$ -- номер этого элемента в наборе в порядке <<устаревания>>
-согласно LRU). Заметим, если тегсет $x$ до этого не встречался в
-тестовом шаблоне, то, чтобы он там оставался, нужно иметь не более
-$w - \delta$ полезных инструкций ($w$ -- ассоциативность
-кэш-памяти). Если же тегсет $x$ встречается в тестовом шаблоне до
-данной инструкции, то, чтобы он оставался в кэш-памяти, нужно иметь
-не более $w$ полезных инструкций (инструкция с этим тегсетом помещает $x$ на первое место в наборе, следующие инструкции будут сдвигать его к концу, вытеснения не произойдет, если полезных инструкций меньше чем $w$). Осталось предложить формулу для функций полезности.
+чем элементов начального состояния кэш-памяти $L$!), назовем
+очередной элемент $\lambda_\delta$ ($\delta$ -- номер этого элемента
+в наборе в порядке <<устаревания>> согласно LRU). Заметим, если
+тегсет $x$ до этого не встречался в тестовом шаблоне, то, чтобы он
+там оставался, нужно иметь не более $w - \delta$ полезных инструкций
+($w$ -- ассоциативность кэш-памяти). Если же тегсет $x$ встречается
+в тестовом шаблоне до данной инструкции, то, чтобы он оставался в
+кэш-памяти, нужно иметь не более $w$ полезных инструкций (инструкция
+с этим тегсетом помещает $x$ на первое место в наборе, следующие
+инструкции будут сдвигать его к концу, вытеснения не произойдет,
+если полезных инструкций меньше чем $w$). Осталось предложить
+формулу для функций полезности.
 
 \emph{Функцией полезности для тегсета $x_i$ инструкции с
 кэш-попаданием} является $u(x_i) \equiv (x_i \in \{
@@ -1618,7 +1634,7 @@ $$a_i = \left\{
                         x_i \in \{
 \lambda_{\delta+1}, ..., \lambda_w\} \wedge x_i \notin [x_{i+1},
 ..., x_n]_{hit}, \mbox{если}~x_i~\mbox{дает кэш-попадание} \\
-                        R(y) = R( \lambda_\delta ) \wedge y \notin
+                        R(x_i) = R( \lambda_\delta ) \wedge x_i \notin
 [x_{i+1}, ..., x_n]_{hit}, \mbox{если}~x_i~\mbox{дает кэш-промах}\\
                         \end{array}
                         \right.$$
@@ -1631,7 +1647,7 @@ $$b_i = \left\{
 \lambda_{\delta+1}, ..., \lambda_w\} \wedge x_i \notin [x_{i+1},
 ..., x_n]_{hit} \wedge \lambda_\delta \notin [x_{i+1},
 ..., x_n]_{hit}, \mbox{если}~x_i~\mbox{дает кэш-попадание} \\
-                        R(y) = R( \lambda_\delta ) \wedge y \notin
+                        R(x_i) = R( \lambda_\delta ) \wedge x_i \notin
 [x_{i+1}, ..., x_n]_{hit} \wedge \lambda_\delta \notin [x_{i+1},
 ..., x_n]_{hit}, \mbox{если}~x_i~\mbox{дает кэш-промах}\\
                         \end{array}
@@ -1857,15 +1873,141 @@ $$
 //TODO
 \end{proof}
 
-\subsubsection{Сводная таблица систем уравнений для тестовых
-ситуаций в кэш-памяти, использующих функции полезности}
-
+\begin{landscape}
+\begin{table}
 \begin{tabular}{|c|c|c|c|c|c|}
-\hline  & случай & переменная перебора & система &
+\hline  & \centering случай &
+\begin{tabular}{c}переменная\\перебора\end{tabular} & система &
 \begin{tabular}{c}функция полезности\\для кэш-попадания\end{tabular} &
 \begin{tabular}{c}функция полезности\\для кэш-промаха\end{tabular} \\
-\hline \hline
+\hline \hline \multirow{10}{*}{\rotatebox{90}{кэш-попадание}} &
+\makecell[c{p{0.35\textwidth}}]{тегсет находится в начальном
+состоянии кэш-памяти и к нему нет обращений до данной инструкции} &
+$\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \notin \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) < w - \delta
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x_i \in \{ \lambda_{\delta+1}, ..., \lambda_w\}$\\
+$\wedge~x_i \notin [x_{i+1}, ..., x_n]_{hit}$
 \end{tabular}
+&
+\begin{tabular}{c}
+$R(x_i) = R(x) \wedge$\\
+$x_i \notin [x_{i+1}, ..., x_n]_{hit}$
+\end{tabular}
+\\ \hhline{~|-----}
+& \makecell[c{p{0.35\textwidth}}]{тегсет находится в начальном
+состоянии кэш-памяти и к нему есть обращение до данной инструкции} &
+$\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \in \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) < w
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~x_i \in \{ \lambda_{\delta+1}, ..., \lambda_w\}$\\
+$\wedge~x_i \notin [x_{i+1}, ..., x_n]_{hit}$\\
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)~\wedge$\\
+$x_i \notin [x_{i+1}, ..., x_n]_{hit}$
+\end{tabular}
+\\  \hhline{~|-----}
+& \makecell[c{p{0.35\textwidth}}]{тегсет был внесен одним из
+кэш-промахов и с того момента не вытеснен} & -- &
+$\left\{\begin{array}{l} x \in \{y_1, ..., y_m\}\\
+\sum\limits^n_{i=1} u(x_i) < w
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)~\wedge$\\
+$\sum\limits^{i-1}_{j=1} c_i(x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin \{x_j, ..., x_i\}$\\
+$\wedge~x_i \in \{x_j, ..., x_{i-1}\})$\\
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hline \hline \multirow{20}{*}{\rotatebox{90}{кэш-промах}}
+& \makecell[c{p{0.35\textwidth}}]{вытесняющий тегсет встречается
+впервые} & -- &
+$\left\{\begin{array}{l} x \notin D\\
+x \notin \{x_1, ..., x_n\}\\
+\end{array}\right.
+$ & -- & -- \\ \hhline{~|-----} &
+\makecell[c{p{0.35\textwidth}}]{вытесняемый тегсет не находился в
+начальном состоянии кэш-памяти, а был внесен одной из инструкций
+шаблона} & -- & $\left\{\begin{array}{l} x \in \{y_1, ..., y_m\}\\\
+\sum\limits^n_{i=1} u(x_i) \geqslant w\\
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)~\wedge$\\
+$\sum\limits_{j=1}^{i-1}c_i(x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin\{x_j, ..., x_i\}$\\
+$\wedge~x_i\in\{x_j, ..., x_{i-1}\})$
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\  \hhline{~|-----} &
+\makecell[c{p{0.35\textwidth}}]{вытесняемый тегсет находился в
+начальном состоянии кэш-памяти и к нему не было обращений в шаблоне}
+& $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \notin \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) \geqslant w - \delta + 1\\
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x_i \in\{\lambda_{\delta+1}, ..., \lambda_w\}$\\
+$\wedge~x \notin \{x_1, ..., x_{i-1}\}$\\
+\end{tabular}
+&
+\begin{tabular}{c}
+$R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hhline{~|-----} &
+\makecell[c{p{0.35\textwidth}}]{вытесняемый тегсет находился в
+начальном состоянии кэш-памяти и к нему было обращение в шаблоне} &
+$\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \in \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) \geqslant w\\
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)~\wedge$\\
+$\sum\limits_{j=1}^{i-1}c_i(x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin\{x_j, ..., x_i\}$\\
+$\wedge~x_i\in\{x_j, ..., x_{i-1}\})$
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hline
+\end{tabular}
+\caption{Таблица систем уравнений для тестовых ситуаций в
+кэш-памяти, использующих функции полезности}
+\end{table}
+\end{landscape}
+
+
 
 
 %Дополнительным преимуществом использования функций полезности
