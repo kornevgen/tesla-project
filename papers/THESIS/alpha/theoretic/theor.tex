@@ -1903,13 +1903,9 @@ x \notin \{x_1, ..., x_n\}\\
 $ &
 \begin{tabular}{c}
 $x_i \in \{ \lambda_{\delta+1}, ..., \lambda_w\}$\\
-$\wedge~x_i \notin [x_{i+1}, ..., x_n]_{hit}$
+$\wedge~x_i \notin \{x_1, ..., x_{i-1}\}$
 \end{tabular}
-&
-\begin{tabular}{c}
-$R(x_i) = R(x) \wedge$\\
-$x_i \notin [x_{i+1}, ..., x_n]_{hit}$
-\end{tabular}
+& $R(x_i) = R(x)$
 \\ \hhline{~|-----}
 & \makecell[c{p{0.35\textwidth}}]{тегсет находится в начальном
 состоянии кэш-памяти, к нему есть обращение до данной инструкции и
@@ -1922,13 +1918,14 @@ $ &
 \begin{tabular}{c}
 $x \notin \{x_i, ..., x_n\}$\\
 $\wedge~x_i \in \{ \lambda_{\delta+1}, ..., \lambda_w\}$\\
-$\wedge~x_i \notin [x_{i+1}, ..., x_n]_{hit}$\\
+$\wedge~\sum_{j=1}^{i-1} c_i (x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin \{x_j, ..., x_i\}$\\
+$\wedge~x_i \in \{x_j, ..., x_{i-1}\})$\\
 \end{tabular}
 &
 \begin{tabular}{c}
 $x \notin \{x_i, ..., x_n\}$\\
-$\wedge~R(x_i) = R(x)~\wedge$\\
-$x_i \notin [x_{i+1}, ..., x_n]_{hit}$
+$\wedge~R(x_i) = R(x)$\\
 \end{tabular}
 \\  \hhline{~|-----}
 & \makecell[c{p{0.35\textwidth}}]{тегсет был внесен одним из
@@ -1984,7 +1981,7 @@ x \notin \{x_1, ..., x_n\}\\
 $ &
 \begin{tabular}{c}
 $x_i \in\{\lambda_{\delta+1}, ..., \lambda_w\}$\\
-$\wedge~x \notin \{x_1, ..., x_{i-1}\}$\\
+$\wedge~x_i \notin \{x_1, ..., x_{i-1}\}$\\
 \end{tabular}
 &
 \begin{tabular}{c}
