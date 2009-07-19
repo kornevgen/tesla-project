@@ -2145,11 +2145,10 @@ $w$ инструкций обращения к памяти. Очевидно, что любой короткий
 \begin{tabular}{c}функция полезности\\для кэш-попадания\end{tabular} &
 \begin{tabular}{c}функция полезности\\для кэш-промаха\end{tabular} \\
 \hline \hline \multirow{4}{*}{\rotatebox{90}{кэш-попадание}} &
-\makecell[c{p{0.35\textwidth}}]{тегсет находится в начальном
-состоянии кэш-памяти, к нему нет обращений до данной инструкции и он
-всё ещё не вытеснен} & $\lambda_\delta \in D$ &
+\makecell[c{p{0.2\textwidth}}]{тегсет находится в начальном
+состоянии кэш-памяти и он всё ещё не вытеснен} &
+$\lambda_\delta \in D$ &
 $\left\{\begin{array}{l} x = \lambda_\delta\\
-x \notin \{x_1, ..., x_n\}\\
 \sum\limits^n_{i=1} u(x_i) \leqslant w - \delta
 \end{array}\right.
 $ &
@@ -2159,26 +2158,19 @@ $\wedge~x_i \notin \{x_1, ..., x_{i-1}\}$
 \end{tabular}
 & $R(x_i) = R(x)$
 \\ \hhline{~|-----}
-& \makecell[c{p{0.35\textwidth}}]{тегсет находится в начальном
-состоянии кэш-памяти, к нему есть обращение до данной инструкции и
-он всё ещё не вытеснен} & $\lambda_\delta \in D$ &
-$\left\{\begin{array}{l} x = \lambda_\delta\\
-x \in \{x_1, ..., x_n\}\\
-\end{array}\right.
-$ & -- & --
-\\  \hhline{~|-----}
-& \makecell[c{p{0.35\textwidth}}]{тегсет был внесен одним из
-кэш-промахов} & -- & $x \in \{y_1, ..., y_m\}$ & -- & --
+& \makecell[c{p{0.2\textwidth}}]{тегсет уже встречался в шаблоне}
+& -- &
+$x \in \{x_1, ..., x_n\}$ & -- & --
 \\ \hline \hline \multirow{6}{*}{\rotatebox{90}{кэш-промах}}
-& \makecell[c{p{0.35\textwidth}}]{тегсет встречается
+& \makecell[c{p{0.2\textwidth}}]{тегсет встречается
 впервые} & -- &
 $\left\{\begin{array}{l} x \notin D\\
 x \notin \{x_1, ..., x_n\}\\
 \end{array}\right.
 $ & -- & -- \\ \hhline{~|-----} &
-\makecell[c{p{0.35\textwidth}}]{тегсет находился в
+\makecell[c{p{0.2\textwidth}}]{тегсет находился в
 начальном состоянии кэш-памяти и был вытеснен}
-& $\lambda_\delta \in D$ &
+& $\begin{array}{c}\lambda_\delta \in D,\\\delta \geqslant w-n+1\end{array}$ &
 $\left\{\begin{array}{l} x = \lambda_\delta\\
 x \notin \{x_1, ..., x_n\}\\
 \sum\limits^n_{i=1} u(x_i) \geqslant w - \delta + 1\\
