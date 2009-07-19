@@ -1,11 +1,11 @@
-247 Patch Control
+275 Patch Control
 
 0
 0
 1
 theor.tex
-4
-0
+1
+1
 0
 
 
@@ -15,15 +15,9 @@ theor.tex
 
 theor.tex
 TeX
-403714043 0 538 14 2580 24 154 154 667 506 0 206 749 -1 -1 0 0 36 0 0 36 1 0 24 2580   0
-C:\Documents and Settings\kornevgen\Desktop\tesla.2008.09.24\papers\THESIS\alpha\1.review\review.tex
-TeX
-269496315 0 19 21 19 24 44 44 819 620 0 206 324 -1 -1 0 0 -1 -1 -1 -1 1 0 24 19   0
-C:\texmf\tex\xelatex\fontspec\fontspec.sty
-TeX:DTX:UNIX
-273788923 7 17 1 17 14 44 44 929 414 0 126 171 -1 -1 0 0 3 0 0 3 1 0 14 17   0
-theor.aux
-DATA
-273678578 7 2 1 2 26 44 44 667 190 1 278 35 -1 -1 0 0 -1 -1 -1 -1 1 0 26 2   0
+420491259 0 -1 90045 -1 90046 22 29 572 405 0 174 323 -1 -1 0 0 35 -1 -1 35 1 0 90046 -1   0
 
 *theor.tex
+>
+*../thesis.bib
+<
