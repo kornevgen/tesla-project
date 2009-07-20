@@ -20,7 +20,20 @@
 		<situation>f2
 			<memory>
 				<cache id="l1Hit" />
-				<microtlb id="mtlbMiss" />
+				<microtlb id="mtlbHit" />
+			</memory>
+		</situation>
+	</instruction>
+	
+	<instruction>
+		<name>LD</name>
+		<argument>y</argument>
+		<argument>x</argument>
+		<argument>c</argument>
+		<situation>f2
+			<memory>
+				<cache id="l1Hit" />
+				<microtlb id="mtlbHit" />
 			</memory>
 		</situation>
 	</instruction>
