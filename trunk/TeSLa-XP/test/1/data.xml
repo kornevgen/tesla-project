@@ -1,0 +1,25 @@
+<data>
+	<cache level="1" mode="DATA">
+		<set value="0">
+			<tag value="0" />
+			<tag value="92345" />
+			<tag value="2345" />
+			<tag value="2234" />
+		</set>
+		<set value="1">
+			<tag value="23546" />
+			<tag value="12451" />
+			<tag value="46735" />
+			<tag value="46577" />
+		</set>
+	</cache>
+	
+	<tlb>
+		<microtlb>
+			<pfn value="0" />
+			<pfn value="231" />
+			<pfn value="18" />
+			<pfn value="179" />
+		</microtlb>
+	</tlb>
+</data>
