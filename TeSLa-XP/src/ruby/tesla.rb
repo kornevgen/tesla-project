@@ -1,3 +1,5 @@
+### эта версия корректно работает только со случаями Cached >< Mapped!
+
 require "rexml/document"
 
 class DataBuilder
@@ -28,20 +30,10 @@ class DataBuilder
     @LinterPFN
   end
   
-  def getTail(lambda,delta)
-    setvalue = lambda % 128
-    
-    tail = Array.new 
-    
-    dataxml = REXML::Document.new File.new(ARGV[1])
-    dataxml.elements.each("data/cache/set") do |set|
-      if set.attributes["value"] == setvalue.to_s
-        tail = tail + set.elements.values_at(delta..@L1ASSOC-1).collect{ |tag|
-            tag.attribute["value"].to_i * 128 + setvalue.to_i }
-      end
-    end
+  def L
+    @tagsets
   end
-
+  
   def M
      @pfns
   end
@@ -49,7 +41,19 @@ class DataBuilder
   def getMTail(delta)
     @pfns.values_at(delta+1..@pfns.length-1)
   end
+  
+  def LinterM
+    #TODO
+  end
+  
+  def LinterPFNminusM
+    #TODO
+  end
 end
+
+#TODO упростить реализацию тестовых ситуаций вначале с учетом добавленных методов
+
+#TODO реализовать tlb_is_displaced и парный метод
 
 class Solver
 
@@ -177,27 +181,7 @@ def l1Hit_mtlbHit_part4(previous_tagsets, current_tagset)
       collect{|lambda,delta|
         delta_T = @pfns.index(lambda/128)
         "(and (= #{current_tagset} bv#{lambda}[#{@TAGSETLEN}])" +
-            (if delta > @L1ASSOC - previous_tagsets.length
-                "(>= #{@L1ASSOC - delta} (+ 0 " +
-                      (0..previous_tagsets.length-1).collect{|i|
-                      if @l1Hits.include? previous_tagsets[i]
-                      "(and " +
-                          "(or " +
-                          @data_builder.getTail(lambda,delta).collect{|l|
-                            "(= #{previous_tagsets[i]} bv#{l}[#{@PFNLEN}]) "
-                          }.join +
-                          ")" +
-                          
-                          previous_tagsets.values_at(0..i-1).collect{|t|
-                            "(/= #{previous_tagsets[i]} #{t} ) "
-                          }.join +
-                      ")"
-                    else
-                      "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset} )"
-                    end }.collect{|f| "(ite #{f} 1 0)"}.join +                     
-                "))"
-            else ""  
-            end) +
+            cache_tagset_is_not_displaced_yet(previous_tagsets, current_tagset, lambda, delta) +
             (if delta_T > @TLBASSOC - previous_tagsets.length
                 "(>= #{@TLBASSOC - delta_T - previous_tagsets.length + @mtlbHits.length} (+ 0 " +
                       (0..previous_tagsets.length-1).collect{|i| if @mtlbHits.include? previous_tagsets[i]
@@ -222,13 +206,220 @@ def l1Hit_mtlbHit_part4(previous_tagsets, current_tagset)
 end
 
 def l1Hit_mtlbHit(previous_tagsets, current_tagset)
+  puts ":assumption"
+  puts "(or false "
+  puts l1Hit_mtlbHit_part1 previous_tagsets, current_tagset
+  puts l1Hit_mtlbHit_part2 previous_tagsets, current_tagset
+  puts l1Hit_mtlbHit_part3 previous_tagsets, current_tagset
+  puts l1Hit_mtlbHit_part4 previous_tagsets, current_tagset
+  puts ")"
+end
+
+def l1Hit_mtlbMiss_part1(previous_tagsets, current_tagset)
+  "(or false " +
+      @data_builder.LinterPFNminusM.collect{|lambda,delta|
+        "(and " +
+              "(= #{current_tagset} bv#{lambda}[#{@TAGSETLEN}])" +
+              cache_tagset_is_not_displaced_yet(previous_tagsets, current_tagset, lambda, delta) +
+        ")" }.join +
+  ")" 
+end
+
+def l1Hit_mtlbMiss_part2(previous_tagsets, current_tagset)
+  "(or false " +
+      @data_builder.LinterM.collect{|lambda,delta|
+        "(and " +
+              "(= #{current_tagset} bv#{lambda}[#{@TAGSETLEN}])" +
+              cache_tagset_is_not_displaced_yet(previous_tagsets, current_tagset, lambda, delta) +
+              tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, lambda/128) +
+        ")" }.join +
+  ")" 
+end
+
+
+def cache_tagset_is_not_displaced_yet(previous_tagsets, current_tagset, lambda, delta)
+          if delta > @L1ASSOC - previous_tagsets.length
+              "(>= #{@L1ASSOC - delta} (+ 0 " +
+                    (0..previous_tagsets.length-1).collect{|i|
+                        if @l1Hits.include? previous_tagsets[i]
+                            "(and " +
+                                "(or " + @data_builder.L.
+                                            select{|l,d| l%128 == lambda%128 }.
+                                            select{|l,d| d > delta }.
+                                            collect{|l,d|
+                                         "(= #{previous_tagsets[i]} bv#{l}[#{@TAGSETLEN}]) "
+                                    }.join + ")" +
+                                
+                                previous_tagsets.values_at(0..i-1).collect{|t|
+                                  "(/= #{previous_tagsets[i]} #{t} ) "
+                                }.join +
+                            ")"
+                        else
+                          "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset} )"
+                        end }.collect{|f| "(ite #{f} 1 0)"}.join +
+              "))"
+          else
+            " true"
+          end
+end
+
+def cache_tagset_is_displaced_already(previous_tagsets, current_tagset, lambda, delta)
+          if delta > @L1ASSOC - previous_tagsets.length
+              "(< #{@L1ASSOC - delta} (+ 0 " +
+                    (0..previous_tagsets.length-1).collect{|i|
+                        if @l1Hits.include? previous_tagsets[i]
+                            "(and " +
+                                "(or " + @data_builder.L.
+                                            select{|l,d| l%128 == lambda%128 }.
+                                            select{|l,d| d > delta }.
+                                            collect{|l,d|
+                                         "(= #{previous_tagsets[i]} bv#{l}[#{@TAGSETLEN}]) "
+                                    }.join + ")" +
+                                
+                                previous_tagsets.values_at(0..i-1).collect{|t|
+                                  "(/= #{previous_tagsets[i]} #{t} ) "
+                                }.join +
+                            ")"
+                        else
+                          "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset} )"
+                        end }.collect{|f| "(ite #{f} 1 0)"}.join +                     
+              "))"
+          else
+            " false"
+          end
+end
+
+def l1Hit_mtlbMiss(previous_tagsets, tagset)
+  previous_tagsets.each{|t|
+    puts ":assumption"
+    puts "(= bit0 (bvcomp #{getRegion t} #{getRegion tagset}))"
+  }
   
   puts ":assumption"
   puts "(or false "
-  puts "#{l1Hit_mtlbHit_part1 previous_tagsets, current_tagset}"
-  puts "#{l1Hit_mtlbHit_part2 previous_tagsets, current_tagset}"
-  puts "#{l1Hit_mtlbHit_part3 previous_tagsets, current_tagset}"
-  puts "#{l1Hit_mtlbHit_part4 previous_tagsets, current_tagset}"
+  puts l1Hit_mtlbMiss_part1 previous_tagsets, tagset
+  puts l1Hit_mtlbMiss_part2 previous_tagsets, tagset
+  puts ")"
+end
+
+def l1Miss_mtlbHit_part1 previous_tagsets, tagset
+  "(and " + 
+      @data_builder.LinterM.collect{|lambda,delta|
+          " (/= #{tagset} bv#{lambda}[#{@TAGSETLEN}])"
+      }.join +
+      
+      "(or " + @data_builder.M.collect{|m|
+          "(and " +
+              "(= #{getRegion tagset} bv#{m}[#{@PFNLEN}])" +
+              tlb_pfn_is_not_displaced_yet(previous_tagsets, tagset, m) +
+          ")"
+      }.join + ")" +
+  ")"
+end
+
+def l1Miss_mtlbHit_part2 previous_tagsets, tagset
+  "(and " +
+      @data_builder.LinterPFN.collect{|lambda,delta|
+          "(/= #{tagset} bv#{lambda}[#{@TAGSETLEN}])"
+      }.join +
+      
+      "(or " + previous_tagsets.collect{|prev_tagset|
+          "(= bit0 (bvcomp #{getRegion tagset} #{getRegion prev_tagset}))"
+      }.join + ")" +
+  ")"
+end
+
+def l1Miss_mtlbHit_part3 previous_tagsets, tagset
+  "(or false " +
+      @data_builder.LinterM.collect{|lambda,delta|
+          "(and " +
+                "(= #{tagset} bv#{lambda}[#{@TAGSETLEN}])" +
+                cache_tagset_is_displaced_already(previous_tagsets, tagset, lambda, delta) +
+                tlb_pfn_is_not_displaced_yet(previous_tagsets, tagset, lambda/128) +
+          ")"
+      } + ")"
+end
+
+def l1Miss_mtlbHit_part4 previous_tagsets, tagset
+  "(or false " +
+      @data_builder.LinterPFN.collect{|lambda,delta|
+          "(and " +
+                "(= #{tagset} bv#{lambda}[#{@TAGSETLEN}])" +
+                cache_tagset_is_displaced_already(previous_tagsets, tagset, lambda, delta) +
+                "(or " + previous_tagsets.collect{|prev_tagset|
+                          "(= bit0 (bvcomp #{getRegion tagset} #{getRegion prev_tagset}))"
+                          }.join + ")" +
+          ")"
+      } + ")"
+end
+
+def l1Miss_mtlbMiss_part1 previous_tagsets, tagset
+  "(and true " + 
+      @data_builder.LinterPFNminusM.collect{|lambda,delta|
+          " (/= #{tagset} bv#{lambda}[#{@TAGSETLEN}])"
+      }.join + ")"
+end
+
+def l1Miss_mtlbMiss_part2 previous_tagsets, tagset
+  "(or false " +
+      @data_builder.LinterPFNminusM.collect{|lambda,delta|
+          "(and " +
+              "(= #{tagset} bv#{lambda}[#{@TAGSETLEN}])" +
+              cache_tagset_is_displaced_already(previous_tagsets, tagset, lambda, delta) + ")"
+      }.join + ")"
+end
+
+def l1Miss_mtlbMiss_part3 previous_tagsets, tagset
+  "(and " +
+        @data_builder.LinterM.collect{|lambda,delta|
+            "(/= #{tagset} bv#{lambda}[#{@TAGSETLEN}])"
+        }.join +
+        
+        "(or " +
+            @data_builder.M.collect{|m|
+                "(and (= #{getRegion tagset} bv#{m}[#{@PFNLEN}]) " +
+                      tlb_pfn_is_displaced_already(previous_tagsets, tagset, m) + ")"
+            }.join + ")" +
+  ")"
+end
+
+def l1Miss_mtlbMiss_part4 previous_tagsets, tagset
+  "(or false " +
+      @data_builder.LinterM.collect{|lambda,delta|
+          "(and " +
+                "(= #{tagset} bv#{lambda}[#{@TAGSETLEN}])" +
+                cache_tagset_is_displaced_already(previous_tagsets, tagset, lambda, delta) +
+                tlb_pfn_is_displaced_already(previous_tagsets, tagset, lambda/128) + ")"
+      } + ")"
+end
+
+def l1Miss_mtlbHit( previous_tagsets, tagset )
+  previous_tagsets.each{|t|
+    puts ":assumption"
+    puts "(/= #{t} #{tagset})"
+  }
+  
+  puts ":assumption"
+  puts "(or false "
+  puts l1Miss_mtlbHit_part1 previous_tagsets, tagset
+  puts l1Miss_mtlbHit_part2 previous_tagsets, tagset
+  puts l1Miss_mtlbHit_part3 previous_tagsets, tagset
+  puts l1Miss_mtlbHit_part4 previous_tagsets, tagset
+  puts ")"  
+end
+
+def l1Miss_mtlbMiss( previous_tagsets, tagset )
+  previous_tagsets.each{|t|
+    puts ":assumption"
+    puts "(= bit0 (bvcomp #{getRegion t} #{getRegion tagset}))"
+  }
+  
+  puts ":assumption"
+  puts "(or false "
+  puts l1Miss_mtlbMiss_part1 previous_tagsets, tagset
+  puts l1Miss_mtlbMiss_part2 previous_tagsets, tagset
+  puts l1Miss_mtlbMiss_part3 previous_tagsets, tagset
+  puts l1Miss_mtlbMiss_part4 previous_tagsets, tagset
   puts ")"
 end
 
@@ -282,14 +473,14 @@ def solve
         @mtlbHits << tagset
         l1Hit_mtlbHit previous_tagsets, tagset
       else
-        #TODO
+        l1Hit_mtlbMiss previous_tagsets, tagset
       end
     else
       if microTLBSituation == "mtlbHit"
         @mtlbHits << tagset
-        #TODO
+        l1Miss_mtlbHit previous_tagsets, tagset
       else
-        #TODO
+        l1Miss_mtlbMiss previous_tagsets, tagset
       end
     end
     
