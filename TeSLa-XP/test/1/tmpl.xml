@@ -32,8 +32,8 @@
 		<argument>c</argument>
 		<situation>f2
 			<memory>
-				<cache id="l1Hit" />
-				<microtlb id="mtlbHit" />
+				<cache id="l1Miss" />
+				<microtlb id="mtlbMiss" />
 			</memory>
 		</situation>
 	</instruction>
