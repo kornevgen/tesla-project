@@ -1,0 +1,32 @@
+<situation>
+	<argument name="rd" state="result" length="64" />
+	<argument name="rs" state="readonly" length="64" />
+	<argument name="rt" state="readonly" length="64" />
+	
+	<assert>
+		<and>
+			<predicate name="wordvalue">rs</predicate>
+			<predicate name="wordvalue">rt</predicate>
+		</and>
+	</assert>
+	
+	<let name="temp">
+		<sum>
+			<concat>
+				<bit index="31">rs</bit>
+				<bits end="31" start="0">rs</bits>
+			</concat>
+			<concat>
+				<bit index="31">rt</bit>
+				<bits end="31" start="0">rt</bits>
+			</concat>
+		</sum>
+	</let>
+	
+	<assert>
+		<noteq>
+			<bit index="32">temp</bit>
+			<bit index="31">temp</bit>
+		</noteq>
+	</assert>
+</situation>

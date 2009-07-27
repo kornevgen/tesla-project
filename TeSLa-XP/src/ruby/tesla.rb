@@ -377,9 +377,44 @@ def l1Miss_mtlbMiss( previous_tagsets, tagset )
   puts ")"
 end
 
-# инициализировать выходной файл (поток?)
+def process_instruction(instruction)
+  path = instruction.attributes['name'] +
+  "/" + instruction.elements['situation'].attributes['name'] + ".xml"
+  test_situation = REXML::Document.new File.new(path)  
 
-# инициализировать входной файл с шаблоном (поток?)
+  reverse_synonyms = Hash[*test_situation.get_elements('situation/argument').  ## перевести в текст??
+      zip(instruction.get_elements('argument')).flatten]
+
+  # for 'result' test situation arguments change synonyms and define new variables
+  test_situation.elements.each('//[@state="result"]'){|arg|
+       new_name = "#{@synonyms[reverse_synonyms[arg].text]}_X"
+       puts ":extrafuns (( #{new_name} BitVec[#{arg.attributes['length']}] ))"
+       @synonyms.merge!( {reverse_synonyms[arg].text => "#{@synonyms[reverse_synonyms[arg].text]}_X"} )
+  }
+  
+  full_context = Hash.new
+  reverse_synonyms.each{|tsarg, insarg|
+      full_context.merge!( {tsarg.attributes['name'] => @synonyms[insarg.text]})
+  }  
+  full_context.merge! @synonyms
+  
+  # traverse operators
+  test_situation.elements.each('situation/*[not(starts-with(name(),"argument"))]'){|operator|
+      send( "process_#{operator.name}", operator, full_context )
+  }
+end
+
+def process_assert( operator, full_context )
+  #TODO
+end
+
+def process_let( operator, full_context )
+  #TODO
+end
+
+def process_procedure( operator, full_context )
+  #TODO
+end
 
 def solve
   raise "please add the first argument for xml with test template" if ARGV[0].nil?
@@ -429,8 +464,17 @@ def solve
     
     puts ":extrafuns ((#{ins.virtual_address} BitVec[#{@VIRTUALLEN}]))"
   end
+
+  @synonyms = Hash.new
+  doc.elements.each('template/register | template/constant') { |reg|
+      puts ":extrafuns (( #{reg.attributes['id']}_X BitVec[#{reg.attributes['length']}] ))"  
+      @synonyms.merge!( {reg.attributes['id'] => "#{reg.attributes['id']}_X"} )
+  }
   
-  
+  doc.elements.each('template/instruction') {|instruction|
+      process_instruction instruction
+  }
+ 
   puts ")"
   end
 end
