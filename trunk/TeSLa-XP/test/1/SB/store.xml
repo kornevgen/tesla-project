@@ -1,0 +1,50 @@
+<!--
+последовательность действий:
+1) подготовить физический адрес данных
+2) подготовить двойное слово на основе исходных данных
+	(в данном случае, из 1 байта сделать 8 байт)
+3) сохранить в памяти в нужном месте подготовленные 8 байт
+-->
+<situation>
+	<argument name="rt" state="readonly" length="64" />
+	<argument name="base" state="readonly" length="64" />
+	<argument name="offset" state="readonly" length="16" />
+	
+	<let name="vAddr">
+		<sum>
+			<sign_extend size="64">offset</sign_extend>
+			base
+		</sum>
+	</let>
+	
+	<assert>
+		<eq>
+			<bits end="1" start="0">vAddr</bits>
+			<constant length="2">0</constant>
+		</eq>
+	</assert>
+	
+	<procedure name="AddressTranslation">
+			pAddr vAddr DATA STORE
+	</procedure>
+	
+	<let name="dwPhysAddr">
+		<bits end="35" start="3">pAddr</bits>
+	</let>
+	
+	<let name="dwByteOffset">
+		<bits end="2" start="0">vAddr</bits>
+	</let>
+	
+	<!-- dwByteOffset can be changed according to BigEndian/LittleEndian -->
+	
+	<let name="datadoubleword">
+		<bytes_expand type="BYTE">
+			rt dwByteOffset
+		</bytes_expand>
+	</let>
+	
+	<procedure name="StoreMemory">
+		datadoubleword BYTE dwPhysAddr vAddr DATA
+	</procedure>
+</situation>

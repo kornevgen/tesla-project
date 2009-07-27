@@ -4,20 +4,18 @@
 	<register id="z" length="64" />		
 	<constant id="c" length="16" />		
 	
-	<instruction>
-		<name>ADD</name>
+	<instruction name="ADD">
 		<argument>x</argument>
 		<argument>y</argument>
 		<argument>z</argument>
-		<situation>f1</situation>
+		<situation name="overflow" />
 	</instruction>
 	
-	<instruction>
-		<name>LD</name>
+	<instruction name="LW">
 		<argument>y</argument>
 		<argument>x</argument>
 		<argument>c</argument>
-		<situation>f2
+		<situation name="load">
 			<memory>
 				<cache id="l1Hit" />
 				<microtlb id="mtlbHit" />
@@ -25,12 +23,11 @@
 		</situation>
 	</instruction>
 	
-	<instruction>
-		<name>LD</name>
+	<instruction name="SB">
 		<argument>y</argument>
 		<argument>x</argument>
 		<argument>c</argument>
-		<situation>f2
+		<situation name="store">
 			<memory>
 				<cache id="l1Miss" />
 				<microtlb id="mtlbMiss" />
