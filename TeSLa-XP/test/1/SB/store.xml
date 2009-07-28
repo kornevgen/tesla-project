@@ -12,37 +12,39 @@
 	
 	<let name="vAddr">
 		<sum>
-			<sign_extend size="64">offset</sign_extend>
-			base
+			<sign_extend size="64"><var>offset</var></sign_extend>
+			<var>base</var>
 		</sum>
 	</let>
 	
 	<assert>
 		<eq>
-			<bits end="1" start="0">vAddr</bits>
+			<bits end="1" start="0"><var>vAddr</var></bits>
 			<constant length="2">0</constant>
 		</eq>
 	</assert>
 	
 	<procedure name="AddressTranslation">
-			pAddr vAddr DATA STORE
+			<physical>pAddr</physical>
+			<virtual>vAddr</virtual>
+			<points_to>DATA</points_to>
+			<points_for>STORE</points_for>
 	</procedure>
 	
 	<let name="dwPhysAddr">
-		<bits end="35" start="3">pAddr</bits>
+		<bits end="35" start="3"><var>pAddr</var></bits>
 	</let>
 	
 	<let name="dwByteOffset">
-		<bits end="2" start="0">vAddr</bits>
+		<bits end="2" start="0"><var>vAddr</var></bits>
 	</let>
 	
 	<!-- dwByteOffset can be changed according to BigEndian/LittleEndian -->
 	
-	<let name="datadoubleword">
-		<bytes_expand type="BYTE">
-			rt dwByteOffset
-		</bytes_expand>
-	</let>
+	<bytes_expand type="BYTE" name="datadoubleword">
+		<content>rt</content>
+		<index>dwByteOffset</index>
+	</bytes_expand>
 	
 	<procedure name="StoreMemory">
 		datadoubleword BYTE dwPhysAddr vAddr DATA
