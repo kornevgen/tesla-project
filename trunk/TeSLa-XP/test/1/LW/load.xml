@@ -11,44 +11,48 @@
 	
 	<let name="vAddr">
 		<sum>
-			<sign_extend size="64">offset</sign_extend>
-			base
+			<sign_extend size="64"><var>offset</var></sign_extend>
+			<var>base</var>
 		</sum>
 	</let>
 	
 	<assert>
 		<eq>
-			<bits end="1" start="0">vAddr</bits>
+			<bits end="1" start="0"><var>vAddr</var></bits>
 			<constant length="2">0</constant>
 		</eq>
 	</assert>
 	
 	<procedure name="AddressTranslation">
-			pAddr vAddr DATA LOAD
+			<physical>pAddr</physical>
+			<virtual>vAddr</virtual>
+			<points_to>DATA</points_to>
+			<points_for>LOAD</points_for>
 	</procedure>
 	
 	<let name="dwPhysAddr">
-		<bits end="35" start="3">pAddr</bits>
+		<bits end="35" start="3"><var>pAddr</var></bits>
 	</let>
 	
 	<let name="dwByteOffset">
-		<bits end="2" start="0">vAddr</bits>
+		<bits end="2" start="0"><var>vAddr</var></bits>
 	</let>
 	
 	<!-- dwByteOffset can be changed according to BigEndian/LittleEndian -->
 	
 	<procedure name="LoadMemory">
-		memdoubleword WORD dwPhysAddr vAddr DATA
+		<argument>memdoubleword</argument> WORD dwPhysAddr vAddr DATA
 	</procedure>
+
+	<bytes_select type="WORD" name="data">
+		<content>memdoubleword</content>
+		<index>dwByteOffset</index>
+	</bytes_select>
 	
 	<assert>
 		<eq>
-			rt
-			<sign_extend size="64">
-				<bytes_select type="WORD">
-					memdoubleword dwByteOffset
-				</bytes_select>
-			</sign_extend>
+			<var>rt</var>
+			<sign_extend size="64"><var>data</var></sign_extend>
 		</eq>
 	</assert>
 </situation>

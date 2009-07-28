@@ -63,7 +63,8 @@ def initialize
   @TAGSETTYPE = "BitVec[#{@TAGSETLEN}]"
   @L1ASSOC = 4
   @TLBASSOC = 4
-  @VIRTUALLEN = 64
+  @VABITS = 40
+  @PABITS = 36
 end
 
 def getPfn(tagset)
@@ -377,7 +378,7 @@ def l1Miss_mtlbMiss( previous_tagsets, tagset )
   puts ")"
 end
 
-def process_instruction(instruction)
+def process_instruction(instruction, ins_object)
   path = instruction.attributes['name'] +
   "/" + instruction.elements['situation'].attributes['name'] + ".xml"
   test_situation = REXML::Document.new File.new(path)  
@@ -393,28 +394,218 @@ def process_instruction(instruction)
   }
   
   full_context = Hash.new
+  @lengths_context = Hash.new
   reverse_synonyms.each{|tsarg, insarg|
       full_context.merge!( {tsarg.attributes['name'] => @synonyms[insarg.text]})
-  }  
+      @lengths_context.merge!( {tsarg.attributes['name'] => @varlengths[insarg.text] })
+  }
   full_context.merge! @synonyms
+  @lengths_context.merge! @varlengths
+  @ins_object = ins_object
   
   # traverse operators
   test_situation.elements.each('situation/*[not(starts-with(name(),"argument"))]'){|operator|
-      send( "process_#{operator.name}", operator, full_context )
+      send( "constraintsfrom_#{operator.name}", operator, full_context )
   }
 end
 
-def process_assert( operator, full_context )
-  #TODO
+def constraintsfrom_assert( operator, full_context )
+  puts ":assumption"
+  puts send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) 
 end
 
-def process_let( operator, full_context )
-  #TODO
+def constraintsfrom_and( operator, full_context )
+  "(and " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) +
+      send("constraintsfrom_#{operator.elements[2].name}", operator.elements[2], full_context) + ")"
 end
 
-def process_procedure( operator, full_context )
-  #TODO
+def constraintsfrom_or( operator, full_context )
+  "(or " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) +
+      send("constraintsfrom_#{operator.elements[2].name}", operator.elements[2], full_context) + ")"
 end
+
+def constraintsfrom_predicate( operator, full_context )
+  if operator.attributes['name'] == "wordvalue"
+     "(= (extract[63:32] #{full_context[operator.text]}) (repeat[32] (extract[31:31] #{full_context[operator.text]})))"
+  else
+    raise "unknown predicate \'#{operator.attributes['name']}\'"
+  end
+end
+
+def constraintsfrom_noteq( operator, full_context )
+  "(= bit0 (bvcomp " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) +
+      send("constraintsfrom_#{operator.elements[2].name}", operator.elements[2], full_context) + "))"
+end
+
+def constraintsfrom_eq( operator, full_context )
+  "(= " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) +
+      send("constraintsfrom_#{operator.elements[2].name}", operator.elements[2], full_context) + ")"
+end
+
+def constraintsfrom_bit( operator, full_context )
+  "(extract[#{operator.attributes['index']}:#{operator.attributes['index']}] " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + ")"
+end
+
+def constraintsfrom_bits( operator, full_context )
+  "(extract[#{operator.attributes['end']}:#{operator.attributes['start']}] " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + ")"
+end
+
+def constraintsfrom_concat( operator, full_context )
+  "(concat " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) +
+      send("constraintsfrom_#{operator.elements[2].name}", operator.elements[2], full_context) + ")"
+end
+
+def constraintsfrom_sum( operator, full_context )
+  "(bvadd " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) +
+      send("constraintsfrom_#{operator.elements[2].name}", operator.elements[2], full_context) + ")"
+end
+
+def constraintsfrom_sign_extend( operator, full_context )
+  "(sign_extend[#{operator.attributes['size']}] " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + ")"
+end
+
+def constraintsfrom_var( operator, full_context )
+  v = full_context[operator.text]
+  raise "cannot find synonym for variable '#{operator.text}'" if v == nil
+  v
+end
+
+def constraintsfrom_constant( operator, full_context )
+  "bv#{operator.text}[#{operator.attributes['length']}]"
+end
+
+def constraintsfrom_bytes_select( operator, full_context )
+  new_name = "_localvar_#{@unique_counter += 1}"
+  full_context.merge!( {operator.attributes['name'] => new_name } )
+  
+  bitlen = send("length_#{operator.attributes['type']}" )
+  puts ":extrafuns (( #{new_name} BitVec[#{bitlen}] ))"
+  puts ":assumption"
+
+  if operator.attributes['type'] == "WORD"
+     puts "(ite (= bv0[3] #{full_context[operator.elements['index'].text]}) " + 
+        "(= #{new_name} (extract[31:0] #{full_context[operator.elements['content'].text]}))" +
+        "(= #{new_name} (extract[63:32] #{full_context[operator.elements['content'].text]}))" + ")"
+  #TODO elsif остальные типы
+  else
+    raise "unknown bytes-select type '#{operator.attributes['type']}'"
+  end
+end
+
+def constraintsfrom_bytes_expand( operator, full_context )
+  new_name = "_localvar_#{@unique_counter += 1}"
+  full_context.merge!( {operator.attributes['name'] => new_name } )
+  
+  puts ":extrafuns (( #{new_name} BitVec[64] ))"
+  puts ":assumption"
+
+  if operator.attributes['type'] == "BYTE"
+    (0..7).each{|number|
+        puts "(ite (= #{full_context[operator.elements['index'].text]} bv#{number}[3])" +
+          "(= #{new_name} (concat (concat bv0[#{56-8*number}] (extract[7:0] #{full_context[operator.elements['content'].text]})) bv0[#{8*number}]))"
+    }
+    puts (1..8).collect{")"}.join
+  #TODO elsif сделать остальные типы
+  else
+    raise "unknown bytes-select type '#{operator.attributes['type']}'"
+  end
+end
+
+def constraintsfrom_let( operator, full_context )
+  bitlen = send("length_#{operator.elements[1].name}", operator.elements[1] )
+  new_name = "_localvar_#{@unique_counter += 1}"
+  full_context.merge!( {operator.attributes['name'] => new_name } )
+  
+  puts ":extrafuns (( #{new_name} BitVec[#{bitlen}] ))"
+  puts ":assumption"
+  puts "(= #{new_name} " + 
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + ")"
+end
+
+def constraintsfrom_procedure( operator, full_context )
+  if operator.attributes['name'] == "AddressTranslation"
+    @lengths_context.merge!({operator.elements['physical'].text => @PABITS})
+    
+    # get physical var from instructions repository
+    physical = @ins_object.phys_after_translation
+    full_context.merge!( {operator.elements['physical'].text => physical } )
+    constraintsfrom_AddressTranslation(operator, full_context)
+  elsif operator.attributes['name'] == "LoadMemory"
+    @lengths_context.merge!({operator.elements[1].text => 64})
+    
+    data = @ins_object.data
+    full_context.merge!( { operator.elements[1].text => data } )
+    constraintsfrom_LoadMemory(operator, full_context)
+  elsif operator.attributes['name'] == "StoreMemory"
+    constraintsfrom_StoreMemory(operator, full_context)
+  else
+    raise "unknown procedure '#{operator.attributes['name']}'"
+  end
+end
+
+def length_equalbinary(operator)
+  len1 = send("length_#{operator.elements[1].name}", operator.elements[1])
+  len2 = send("length_#{operator.elements[2].name}", operator.elements[2])
+  raise "arguments must have equal bitlengths (now #{len1} and #{len2})" if len1 != len2
+  len1  
+end
+
+def length_sum(operator)
+  length_equalbinary(operator)
+end
+
+def length_concat(operator)
+  send("length_#{operator.elements[1].name}", operator.elements[1]) +
+  send("length_#{operator.elements[2].name}", operator.elements[2])
+end
+
+def length_bit(operator)
+  1
+end
+
+def length_bits(operator)
+  operator.attributes['end'].to_i - operator.attributes['start'].to_i + 1
+end
+
+def length_sign_extend(operator)
+  operator.attributes['size'].to_i
+end
+
+def length_var(operator)
+  @lengths_context[operator.text]
+end
+
+def length_WORD
+  32
+end
+
+def constraintsfrom_AddressTranslation( operator, full_context )
+  puts ":extrafuns(( #{@ins_object.virtual_address} BitVec[64] ))"
+  puts ":extrafuns(( #{@ins_object.physical_after_translation} BitVec[#{@PABITS}] ))"
+  puts ":assumption"
+  
+  # модель виртуальной памяти
+  #TODO можно сделать более полный Cached Mapped сегмент
+  puts "(= bv0[33] (extract[63:31] #{@ins_object.virtual_address}))"  
+
+  # соответствие некоторой строке TLB
+  
+  # определение physical_after_translation
+  puts "(= #{@ins_object.physical_after_translation} (concat (extract[??] #{@ins_object.tagset}) (extract[??] #{@ins_object.virtual_address}) ) )"
+end
+
+#TODO LoadMemory
+
+#TODO StoreMemory
 
 def solve
   raise "please add the first argument for xml with test template" if ARGV[0].nil?
@@ -461,18 +652,18 @@ def solve
     ins.phys_before_memaccess = "pbma#{@unique_counter += 1}"
     ins.tagset = tagset
     ins.data = "data#{@unique_counter += 1}"
-    
-    puts ":extrafuns ((#{ins.virtual_address} BitVec[#{@VIRTUALLEN}]))"
   end
 
   @synonyms = Hash.new
+  @varlengths = Hash.new
   doc.elements.each('template/register | template/constant') { |reg|
       puts ":extrafuns (( #{reg.attributes['id']}_X BitVec[#{reg.attributes['length']}] ))"  
       @synonyms.merge!( {reg.attributes['id'] => "#{reg.attributes['id']}_X"} )
+      @varlengths.merge!( {reg.attributes['id'] => reg.attributes['length'].to_i})
   }
   
   doc.elements.each('template/instruction') {|instruction|
-      process_instruction instruction
+      process_instruction instruction, instructions[instruction]
   }
  
   puts ")"
