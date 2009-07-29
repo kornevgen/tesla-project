@@ -30,10 +30,6 @@
 			<points_for>LOAD</points_for>
 	</procedure>
 	
-	<let name="dwPhysAddr">
-		<bits end="35" start="3"><var>pAddr</var></bits>
-	</let>
-	
 	<let name="dwByteOffset">
 		<bits end="2" start="0"><var>vAddr</var></bits>
 	</let>
@@ -41,7 +37,7 @@
 	<!-- dwByteOffset can be changed according to BigEndian/LittleEndian -->
 	
 	<procedure name="LoadMemory">
-		<argument>memdoubleword</argument> WORD dwPhysAddr vAddr DATA
+		<argument>memdoubleword</argument> WORD pAddr vAddr DATA
 	</procedure>
 
 	<bytes_select type="WORD" name="data">

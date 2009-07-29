@@ -7,11 +7,11 @@ class DataBuilder
   def initialize
     @tagsets = Hash.new
     dataxml = REXML::Document.new File.new(ARGV[1])
-    dataxml.elements.each("data/cache/set") do |set|
+    dataxml.elements.each("data/cache/set"){ |set|
         set.elements.each_with_index{ |tag,delta|
               tagvalue = tag.attributes["value"]
               @tagsets[tagvalue.to_i * 128 + set.attributes["value"].to_i ] = delta }
-    end
+    }
     
     @micropfns = dataxml.elements.collect("data/tlb/microtlb/pfn"){ |pfn|
                       pfn.attributes["value"].to_i }
@@ -20,6 +20,19 @@ class DataBuilder
                       pfn.attributes["value"].to_i }
     
     @pfns = @micropfns + @nonmicropfns
+    
+    @tlb = []
+    dataxml.elements.each("data/tlb/content/line") {|line|
+        tlbline = TLBLine.new
+        tlbline.r = line.attributes["range"].to_i
+        tlbline.vpndiv2 = line.attributes["vpndiv2"].to_i
+        tlbline.mask = line.attributes["mask"].to_i
+        tlbline.pfn0 = line.attributes["pfn0"].to_i
+        tlbline.CCA0 = line.attributes["CCA0"]
+        tlbline.pfn1 = line.attributes["pfn1"].to_i
+        tlbline.CCA1 = line.attributes["CCA1"]
+        @tlb << tlbline
+    }
   end
   
   def LinterPFN
@@ -44,6 +57,20 @@ class DataBuilder
      @LinterPFNminusM ||= @tagsets.select{|tagset,delta|
                     @nonmicropfns.include?(tagset/128) }
   end
+  
+  def TLB
+    @tlb
+  end
+end
+
+class TLBLine
+  attr_accessor :r
+  attr_accessor :vpndiv2
+  attr_accessor :mask
+  attr_accessor :pfn0
+  attr_accessor :CCA0
+  attr_accessor :pfn1
+  attr_accessor :CCA1
 end
 
 class Instruction
@@ -51,6 +78,12 @@ class Instruction
   attr_accessor :tagset
   attr_accessor :phys_after_translation
   attr_accessor :phys_before_memaccess
+  attr_accessor :data
+end
+
+class MemoryAccess
+  attr_accessor :dwPhysAddr
+  attr_accessor :type
   attr_accessor :data
 end
 
@@ -63,8 +96,9 @@ def initialize
   @TAGSETTYPE = "BitVec[#{@TAGSETLEN}]"
   @L1ASSOC = 4
   @TLBASSOC = 4
-  @VABITS = 40
+  @SEGBITS = 40
   @PABITS = 36
+  @MASK = 0
 end
 
 def getPfn(tagset)
@@ -390,14 +424,14 @@ def process_instruction(instruction, ins_object)
   test_situation.elements.each('//[@state="result"]'){|arg|
        new_name = "#{@synonyms[reverse_synonyms[arg].text]}_X"
        puts ":extrafuns (( #{new_name} BitVec[#{arg.attributes['length']}] ))"
-       @synonyms.merge!( {reverse_synonyms[arg].text => "#{@synonyms[reverse_synonyms[arg].text]}_X"} )
+       @synonyms[reverse_synonyms[arg].text] = "#{@synonyms[reverse_synonyms[arg].text]}_X"
   }
   
   full_context = Hash.new
   @lengths_context = Hash.new
   reverse_synonyms.each{|tsarg, insarg|
-      full_context.merge!( {tsarg.attributes['name'] => @synonyms[insarg.text]})
-      @lengths_context.merge!( {tsarg.attributes['name'] => @varlengths[insarg.text] })
+      full_context[tsarg.attributes['name']] = @synonyms[insarg.text]
+      @lengths_context[tsarg.attributes['name']] = @varlengths[insarg.text]
   }
   full_context.merge! @synonyms
   @lengths_context.merge! @varlengths
@@ -462,6 +496,11 @@ def constraintsfrom_concat( operator, full_context )
       send("constraintsfrom_#{operator.elements[2].name}", operator.elements[2], full_context) + ")"
 end
 
+def constraintsfrom_power( operator, full_context )
+  "(repeat[#{operator.attributes['index']}] " +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + ")"
+end
+
 def constraintsfrom_sum( operator, full_context )
   "(bvadd " +
       send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) +
@@ -469,7 +508,8 @@ def constraintsfrom_sum( operator, full_context )
 end
 
 def constraintsfrom_sign_extend( operator, full_context )
-  "(sign_extend[#{operator.attributes['size']}] " +
+  length = send("length_#{operator.elements[1].name}", operator.elements[1])
+  "(sign_extend[#{operator.attributes['size'].to_i - length }] " +
       send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + ")"
 end
 
@@ -485,9 +525,10 @@ end
 
 def constraintsfrom_bytes_select( operator, full_context )
   new_name = "_localvar_#{@unique_counter += 1}"
-  full_context.merge!( {operator.attributes['name'] => new_name } )
+  full_context[operator.attributes['name']] = new_name
   
   bitlen = send("length_#{operator.attributes['type']}" )
+  @lengths_context[operator.attributes['name']] = bitlen
   puts ":extrafuns (( #{new_name} BitVec[#{bitlen}] ))"
   puts ":assumption"
 
@@ -495,6 +536,8 @@ def constraintsfrom_bytes_select( operator, full_context )
      puts "(ite (= bv0[3] #{full_context[operator.elements['index'].text]}) " + 
         "(= #{new_name} (extract[31:0] #{full_context[operator.elements['content'].text]}))" +
         "(= #{new_name} (extract[63:32] #{full_context[operator.elements['content'].text]}))" + ")"
+  elsif operator.attributes['type'] == "DOUBLEWORD"
+     puts "(= #{new_name} #{full_context[operator.elements['content'].text]})"
   #TODO elsif остальные типы
   else
     raise "unknown bytes-select type '#{operator.attributes['type']}'"
@@ -503,8 +546,9 @@ end
 
 def constraintsfrom_bytes_expand( operator, full_context )
   new_name = "_localvar_#{@unique_counter += 1}"
-  full_context.merge!( {operator.attributes['name'] => new_name } )
+  full_context[operator.attributes['name']] = new_name
   
+  @lengths_context[operator.attributes['name']] = 64
   puts ":extrafuns (( #{new_name} BitVec[64] ))"
   puts ":assumption"
 
@@ -513,7 +557,10 @@ def constraintsfrom_bytes_expand( operator, full_context )
         puts "(ite (= #{full_context[operator.elements['index'].text]} bv#{number}[3])" +
           "(= #{new_name} (concat (concat bv0[#{56-8*number}] (extract[7:0] #{full_context[operator.elements['content'].text]})) bv0[#{8*number}]))"
     }
+    puts "false"
     puts (1..8).collect{")"}.join
+  elsif operator.attributes['type'] == "DOUBLEWORD"
+    puts "(= #{new_name} #{full_context[operator.elements['content'].text]})"
   #TODO elsif сделать остальные типы
   else
     raise "unknown bytes-select type '#{operator.attributes['type']}'"
@@ -537,13 +584,13 @@ def constraintsfrom_procedure( operator, full_context )
     
     # get physical var from instructions repository
     physical = @ins_object.phys_after_translation
-    full_context.merge!( {operator.elements['physical'].text => physical } )
+    full_context[operator.elements['physical'].text] = physical
     constraintsfrom_AddressTranslation(operator, full_context)
   elsif operator.attributes['name'] == "LoadMemory"
-    @lengths_context.merge!({operator.elements[1].text => 64})
+    @lengths_context[operator.elements[1].text] = 64
     
     data = @ins_object.data
-    full_context.merge!( { operator.elements[1].text => data } )
+    full_context[operator.elements[1].text] = data
     constraintsfrom_LoadMemory(operator, full_context)
   elsif operator.attributes['name'] == "StoreMemory"
     constraintsfrom_StoreMemory(operator, full_context)
@@ -568,6 +615,11 @@ def length_concat(operator)
   send("length_#{operator.elements[2].name}", operator.elements[2])
 end
 
+def length_power(operator)
+  send("length_#{operator.elements[1].name}", operator.elements[1]) *
+    operator.attributes['index'].to_i
+end
+
 def length_bit(operator)
   1
 end
@@ -581,16 +633,30 @@ def length_sign_extend(operator)
 end
 
 def length_var(operator)
-  @lengths_context[operator.text]
+  l = @lengths_context[operator.text]
+  raise "unknown length for '#{operator.text}'" if l == nil
+  l
+end
+
+def length_DOUBLEWORD
+  64
 end
 
 def length_WORD
   32
 end
 
+def length_HALFWORD
+  16
+end
+
+def length_BYTE
+  8
+end
+
 def constraintsfrom_AddressTranslation( operator, full_context )
   puts ":extrafuns(( #{@ins_object.virtual_address} BitVec[64] ))"
-  puts ":extrafuns(( #{@ins_object.physical_after_translation} BitVec[#{@PABITS}] ))"
+  puts ":extrafuns(( #{@ins_object.phys_after_translation} BitVec[#{@PABITS}] ))"
   puts ":assumption"
   
   # модель виртуальной памяти
@@ -598,14 +664,62 @@ def constraintsfrom_AddressTranslation( operator, full_context )
   puts "(= bv0[33] (extract[63:31] #{@ins_object.virtual_address}))"  
 
   # соответствие некоторой строке TLB
+  pfn_name = "_localvar_#{@unique_counter += 1}"
+  vpndiv2_name = "_localvar_#{@unique_counter += 1}"
+  puts "(let (#{pfn_name} #{getPfn( @ins_object.tagset )})"
+  puts "(let (#{vpndiv2_name} (extract[#{@SEGBITS-1}:#{@PABITS-@PFNLEN}] #{@ins_object.virtual_address}))"
   
+  puts "(or "
+  @data_builder.TLB.select{|l| l.mask == @MASK && l.r == 0}.each{|tlbline|
+    if tlbline.CCA0 == "Cached"
+      puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{@PFNLEN}])" +
+          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2}[#{@SEGBITS-@PABITS+@PFNLEN}]))"
+    end
+    if tlbline.CCA1 == "Cached"
+      puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{@PFNLEN}])" +
+          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{@SEGBITS-@PABITS+@PFNLEN}]))"
+    end
+  }
+  puts")))"
+    
   # определение physical_after_translation
-  puts "(= #{@ins_object.physical_after_translation} (concat (extract[??] #{@ins_object.tagset}) (extract[??] #{@ins_object.virtual_address}) ) )"
+  puts "(= #{@ins_object.phys_after_translation} " + 
+    "(concat (extract[#{@TAGSETLEN-1}:#{@TAGSETLEN-@PFNLEN}] #{@ins_object.tagset}) " + 
+            "(extract[#{@PABITS-@PFNLEN-1}:0] #{@ins_object.virtual_address}) ) )"
 end
 
-#TODO LoadMemory
+def constraintsfrom_LoadMemory( operator, full_context )
+  puts ":extrafuns(( #{@ins_object.data} BitVec[64] ))"
+  ma = MemoryAccess.new
+  ma.dwPhysAddr = "_localvar_#{@unique_counter += 1}"
+  ma.type = "LOAD"
+  ma.data = @ins_object.data
+  puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{@PABITS-3}] ))"
+  
+  puts ":assumption"
+  puts "(and true "
+  @memory_accesses.reverse.each{|maccess|
+      if maccess.type == "LOAD"
+          puts "(implies (= #{maccess.dwPhysAddr} #{ma.dwPhysAddr}) (= #{@ins_object.data} #{ma.data}))"
+      else
+          puts "(ite (= #{maccess.dwPhysAddr} #{ma.dwPhysAddr}) (= #{@ins_object.data} #{ma.data}) (and true "
+      end
+  }
+  @memory_accesses.select{|m| m.type=="STORE"}.each{|m| puts "))" }
+  puts ")"
+  
+  @memory_accesses << ma
+end
 
-#TODO StoreMemory
+def constraintsfrom_StoreMemory( operator, full_context )
+  ma = MemoryAccess.new
+  ma.dwPhysAddr = "_localvar_#{@unique_counter += 1}"
+  ma.type = "STORE"
+  ma.data = @ins_object.data
+  puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{@PABITS-3}] ))"
+  
+  @memory_accesses << ma
+end
 
 def solve
   raise "please add the first argument for xml with test template" if ARGV[0].nil?
@@ -616,6 +730,7 @@ def solve
   
   @unique_counter = 0
   @data_builder = DataBuilder.new
+  @memory_accesses = []
   
   puts "(benchmark tesla"
   puts ":logic QF_BV"
@@ -658,12 +773,14 @@ def solve
   @varlengths = Hash.new
   doc.elements.each('template/register | template/constant') { |reg|
       puts ":extrafuns (( #{reg.attributes['id']}_X BitVec[#{reg.attributes['length']}] ))"  
-      @synonyms.merge!( {reg.attributes['id'] => "#{reg.attributes['id']}_X"} )
-      @varlengths.merge!( {reg.attributes['id'] => reg.attributes['length'].to_i})
+      @synonyms[reg.attributes['id']] = "#{reg.attributes['id']}_X"
+      @varlengths[reg.attributes['id']] = reg.attributes['length'].to_i
   }
   
   doc.elements.each('template/instruction') {|instruction|
+      #instruction.attributes["clone"].to_i.times{|i|
       process_instruction instruction, instructions[instruction]
+      #}
   }
  
   puts ")"
