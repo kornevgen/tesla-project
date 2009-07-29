@@ -31,10 +31,6 @@
 			<points_for>STORE</points_for>
 	</procedure>
 	
-	<let name="dwPhysAddr">
-		<bits end="35" start="3"><var>pAddr</var></bits>
-	</let>
-	
 	<let name="dwByteOffset">
 		<bits end="2" start="0"><var>vAddr</var></bits>
 	</let>
@@ -47,6 +43,6 @@
 	</bytes_expand>
 	
 	<procedure name="StoreMemory">
-		datadoubleword BYTE dwPhysAddr vAddr DATA
+		datadoubleword BYTE pAddr vAddr DATA
 	</procedure>
 </situation>

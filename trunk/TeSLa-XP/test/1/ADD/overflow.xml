@@ -1,5 +1,5 @@
 <situation>
-	<argument name="rd" state="result" length="64" />
+	<argument name="rd" state="readonly" length="64" />
 	<argument name="rs" state="readonly" length="64" />
 	<argument name="rt" state="readonly" length="64" />
 	
