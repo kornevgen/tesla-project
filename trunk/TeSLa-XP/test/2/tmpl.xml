@@ -1,7 +1,7 @@
 <template>
 	<register id="x" length="64" />	
 	
-	<instruction name="ADD" clone="1">
+	<instruction name="ADD" clone="62">
 		<argument>x</argument>
 		<argument>x</argument>
 		<argument>x</argument>

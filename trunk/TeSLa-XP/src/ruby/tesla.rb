@@ -419,18 +419,16 @@ def process_instruction(instruction, ins_object)
 
   reverse_synonyms = Hash[*test_situation.get_elements('situation/argument').  ## перевести в текст??
       zip(instruction.get_elements('argument')).flatten]
-
-  # for 'result' test situation arguments change synonyms and define new variables
+      
   test_situation.elements.each('//[@state="result"]'){|arg|
        new_name = "#{@synonyms[reverse_synonyms[arg].text]}_X"
        puts ":extrafuns (( #{new_name} BitVec[#{arg.attributes['length']}] ))"
-       @synonyms[reverse_synonyms[arg].text] = "#{@synonyms[reverse_synonyms[arg].text]}_X"
   }
-  
+
   full_context = Hash.new
   @lengths_context = Hash.new
   reverse_synonyms.each{|tsarg, insarg|
-      full_context[tsarg.attributes['name']] = @synonyms[insarg.text]
+      full_context[tsarg.attributes['name']] = @synonyms[insarg.text] +(tsarg.attributes["state"] == "result" ? "_X" : "" )
       @lengths_context[tsarg.attributes['name']] = @varlengths[insarg.text]
   }
   full_context.merge! @synonyms
@@ -440,6 +438,10 @@ def process_instruction(instruction, ins_object)
   # traverse operators
   test_situation.elements.each('situation/*[not(starts-with(name(),"argument"))]'){|operator|
       send( "constraintsfrom_#{operator.name}", operator, full_context )
+  }
+  
+  test_situation.elements.each('//[@state="result"]'){|arg|
+       @synonyms[reverse_synonyms[arg].text] = "#{@synonyms[reverse_synonyms[arg].text]}_X"
   }
 end
 
@@ -778,9 +780,9 @@ def solve
   }
   
   doc.elements.each('template/instruction') {|instruction|
-      #instruction.attributes["clone"].to_i.times{|i|
-      process_instruction instruction, instructions[instruction]
-      #}
+      (instruction.attributes["clone"]||"1").to_i.times{|i|
+          process_instruction instruction, instructions[instruction]
+      }
   }
  
   puts ")"
