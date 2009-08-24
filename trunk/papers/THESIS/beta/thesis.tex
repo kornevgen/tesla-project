@@ -1,0 +1,110 @@
+\documentclass[14pt]{extreport}
+
+\usepackage[cp1251]{inputenc}
+\usepackage[russian]{babel} % русские шрифты
+\usepackage{pscyr}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{lscape}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{setspace} % интервалы межстрочные
+\onehalfspacing
+
+\usepackage[left=3cm,right=2cm,
+top=2cm,bottom=0.5cm,bindingoffset=0cm]{geometry} % поля
+
+\usepackage{ccaption} % заменяем для рисунков ':' после номера рисунка на другой символ
+\captiondelim{. } % разделитель точка и пробел
+
+
+\newtheorem{theorem}{Теорема}
+\newtheorem{lemma}{Лемма}
+\newtheorem{utv}{Утверждение}
+\newtheorem*{sld}{Следствие}
+
+
+
+\begin{document}
+
+\thispagestyle{empty}
+
+\begin{singlespace}
+\begin{center}
+МИНИСТЕРСТВО ОБРАЗОВАНИЯ И НАУКИ\\ РОССИЙСКОЙ ФЕДЕРАЦИИ\\[0.5cm]
+
+МОСКОВСКИЙ ГОСУДАРСТВЕННЫЙ УНИВЕРСИТЕТ\\[0.5cm]
+
+ФАКУЛЬТЕТ ВЫЧИСЛИТЕЛЬНОЙ МАТЕМАТИКИ\\ И КИБЕРНЕТИКИ\\[1cm]
+\end{center}
+
+\begin{flushright}
+На правах рукописи\\[2.5cm]
+\end{flushright}
+
+\begin{center}
+Корныхин Евгений Валерьвич\\[1cm]
+\textbf{\Large{Исследование методов генерации программ для тестирования модулей
+управления памяти микропроцессоров}}\\[1.5cm]
+
+Специальность 05.13.11 -- математическое и программное обеспечение
+вычислительных машин, комплексов и компьютерных сетей\\[1.5cm]
+
+
+Диссертация на соискание ученой степени\\
+кандидата физико-математических наук
+\end{center}
+
+\vspace{0.7cm}
+
+\begin{flushright} Научный руководитель:\\
+д.ф-м.н. Петренко Александр Константинович
+\end{flushright}
+
+\vspace{3cm}
+
+\begin{center}
+Москва -- 2009
+\end{center}
+
+
+\end{singlespace}
+
+\tableofcontents
+
+%%посмотреть паспорт специальности и требования к оформлению диссертации (типа
+%%%%"все результаты должны быть проверны, точны, ...")
+
+\include{0.intro/intro}
+%% возможно фразы надо снабдить ссылками на умные книжки для подкрепления
+
+\include{1.review/review}
+%% доделать таблички -- снабдить их комментариями?
+
+\include{2.theor/theor}
+%% подправить формулировки теорем
+%% написать доказательства
+%% Где-то должно быть написано, зачем нужны теоремы, эта цепочка теорем направлена на то-то, эта цепочка направлена на то-то. (для каждого свойства-теоремы должно быть понятно, зачем они нужны, т.е. что дает наличие этой теоремы)
+
+\include{3.impl/impl}
+
+\include{4.analysis/analysis}
+%% добавить оценочных фраз?
+%% ключевая мысль -- оценка трудоемкости, в данном случае под "трудоемкостью" можно
+%% понимать время генерации тестовой программы, а оценивать его можно с помощью сложности
+%% получаемых ограничений; целью сравнения было бы показать, что сложность меньше, чем
+%% при других методах....
+
+\chapter*{Заключение}
+\addcontentsline{toc}{chapter}{Заключение}
+%% написать заключение
+
+\pagebreak
+\bibliographystyle{plain}
+\bibliography{thesis}
+%% привести оформление в соответствие с требованием
+
+\end{document}
