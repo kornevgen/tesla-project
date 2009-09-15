@@ -3504,7 +3504,7 @@ x_n\}$ -- в виде конъюнкции $(x \neq x_1) \wedge (x \neq x_2) \wedge
 
 \pagebreak
 \section{Ограничения, описывающие тестовые ситуации в некоторых
-частных случаях, для стратегии вытеснения LRU}
+частных случаях, для стратегии вытеснения \LRU}
 
 \subsection{Тестовые шаблоны без кэш-промахов}
 
@@ -3516,7 +3516,7 @@ $$
 \left\{
 \begin{array}{l}
 x \in D\\
-... (\mbox{тестовая ситуация на буфер TLB})\\
+... (\mbox{тестовые ситуации на остальные буферы})\\
 \end{array}
 \right.
 $$
@@ -3551,25 +3551,6 @@ $$F'''(x, \lambda_\delta) \equiv (x = \lambda_\delta \wedge x \notin
 \{x_1, ..., x_n\} \wedge \sum_{i=1}^n (R(x_i) = R(x)) \geqslant w -
 \delta + 1)$$
 
-\subsection{Простые тестовые шаблоны}
-
-Рассмотрим еще один класс тестовых шаблонов -- т.н. \emph{простые
-тестовые шаблоны}. Структура этих тестовых шаблонов такова, что все
-диапазоны вытеснения будут начинаться в начальном состоянии
-кэш-памяти. Это позволит строить более простые уравнения по
-сравнению с общим случаем.
-
-Тестовый шаблон называется \emph{простым}, если в нем не более $w$ кэш-промахов.
-
-\begin{theorem}
-Случай, когда вытесняемый тегсет не находился в начальном состоянии
-кэш-памяти, а был внесен одной из инструкций тестового шаблона,
-невозможен для простых тестовых шаблонов.
-\end{theorem}
-\begin{proof}
-//TODO
-\end{proof}
-
 \subsection{Короткие тестовые шаблоны}
 
 Будем называть тестовый шаблон \emph{коротким}, если в нем не более
@@ -3578,46 +3559,24 @@ $w$ инструкций обращения к памяти. Очевидно, что любой короткий
 шаблонов остается всего 5 (первые два можно еще объединить в более
 компактную систему уравнений).
 
-\begin{theorem}[корректность использования функций полезности для
-записи LRU в коротких тестовых шаблонах] Тестовая программа,
-построенная по ограничениям, которые сгенерированы с использованием
-предъявленных в таблице~\ref{short_templates_table} функций
-полезности, удовлетворяет своему короткому тестовому шаблону.
-\end{theorem}
-\begin{proof}
-  //TODO
-\end{proof}
-
-
-\begin{landscape}
-\begin{table}
-\begin{tabular}{|c|c|c|c|c|c|}
+\begin{table}[t]
+\begin{tabular}{|c|c|c|c|}
 \hline  & \centering случай &
-\begin{tabular}{c}переменная\\перебора\end{tabular} & система &
-\begin{tabular}{c}функция\\полезности\\для кэш-\\попадания\end{tabular} &
-\begin{tabular}{c}функция\\полезности\\для кэш-\\промаха\end{tabular} \\
+\begin{tabular}{c}переменная\\перебора\end{tabular} & система \\
 \hline \hline \multirow{-2}{*}{\rotatebox{90}{кэш-попадание}} &
 \makecell[c{p{0.3\textwidth}}]{тегсет находится в начальном
 состоянии кэш-памяти и он всё ещё не вытеснен} & $\lambda_\delta \in
 D$ &
 $\left\{\begin{array}{l} x = \lambda_\delta\\
 \sum\limits^n_{i=1} u(x_i) \leqslant w - \delta
-\end{array}\right.
-$ &
-\begin{tabular}{c}
-$x_i \in \{ \lambda_{\delta+1}, ..., \lambda_w\}$\\
-$\wedge~x_i \notin \{x_1, ..., x_{i-1}\}$
-\end{tabular}
-& $R(x_i) = R(x)$
-\\ \hhline{~|-----}
+\end{array}\right.$ \\ \hhline{~|---}
 & \makecell[c{p{0.3\textwidth}}]{тегсет уже встречался в шаблоне} &
--- & $x \in \{x_1, ..., x_n\}$ & -- & --
+-- & $x \in \{x_1, ..., x_n\}$
 \\ \hline \hline \multirow{6}{*}{\rotatebox{90}{кэш-промах}}
 & \makecell[c{p{0.3\textwidth}}]{тегсет встречается впервые} & -- &
 $\left\{\begin{array}{l} x \notin D\\
 x \notin \{x_1, ..., x_n\}\\
-\end{array}\right.
-$ & -- & -- \\ \hhline{~|-----} &
+\end{array}\right.$\\ \hhline{~|---} &
 \makecell[c{p{0.3\textwidth}}]{тегсет находился в начальном
 состоянии кэш-памяти и был вытеснен} &
 $\begin{array}{c}\lambda_\delta \in D,\\\delta \geqslant
@@ -3626,22 +3585,170 @@ $\left\{\begin{array}{l} x = \lambda_\delta\\
 x \notin \{x_1, ..., x_n\}\\
 \sum\limits^n_{i=1} u(x_i) > w - \delta\\
 \end{array}\right.
-$ &
-\begin{tabular}{c}
-$x_i \in\{\lambda_{\delta+1}, ..., \lambda_w\}$\\
-$\wedge~x \notin \{x_1, ..., x_{i-1}\}$\\
+$ \\ \hline
 \end{tabular}
-&
-\begin{tabular}{c}
-$R(x_i) = R(x)$\\
-\end{tabular}
-\\ \hline
-\end{tabular}
+
+%где функция полезности определена следующим образом:
+$$u(x_i) \equiv
+\left\{\begin{array}{l} x_i \in \{ \lambda_{\delta+1}, ...,
+\lambda_w\}~\wedge~x_i \notin \{x_1, ..., x_{i-1}\}, \mbox{если}~S_i
+= \mbox{hit}\\
+R(x_i) = R(x), \mbox{если}~S_i = \mbox{miss}
+\end{array}\right.
+$$
 \caption{Таблица систем уравнений для тестовых ситуаций в кэш-памяти
 для коротких тестовых шаблонов в случае стратегии вытеснения
-LRU}\label{short_templates_table}
+\LRU}\label{short_templates_table}
 \end{table}
-\end{landscape}
+
+\begin{theorem}[корректность использования функций полезности для
+записи LRU в коротких тестовых шаблонах]\label{short_templates}
+Тестовая программа, построенная по ограничениям, которые
+сгенерированы с использованием предъявленных в
+таблице~\ref{short_templates_table} функций полезности,
+удовлетворяет своему короткому тестовому шаблону.
+\end{theorem}
+\begin{proof}
+  Для короткого шаблона, как и для любого другого, справедлива
+  теорема~\ref{thm_lru_usefulness_correct} и
+  таблица~\ref{hit_miss_table}. Однако не все выделенные в них
+  ситуации в коротких шаблонах возможны. Поскольку в коротком
+  шаблоне не может быть более $w$ инструкций обращения к памяти, то
+  и количество полезных инструкций не может быть более $w$. Значит,
+  подформулы $\sum u(x_i) \geqslant w$ являются тождественно
+  ложными, а подформулы $\sum u(x_i) < w$ --- тождественно
+  истинными. Таким образом, пятая и седьмая строчки
+  таблицы~\ref{hit_miss_table} не попадут в таблицу для коротких
+  шаблонов, а из второй и третьей строчек нужно исключить
+  неравенство с суммой функций полезности (в этих строчках функции
+  полезности не нужны вовсе).
+
+  Дизъюнкция получившихся первых трех строк системы выглядит следующим образом:
+  $$\left[\begin{array}{l}
+        \left\{\begin{array}{l}
+            x = \lambda_\delta\\
+            x \notin \{x_1,~x_2,~\dots,~x_n\}\\
+            \sum_{i=1}^n u(x_i) \leqslant w - \delta\\
+        \end{array}\right.\\[1cm]
+        \left\{\begin{array}{l}
+            x = \lambda_\delta\\
+            x \in \{x_1,~x_2,~\dots,~x_n\}\\
+        \end{array}\right.\\
+        x \in [x_1,~x_2,~\dots,~x_n]_{\mbox{miss}}\\
+    \end{array}\right.$$
+    что эквивалентно следующей системе:
+  $$\left[\begin{array}{l}
+        \left\{\begin{array}{l}
+            x = \lambda_\delta\\
+            \sum_{i=1}^n u(x_i) \leqslant w - \delta\\
+        \end{array}\right.\\[1cm]
+        \left\{\begin{array}{l}
+            x = \lambda_\delta\\
+            x \in \{x_1,~x_2,~\dots,~x_n\}\\
+        \end{array}\right.\\
+        x \in [x_1,~x_2,~\dots,~x_n]_{\mbox{miss}}\\
+    \end{array}\right.$$
+
+    Покажем, что справедливо следующее эквивалентное преобразование:
+  $$\left[\begin{array}{l}
+        \left\{\begin{array}{l}
+            x = \lambda_\delta\\
+            x \in \{x_1,~x_2,~\dots,~x_n\}\\
+        \end{array}\right.\\
+        x \in [x_1,~x_2,~\dots,~x_n]_{\mbox{miss}}\\
+    \end{array}\right. \Leftrightarrow x \in \{x_1,~x_2,~\dots,~x_n\}$$
+
+    Обозначим, $\alpha \equiv x = \lambda_\delta$, $\beta \equiv x \in
+    [x_1,~x_2,~\dots,~x_n]_{\mbox{hit}}$, $\gamma \equiv x \in
+    [x_1,~x_2,~\dots,~x_n]_{\mbox{miss}}$. Тогда надо доказать
+    следующую эквивалентность: $\alpha (\beta \vee \gamma) \vee \gamma \equiv
+    \beta \vee \gamma$. Для начала упростим ее с помощью
+    эквивалентных преобразований: $\alpha (\beta \vee \gamma) \vee \gamma \equiv
+    \beta \vee \gamma \Leftrightarrow \alpha \beta \vee \gamma \equiv
+    \beta \vee \gamma \Leftrightarrow (\alpha \beta \vee \gamma)(\beta \vee \gamma)
+    \vee \neg(\alpha \beta \vee \gamma)\neg(\beta \vee \gamma)
+    \Leftrightarrow (\alpha \beta \vee \gamma) \vee (\neg \alpha
+    \vee \neg \beta)\neg \gamma \neg \beta \Leftrightarrow (\alpha \beta \vee \gamma) \vee
+    \neg \gamma \neg \beta \Leftrightarrow \alpha \vee \gamma \vee \neg \beta$.
+
+    Итак, эквивалентность будет показана, если будет доказано, что:
+  $$\left[\begin{array}{l}
+        x = \lambda_\delta\\
+        x \in [x_1,~x_2,~\dots,~x_n]_{\mbox{miss}}\\
+        x \notin [x_1,~x_2,~\dots,~x_n]_{\mbox{hit}}\\
+    \end{array}\right.$$
+
+    Из теоремы~\ref{thm_lru_usefulness_correct} следует, что $x \in L_0 \vee x \in
+    [x_1,~x_2,~\dots,~x_n]_{\mbox{miss}}$, из чего следует и
+    требуемая эквивалентность.
+
+    Таким образом, если при обращении к $x$ происходит
+    кэш-попадание, то для $x$ справедливы следующие условия:
+  $$\left[\begin{array}{l}
+        \left\{\begin{array}{l}
+            x = \lambda_\delta\\
+            \sum_{i=1}^n u(x_i) \leqslant w - \delta\\
+        \end{array}\right.\\[1cm]
+        x \in \{x_1,~x_2,~\dots,~x_n\}\\
+    \end{array}\right.$$
+\end{proof}
+
+
+%\begin{landscape}
+%\begin{table}
+%\begin{tabular}{|c|c|c|c|c|c|}
+%\hline  & \centering случай &
+%\begin{tabular}{c}переменная\\перебора\end{tabular} & система &
+%\begin{tabular}{c}функция\\полезности\\для кэш-\\попадания\end{tabular} &
+%\begin{tabular}{c}функция\\полезности\\для кэш-\\промаха\end{tabular} \\
+%\hline \hline \multirow{-2}{*}{\rotatebox{90}{кэш-попадание}} &
+%\makecell[c{p{0.3\textwidth}}]{тегсет находится в начальном
+%состоянии кэш-памяти и он всё ещё не вытеснен} & $\lambda_\delta \in
+%D$ &
+%$\left\{\begin{array}{l} x = \lambda_\delta\\
+%\sum\limits^n_{i=1} u(x_i) \leqslant w - \delta
+%\end{array}\right.
+%$ &
+%\begin{tabular}{c}
+%$x_i \in \{ \lambda_{\delta+1}, ..., \lambda_w\}$\\
+%$\wedge~x_i \notin \{x_1, ..., x_{i-1}\}$
+%\end{tabular}
+%& $R(x_i) = R(x)$
+%\\ \hhline{~|-----}
+%& \makecell[c{p{0.3\textwidth}}]{тегсет уже встречался в шаблоне} &
+%-- & $x \in \{x_1, ..., x_n\}$ & -- & --
+%\\ \hline \hline \multirow{6}{*}{\rotatebox{90}{кэш-промах}}
+%& \makecell[c{p{0.3\textwidth}}]{тегсет встречается впервые} & -- &
+%$\left\{\begin{array}{l} x \notin D\\
+%x \notin \{x_1, ..., x_n\}\\
+%\end{array}\right.
+%$ & -- & -- \\ \hhline{~|-----} &
+%\makecell[c{p{0.3\textwidth}}]{тегсет находился в начальном
+%состоянии кэш-памяти и был вытеснен} &
+%$\begin{array}{c}\lambda_\delta \in D,\\\delta \geqslant
+%w-n+1\end{array}$ &
+%$\left\{\begin{array}{l} x = \lambda_\delta\\
+%x \notin \{x_1, ..., x_n\}\\
+%\sum\limits^n_{i=1} u(x_i) > w - \delta\\
+%\end{array}\right.
+%$ &
+%\begin{tabular}{c}
+%$x_i \in\{\lambda_{\delta+1}, ..., \lambda_w\}$\\
+%$\wedge~x \notin \{x_1, ..., x_{i-1}\}$\\
+%\end{tabular}
+%&
+%\begin{tabular}{c}
+%$R(x_i) = R(x)$\\
+%\end{tabular}
+%\\ \hline
+%\end{tabular}
+%\caption{Таблица систем уравнений для тестовых ситуаций в кэш-памяти
+%для коротких тестовых шаблонов в случае стратегии вытеснения
+%LRU}\label{short_templates_table}
+%\end{table}
+%\end{landscape}
+
+
 
 
 \subsection{Генерация тестовых данных для кэш-памяти, содержащей
@@ -3971,34 +4078,17 @@ $\delta + 1 < \Delta$, то функция полезности, в которую входит
 обозначено параметром $m$):
 
 \begin{theorem}[Корректность ограничений, генерируемые зеркальным методом с
-использованием функций полезности для LRU] Пусть $t_1, t_2, ...,
-t_m$ -- теги инициализирующей последовательности, $x$ -- текущий тег
-тестового шаблона, $x_1, x_2, ..., x_n$ -- теги предыдущих
-инструкций тестового шаблона. Тогда $x$ удовлетворяет тестовой
-ситуации согласно определению на списках тогда и только тогда,
-когда:
-\begin{itemize}
-\item если текущая инструкция дает кэш-попадание, то
-$$
-\left\{\begin{array}{l} x \in \{t_1, ..., t_m, x_1, ..., x_n\}\\
-\sum\limits_{i=1}^m u_x(t_i) + \sum\limits_{i=1}^n u_x(x_i) < w\\
-\{t_1, ..., t_m\} - \mbox{все разные}\\
-\end{array} \right.
-$$
-\item если текущая инструкция дает кэш-промах, то
-$$
-\left\{\begin{array}{l} x \in \{t_1, ..., t_m, x_1, ..., x_n\}\\
-\sum\limits_{i=1}^m u_x(t_i) + \sum\limits_{i=1}^n u_x(x_i)
-\geqslant w\\
-\{t_1, ..., t_m\} - \mbox{все разные}\\
-\end{array} \right.
-$$
-
+использованием функций полезности для
+\LRU]\label{correct_mirror_LRU} Пусть $t_1, t_2, ..., t_m$ -- теги
+инициализирующей последовательности, $x$ -- текущий тег тестового
+шаблона, $x_1, x_2, ..., x_n$ -- теги предыдущих инструкций
+тестового шаблона, причем $x \in \{t_1, ..., t_m, x_1, ..., x_n\}$ и
+$\{t_1, ..., t_m\}$ --- все разные. Тогда $x$ не вытеснен согласно
+определению на списках тогда и только тогда, когда
+$$\sum\limits_{i=1}^m u_x(t_i) + \sum\limits_{i=1}^n u_x(x_i) < w$$
 где функции полезности определены следующим образом:
-
 $$u_x(t_i) \equiv (x \notin \{t_i, ..., t_m, x_1, ..., x_n\} \wedge
 R(x) = R(t_i))$$
-
 $$\begin{array}{c}u_x(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x) =
 R(x_i)), \mbox{если}~S_i=\mbox{miss}\end{array}$$
 $$\begin{array}{c}u_x(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x) =
@@ -4007,9 +4097,53 @@ R(x_i) \wedge \sum\limits_{j=1}^{n} \tilde{c}_{x_i}(t_j) = 0
 \mbox{если}~S_i=\mbox{hit}\end{array}$$
 $$c_i(x_j) \equiv (x \notin \{x_j, ..., x_i\} \wedge x_i = x_j)$$
 $$\tilde{c}_{x_i}(t_j) \equiv (x \notin \{t_j, ..., t_m, x_1, ..., x_{i-1}\} \wedge x_i = t_j)$$
-\end{itemize}
 \end{theorem}
-\begin{proof}//TODO\end{proof}
+\begin{proof}
+Воспользуемся леммой~\ref{hit_II}. При этом в качестве
+последовательности тегов тестового шаблона в этой лемме рассмотрим
+последовательность $t_1, t_2,~\dots,~t_m,~x_1,~x_2,~\dots,~x_n$.
+Согласно лемме тестовая ситуация на $x$ выполнена при
+соответствующем условии на сумму функций полезности от элементов
+этой последовательности. Функции полезности для
+$x_1,~x_2,~\dots,~x_n$ без изменений переходят из формулировки
+леммы~\ref{hit_II} в данную теорему. Функцию полезности для $t_1,
+t_2,~\dots,~t_m$ из формулировки леммы~\ref{hit_II} получить нельзя,
+поскольку неизвестна тестовая ситуация на эти теги. Однако, вспомнив
+определение полезной инструкции, функцию полезности для этих тегов
+получить несложно. А именно, тег $t_i$ будет полезным, если он
+продвигает $x$ к концу списка \LRU после последнего обращения к $x$.
+Если после последнего обращения к $x$ сам тег $t_i$ встречается
+впервые, то он будет полезным (см. доказательство
+леммы~\ref{hit_II}). Если же после последнего обращения к $x$ $t_i$
+встречается не в первый раз, то он не двигает $x$ к концу списка,
+что, тем самым, означает бесполезность $t_i$. Но поскольку все $t_i$
+разные, то повторное обращение возможно лишь среди
+$x_1,~x_2,~\dots,~x_n$ -- поэтому в функцию полезности для этих
+тегов добавлено отличие от $t_1,~t_2,~\dots,~t_m$.
+\end{proof}
+
+Из теоремы~\ref{correct_mirror_LRU} следует система уравнений для
+описания тестовой ситуации $S$ тега $x$, генерируемая зеркальным
+методом с использованием функций полезности для \LRU (функции
+полезности приведены в формулировке
+теоремы~\ref{correct_mirror_LRU}):
+\begin{itemize}
+\item если $S$ = hit, то
+$$
+\left\{\begin{array}{l} x \in \{t_1, ..., t_m, x_1, ..., x_n\}\\
+\sum\limits_{i=1}^m u_x(t_i) + \sum\limits_{i=1}^n u_x(x_i) < w\\
+\{t_1, ..., t_m\} - \mbox{все разные}\\
+\end{array} \right.
+$$
+\item если $S$ = miss, то
+$$
+\left\{\begin{array}{l} x \in \{t_1, ..., t_m, x_1, ..., x_n\}\\
+\sum\limits_{i=1}^m u_x(t_i) + \sum\limits_{i=1}^n u_x(x_i)
+\geqslant w\\
+\{t_1, ..., t_m\} - \mbox{все разные}\\
+\end{array} \right.
+$$
+\end{itemize}
 
 Стоит заметить, что функции полезности добавили новое дополнительное
 условие на теги инициализирующих инструкций: они должны быть
