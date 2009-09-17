@@ -1,15 +1,7 @@
 <template>
 	<register id="x" length="64" />	
-	<register id="y" length="64" />		
-	<register id="z" length="64" />		
+	<register id="y" length="64" />	
 	<constant id="c" length="16" />		
-	
-	<instruction name="ADD">
-		<argument>x</argument>
-		<argument>y</argument>
-		<argument>z</argument>
-		<situation name="overflow" />
-	</instruction>
 	
 	<instruction name="LW">
 		<argument>y</argument>
@@ -29,7 +21,7 @@
 		<argument>c</argument>
 		<situation name="store">
 			<memory>
-				<cache id="l1Miss" />
+				<cache id="l1Hit" />
 				<microtlb id="mtlbMiss" />
 			</memory>
 		</situation>
