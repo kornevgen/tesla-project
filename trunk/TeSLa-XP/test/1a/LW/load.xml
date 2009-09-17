@@ -1,0 +1,54 @@
+<!--
+последовательность действий:
+1) подготовить физический адрес данных
+2) загрузить из памяти двойное слово, в состав которого входят требуемые данные
+3) выделить из двойного слова нужные данные (в данном случае, 4 байта из 8 байт)
+-->
+<situation>
+	<argument name="rt" state="result" length="64" />
+	<argument name="base" state="readonly" length="64" />
+	<argument name="offset" state="readonly" length="16" />
+	
+	<let name="vAddr">
+		<sum>
+			<sign_extend size="64"><var>offset</var></sign_extend>
+			<var>base</var>
+		</sum>
+	</let>
+	
+	<assert>
+		<eq>
+			<bits end="1" start="0"><var>vAddr</var></bits>
+			<constant length="2">0</constant>
+		</eq>
+	</assert>
+	
+	<procedure name="AddressTranslation">
+			<physical>pAddr</physical>
+			<virtual>vAddr</virtual>
+			<points_to>DATA</points_to>
+			<points_for>LOAD</points_for>
+	</procedure>
+	
+	<let name="dwByteOffset">
+		<bits end="2" start="0"><var>vAddr</var></bits>
+	</let>
+	
+	<!-- dwByteOffset can be changed according to BigEndian/LittleEndian -->
+	
+	<procedure name="LoadMemory">
+		<data>memdoubleword</data> WORD pAddr vAddr DATA
+	</procedure>
+
+	<bytes_select type="WORD" name="data">
+		<content>memdoubleword</content>
+		<index>dwByteOffset</index>
+	</bytes_select>
+	
+	<assert>
+		<eq>
+			<var>rt</var>
+			<sign_extend size="64"><var>data</var></sign_extend>
+		</eq>
+	</assert>
+</situation>
