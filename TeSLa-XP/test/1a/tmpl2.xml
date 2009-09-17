@@ -1,0 +1,30 @@
+<template>
+	<register id="x" length="64" />	
+	<register id="y" length="64" />	
+	<constant id="c" length="16" />		
+	
+	<instruction name="LW">
+		<argument>y</argument>
+		<argument>x</argument>
+		<argument>c</argument>
+		<situation name="load">
+			<memory>
+				<cache id="l1Hit" />
+				<microtlb id="mtlbHit" />
+			</memory>
+		</situation>
+	</instruction>
+	
+	<instruction name="SB">
+		<argument>y</argument>
+		<argument>x</argument>
+		<argument>c</argument>
+		<situation name="store">
+			<memory>
+				<cache id="l1Miss" />
+				<microtlb id="mtlbHit" />
+			</memory>
+		</situation>
+	</instruction>
+</template>
+					
