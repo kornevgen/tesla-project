@@ -4599,17 +4599,17 @@ $\delta + 1 < \Delta$, то функция полезности, в которую входит
 тестового шаблона, причем $x \in \{t_1, ..., t_m, x_1, ..., x_n\}$ и
 $\{t_1, ..., t_m\}$ --- все разные. Тогда $x$ не вытеснен согласно
 определению на списках тогда и только тогда, когда
-$$\sum\limits_{i=1}^m u_x(t_i) + \sum\limits_{i=1}^n u_x(x_i) < w$$
+$$\sum\limits_{i=1}^m \tilde{u}_x(t_i) + \sum\limits_{i=1}^n u_x(x_i) < w$$
 где функции полезности определены следующим образом:
-$$u_x(t_i) \equiv (x \notin \{t_i, ..., t_m, x_1, ..., x_n\} \wedge
+$$\tilde{u}_x(t_i) \equiv (x \notin \{t_i, ..., t_m, x_1, ..., x_n\} \wedge
 R(x) = R(t_i))$$
 $$\begin{array}{c}u_x(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x) =
 R(x_i)), \mbox{если}~S_i=\mbox{miss}\end{array}$$
 $$\begin{array}{c}u_x(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x) =
-R(x_i) \wedge \sum\limits_{j=1}^{n} \tilde{c}_{x_i}(t_j) = 0
+R(x_i) \wedge \sum\limits_{j=1}^{m} \tilde{c}_{x_i}(t_j) = 0
 \wedge \sum\limits_{j=1}^{i-1} c_i(x_j) = 0),\\
 \mbox{если}~S_i=\mbox{hit}\end{array}$$
-$$c_i(x_j) \equiv (x \notin \{x_j, ..., x_i\} \wedge x_i = x_j)$$
+$$c_i(x_j) \equiv (x \notin \{x_j, ..., x_{i-1}\} \wedge x_i = x_j)$$
 $$\tilde{c}_{x_i}(t_j) \equiv (x \notin \{t_j, ..., t_m, x_1, ..., x_{i-1}\} \wedge x_i = t_j)$$
 \end{theorem}
 \begin{proof}
@@ -4645,14 +4645,14 @@ $x_1,~x_2,~\dots,~x_n$ -- поэтому в функцию полезности для этих
 \item если $S$ = hit, то
 $$
 \left\{\begin{array}{l} x \in \{t_1, ..., t_m, x_1, ..., x_n\}\\
-\sum\limits_{i=1}^m u_x(t_i) + \sum\limits_{i=1}^n u_x(x_i) < w\\
+\sum\limits_{i=1}^m \tilde{u}_x(t_i) + \sum\limits_{i=1}^n u_x(x_i) < w\\
 \{t_1, ..., t_m\} - \mbox{все разные}\\
 \end{array} \right.
 $$
 \item если $S$ = miss, то
 $$
 \left\{\begin{array}{l} x \in \{t_1, ..., t_m, x_1, ..., x_n\}\\
-\sum\limits_{i=1}^m u_x(t_i) + \sum\limits_{i=1}^n u_x(x_i)
+\sum\limits_{i=1}^m \tilde{u}_x(t_i) + \sum\limits_{i=1}^n u_x(x_i)
 \geqslant w\\
 \{t_1, ..., t_m\} - \mbox{все разные}\\
 \end{array} \right.
