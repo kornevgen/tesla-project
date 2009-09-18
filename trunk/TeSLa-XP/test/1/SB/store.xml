@@ -43,6 +43,6 @@
 	</bytes_expand>
 	
 	<procedure name="StoreMemory">
-		datadoubleword BYTE pAddr vAddr DATA
+		<data>datadoubleword</data> BYTE pAddr vAddr DATA
 	</procedure>
 </situation>
