@@ -37,7 +37,7 @@
 	<!-- dwByteOffset can be changed according to BigEndian/LittleEndian -->
 	
 	<procedure name="LoadMemory">
-		<argument>memdoubleword</argument> WORD pAddr vAddr DATA
+		<data>memdoubleword</data> WORD pAddr vAddr DATA
 	</procedure>
 
 	<bytes_select type="WORD" name="data">
