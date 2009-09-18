@@ -15,7 +15,7 @@
 		</situation>
 	</instruction>
 	
-<!-- 	<instruction name="SB">
+ 	<instruction name="SB">
 		<argument>y</argument>
 		<argument>x</argument>
 		<argument>c</argument>
@@ -26,6 +26,5 @@
 			</memory>
 		</situation>
 	</instruction>
-	-->
 </template>
 					
