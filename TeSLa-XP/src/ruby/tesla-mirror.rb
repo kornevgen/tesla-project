@@ -118,68 +118,64 @@ def getRegion(tagset)
 end
 
 def l1Hit( init_tagsets, previous_tagsets, current_tagset )
-  mirror init_tagsets, previous_tagsets, current_tagset, ">"
+  mirror init_tagsets, previous_tagsets, current_tagset, "bvugt",\
+      (Math.log([@L1ASSOC, init_tagsets.length + previous_tagsets.length].max + 1)/Math.log(2)).ceil
 end
 
 def l1Miss( init_tagsets, previous_tagsets, current_tagset )
-  mirror init_tagsets, previous_tagsets, current_tagset, "=<"
+  mirror init_tagsets, previous_tagsets, current_tagset, "bvule",\
+      (Math.log([@L1ASSOC, init_tagsets.length + previous_tagsets.length].max + 1)/Math.log(2)).ceil
 end
 
-def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation )
-  "(and " +
-      "(or " +
-          (init_tagsets + previous_tagsets).collect{|t|
-              "(= #{t} #{current_tagset})"
-          }.join + ")" +
-      "(#{mirrrelation} #{@L1ASSOC} (sum "  +
+def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlength )
+  puts "(and "
+    puts "(or "
+          (init_tagsets + previous_tagsets).each{|t|
+              puts "(= #{t} #{current_tagset})"  }
+    puts ")"
+    
+    puts "(#{mirrrelation} bv#{@L1ASSOC}[#{sumlength}] (bvadd "
           
           # u(t_i)
-          (0.. init_tagsets.length-1).collect{|i|
-            "(ite (and " +
-               init_tagsets[i..init_tagsets.length-1].collect{|t|
-                      "(= bit0 (bvcomp #{t} #{current_tagset}))"
-               }.join + 
-               previous_tagsets.collect{|t|
-                      "(= bit0 (bvcomp #{t} #{current_tagset}))"
-               }.join + 
-               "(= #{getRegion init_tagsets[i]} #{getRegion current_tagset}))" +
-            " ) 1 0 ) " }.join +
+          (0.. init_tagsets.length-1).each{|i|
+            puts "(ite (and "
+               init_tagsets[i..init_tagsets.length-1].each{|t|
+                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))" } 
+               previous_tagsets.each{|t|
+                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))" }
+               puts "(= #{getRegion init_tagsets[i]} #{getRegion current_tagset}))" +
+            " bv1[#{sumlength}] bv0[#{sumlength}] ) " }
             
           # u(x_i): S_i = miss/hit
-          (0.. previous_tagsets.length-1).collect{|i|
-            "(ite (and " +
-               previous_tagsets[i..previous_tagsets.length-1].collect{|t|
-                      "(= bit0 (bvcomp #{t} #{current_tagset}))"
-               }.join + 
-               "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset}))" +
+          (0.. previous_tagsets.length-1).each{|i|
+            puts "(ite (and "
+               previous_tagsets[i..previous_tagsets.length-1].each{|t|
+                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))"
+               }
+               puts "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset})"
                
-              ( if ! @l1Hits.include?( previous_tagsets[i])
-                ""
-              else
-                (0..init_tagsets.length-1).collect{|j|
-                  "(or " +
+               if @l1Hits.include?( previous_tagsets[i])
+                (0..init_tagsets.length-1).each{|j|
+                  puts "(or "
                     # c(t_j) = 0
-                    init_tagsets[j..init_tagsets.length-1].collect{|t|
-                        "(= #{current_tagset} #{t})" }.join +
-                    previous_tagsets[0..i-1].collect{|t|
-                        "(= #{current_tagset} #{t})" }.join +
-                    "(= bit0 (bvcomp #{previous_tagsets[i]} #{init_tagsets[j]}))"                    
-                  ")"
-                }.join +
-                (0..i-1).collect{|j|
-                  "(or " +
+                    init_tagsets[j..init_tagsets.length-1].each{|t|
+                        puts "(= #{current_tagset} #{t})" }
+                    previous_tagsets[0..i-1].each{|t|
+                        puts "(= #{current_tagset} #{t})" }
+                    puts "(= bit0 (bvcomp #{previous_tagsets[i]} #{init_tagsets[j]})))"
+                }
+                (0..i-1).each{|j|
+                  puts "(or "
                     # c(t_j) = 0
-                    previous_tagsets[j..i-1].collect{|t|
-                        "(= #{current_tagset} #{t})" }.join +
-                    "(= bit0 (bvcomp #{previous_tagsets[i]} #{previous_tagsets[j]}))"                    
-                  ")"
-                }.join
-              end ) +
+                    previous_tagsets[j..i-1].each{|t|
+                        puts "(= #{current_tagset} #{t})" }
+                    puts "(= bit0 (bvcomp #{previous_tagsets[i]} #{previous_tagsets[j]})))"
+                }
+               end
                 
-            " ) 1 0 ) " }.join +
+            puts " ) bv1[#{sumlength}] bv0[#{sumlength}] ) " }
           
-      " ))" +
-  ")"
+      puts " )))"
 end
 
 def mtlbHit(previous_tagsets, current_tagset)  
@@ -210,107 +206,47 @@ def mtlbMiss(previous_tagsets, current_tagset)
           " (= bit0 (bvcomp #{getPfn current_tagset} #{getPfn tagset})) " }.join + ")"
 end
 
-def cache_tagset_is_not_displaced_yet(previous_tagsets, current_tagset, lambda, delta)
-          if delta + 1 > @L1ASSOC - previous_tagsets.length
-              "(>= #{@L1ASSOC - delta - 1} (+ 0 " +
-                    (0..previous_tagsets.length-1).collect{|i|
-                        if @l1Hits.include? previous_tagsets[i]
-                            "(and " +
-                                "(or " + @data_builder.L.
-                                            select{|l,d| l%128 == lambda%128 }.
-                                            select{|l,d| d > delta }.
-                                            collect{|l,d|
-                                         "(= #{previous_tagsets[i]} bv#{l}[#{@TAGSETLEN}]) "
-                                    }.join + ")" +
-                                
-                                previous_tagsets.values_at(0..i-1).collect{|t|
-                                  "(= bit0 (bvcomp #{previous_tagsets[i]} #{t} )) "
-                                }.join +
-                            ")"
-                        else
-                          "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset} )"
-                        end }.collect{|f| "(ite #{f} 1 0)"}.join +
-              "))"
-          else
-            " true"
-          end
-end
-
-def cache_tagset_is_displaced_already(previous_tagsets, current_tagset, lambda, delta)
-          if delta + 1 > @L1ASSOC - previous_tagsets.length
-              "(< #{@L1ASSOC - delta - 1} (+ 0 " +
-                    (0..previous_tagsets.length-1).collect{|i|
-                        if @l1Hits.include? previous_tagsets[i]
-                            "(and " +
-                                "(or " + @data_builder.L.
-                                            select{|l,d| l%128 == lambda%128 }.
-                                            select{|l,d| d > delta }.
-                                            collect{|l,d|
-                                         "(= #{previous_tagsets[i]} bv#{l}[#{@TAGSETLEN}]) "
-                                    }.join + ")" +
-                                
-                                previous_tagsets.values_at(0..i-1).collect{|t|
-                                  "(= bit0 (bvcomp #{previous_tagsets[i]} #{t} )) "
-                                }.join +
-                            ")"
-                        else
-                          "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset} )"
-                        end }.collect{|f| "(ite #{f} 1 0)"}.join +                     
-              "))"
-          else
-            " false"
-          end
+def tlb_cardinality_constraint(delta_T, previous_tagsets, relation, sumlength)
+      "(#{relation} bv#{@TLBASSOC - delta_T - previous_tagsets.length + @mtlbHits.length}[#{sumlength}] (bvadd bv0[#{sumlength}] " +
+            (0..previous_tagsets.length-1).collect{|i| if @mtlbHits.include? previous_tagsets[i]
+            "(and " +
+                "(or " +
+                  @data_builder.M[delta_T..@TLBASSOC-1].collect{|mtail|
+                    "(= #{getPfn previous_tagsets[i]} bv#{mtail}[#{@PFNLEN}]) " }.join +
+                ")" +
+                
+                previous_tagsets[0..i-1].collect{|t|
+                  "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn t} )) " }.join +
+            ")"
+          end }.compact.collect{|f| " (ite #{f} bv1[#{sumlength}] bv0[#{sumlength}])"}.join +                     
+      "))"  
 end
 
 def tlb_pfn_is_not_displaced_yet(previous_tagsets, current_tagset, m)
-	delta_T = @data_builder.M.index(m)
-
-            if delta_T + 1 > @TLBASSOC - previous_tagsets.length
-                "(>= #{@TLBASSOC - delta_T - 1 - previous_tagsets.length + @mtlbHits.length} (+ 0 " +
-                      (0..previous_tagsets.length-1).collect{|i| if @mtlbHits.include? previous_tagsets[i]
-                      "(and " +
-                          "(or " +
-                          	@data_builder.M.values_at(delta_T+1..@TLBASSOC-1).collect{|mtail|
-	                            "(= #{getPfn previous_tagsets[i]} bv#{mtail}[#{@PFNLEN}]) "
-      	                    }.join +
-                          ")" +
-                          
-                          previous_tagsets.values_at(0..i-1).collect{|t|
-                            "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn t} )) "
-                          }.join +
-                      ")"
-                    end }.compact.collect{|f| " (ite #{f} 1 0)"}.join +                     
-                "))"
-            else " true"
-            end
+  delta_T = @data_builder.M.index(m) + 1
+  
+  if @TLBASSOC - delta_T - previous_tagsets.length > 0
+    " true "
+  elsif @TLBASSOC - delta_T - (previous_tagsets.length - @mtlbHits.length) <= 0
+    " false "
+  else
+    tlb_cardinality_constraint(delta_T, previous_tagsets, "bvuge",\
+      (Math.log(@mtlbHits.length + 1) / Math.log(2)).ceil )
+  end
 end
 
 def tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, m)
-	delta_T = @data_builder.M.index(m)
-	previous_mtlbmiss_count = previous_tagsets.length - @mtlbHits.length
-
-  if delta_T + 1 > @TLBASSOC - previous_tagsets.length
-			if delta_T < @TLBASSOC - previous_mtlbmiss_count #it is right!
-                "(< #{@TLBASSOC - delta_T - 1 - previous_mtlbmiss_count} (+ 0 " +
-                      (0..previous_tagsets.length-1).collect{|i| if @mtlbHits.include? previous_tagsets[i]
-                      "(and " +
-                          "(or " +
-                          	@data_builder.M.values_at(delta_T+1..@TLBASSOC-1).collect{|mtail|
-	                            "(= #{getPfn previous_tagsets[i]} bv#{mtail}[#{@PFNLEN}]) "
-      	                    }.join +
-                          ")" +
-                          
-                          previous_tagsets.values_at(0..i-1).collect{|t|
-                            "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn t} )) "
-                          }.join +
-                      ")"
-                    end }.compact.collect{|f| " (ite #{f} 1 0)"}.join +                     
-                "))"
-			else
-				" true"
-			end
-    else " false"
-    end
+  delta_T = @data_builder.M.index(m) + 1
+  mtlbmissc = previous_tagsets.length - @mtlbHits.length
+  
+  if @TLBASSOC - delta_T - mtlbmissc <= -1
+    " true "
+  elsif @TLBASSOC - delta_T - previous_tagsets.length >= 0
+    " false "
+  else
+    tlb_cardinality_constraint(delta_T, previous_tagsets, "bvult",\
+      (Math.log(@mtlbHits.length + 1) / Math.log(2)).ceil  )
+  end
 end
 
 def process_instruction(instruction, ins_object)
@@ -453,6 +389,7 @@ def constraintsfrom_bytes_expand( operator, full_context )
   
   @lengths_context[operator.attributes['name']] = 64
   puts ":extrafuns (( #{new_name} BitVec[64] ))"
+  puts ":extrafuns (( #{@ins_object.data} BitVec[64] ))"
   puts ":assumption"
 
   if operator.attributes['type'] == "BYTE"
@@ -560,15 +497,22 @@ end
 def constraintsfrom_AddressTranslation( operator, full_context )
   puts ":extrafuns(( #{@ins_object.virtual_address} BitVec[64] ))"
   puts ":extrafuns(( #{@ins_object.phys_after_translation} BitVec[#{@PABITS}] ))"
+  
   puts ":assumption"
+  puts "(= #{@ins_object.virtual_address} #{full_context[operator.elements['virtual'].text]})"
+  
+  puts ":assumption"
+  puts "(= #{@ins_object.phys_after_translation} #{full_context[operator.elements['physical'].text]})"
   
   # модель виртуальной памяти
   #TODO можно сделать более полный Cached Mapped сегмент
+  puts ":assumption"
   puts "(= bv0[33] (extract[63:31] #{@ins_object.virtual_address}))"  
 
   # соответствие некоторой строке TLB
   pfn_name = "_localvar_#{@unique_counter += 1}"
   vpndiv2_name = "_localvar_#{@unique_counter += 1}"
+  puts ":assumption"
   puts "(let (#{pfn_name} #{getPfn( @ins_object.tagset )})"
   puts "(let (#{vpndiv2_name} (extract[#{@SEGBITS-1}:#{@PABITS-@PFNLEN}] #{@ins_object.virtual_address}))"
   
@@ -586,9 +530,14 @@ def constraintsfrom_AddressTranslation( operator, full_context )
   puts")))"
     
   # определение physical_after_translation
+  puts ":assumption"
   puts "(= #{@ins_object.phys_after_translation} " + 
     "(concat (extract[#{@TAGSETLEN-1}:#{@TAGSETLEN-@PFNLEN}] #{@ins_object.tagset}) " + 
             "(extract[#{@PABITS-@PFNLEN-1}:0] #{@ins_object.virtual_address}) ) )"
+            
+  # TODO (это только частный случай) часть виртуального адреса -- это часть тегсета (сет)
+  puts ":assumption"
+  puts "(= (extract[11:5] #{@ins_object.virtual_address}) (extract[6:0] #{@ins_object.tagset}))"
 end
 
 def constraintsfrom_LoadMemory( operator, full_context )
@@ -598,6 +547,9 @@ def constraintsfrom_LoadMemory( operator, full_context )
   ma.type = "LOAD"
   ma.data = @ins_object.data
   puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{@PABITS-3}] ))"
+  
+  puts ":assumption"
+  puts "(= #{@ins_object.data} #{full_context[operator.elements['data'].text]})"
   
   puts ":assumption"
   puts "(and true "
@@ -620,6 +572,9 @@ def constraintsfrom_StoreMemory( operator, full_context )
   ma.type = "STORE"
   ma.data = @ins_object.data
   puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{@PABITS-3}] ))"
+  
+  puts ":assumption"
+  puts "(= #{@ins_object.data} #{full_context[operator.elements['data'].text]})"
   
   @memory_accesses << ma
 end
@@ -682,8 +637,10 @@ def solve template_file
     # сделать ограничения для cacheTS >< microTLBS и выдать их на out
     @l1Hits << tagset if cacheTestSituation == "l1Hit"
     @mtlbHits << tagset if microTLBSituation == "mtlbHit"
-    send("#{cacheTestSituation}", init_tagsets, previous_tagsets, tagset)
-    send("#{microTLBSituation}", previous_tagsets, tagset)
+    puts ":assumption"
+    send(cacheTestSituation, init_tagsets, previous_tagsets, tagset)
+    puts ":assumption"
+    puts send(microTLBSituation, previous_tagsets, tagset)
     previous_tagsets << tagset
     
     instruction = memory.parent.parent
