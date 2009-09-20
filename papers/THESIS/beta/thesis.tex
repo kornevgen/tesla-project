@@ -1,18 +1,22 @@
 \documentclass[14pt]{extreport}
 
+\usepackage{fix-cm}
 \usepackage[cp1251]{inputenc}
 \usepackage[russian]{babel}
 %\usepackage{pscyr}
-\usepackage[T1]{fontenc} %cm-super
+%\usepackage[T1]{fontenc} %cm-super
+%\usepackage{type1cm}
 \usepackage{indentfirst}
 \usepackage{graphicx}
 \usepackage{amsthm}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{dsfont}
 \usepackage{lscape}
 \usepackage{makecell}
 \usepackage{multirow}
 \usepackage{hhline}
+\usepackage[numbers,compress,sort]{natbib}
 \usepackage{setspace} % интервалы межстрочные
 \pagestyle{plain} \onehalfspacing
 
@@ -87,8 +91,6 @@ top=2cm,bottom=0.5cm,bindingoffset=0cm]{geometry} % поля
 
 \tableofcontents
 
-%%! придумать адекватные названия глав!
-
 %%! проблема с нумерацией страниц: если начать просмотр с некого
 %%! "разрывного" места, то после него пропадает нумерация страниц вообще
 %%! (нумерация уезжает вниз страницы)
@@ -107,9 +109,6 @@ top=2cm,bottom=0.5cm,bindingoffset=0cm]{geometry} % поля
 
 %%! там, где в формулах разъехался "w-1", заменить на "w{-}1"
 
-%%посмотреть паспорт специальности и требования к оформлению диссертации (типа
-%%%%"все результаты должны быть проверны, точны, ...")
-
 
 
 % к докладу пожелание от А.К.:
@@ -124,21 +123,9 @@ top=2cm,bottom=0.5cm,bindingoffset=0cm]{geometry} % поля
 \include{0.intro/intro}
 %% возможно фразы надо снабдить ссылками на умные книжки для подкрепления
 
-%% из-за написания глав по отдельности весь текст может быть мозаичным
-%% где-то говорится про кэш+TLB, где-то говорится в общем случае
-%% надо вычитать и привести к единому виду
-
 \include{1.review/review}
 
-%%? более точно описать, что такое "тестовый шаблон" ? а то как-то размазанно сейчас
-
 \include{2.theor/theor}
-
-%%! описание модульного алгоритма перевести с MIPS'вских "кэш-памяти и TLB"
-%% на произвольные кэширующие буферы и таблицы
-
-%%! добавить информацию про статью немцев про запись cardinality constraints
-
 
 \include{3.impl/impl}
 
@@ -152,9 +139,23 @@ top=2cm,bottom=0.5cm,bindingoffset=0cm]{geometry} % поля
 %%! написать заключение
 
 \pagebreak
-\bibliographystyle{plain}
+\appendix
+\include{appendix}
+
+\pagebreak
+%\bibliographystyle{plain}
+%\bibliographystyle{gost71u}
+\bibliographystyle{gost780s}
 \bibliography{thesis}
 %% привести оформление в соответствие с требованием
 %% написать страницы моих статей в трудах конференций
+
+
+%%% самые важные правки:
+% 2. заключение
+% 3. правки Петренко по актуальности
+% 4. поправить краткое содержание во введении, чтобы оно отражало текущее состояние работы
+% 5. убрать все подчеркивания
+% 6. привести оформление списка литературы к единому формату
 
 \end{document}
