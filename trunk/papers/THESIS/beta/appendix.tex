@@ -1,0 +1,377 @@
+\chapter{Таблицы ограничений}
+%\addcontentsline{toc}{chapter}{Приложение А: Таблицы ограничений}
+
+\begin{table}[h] \small
+\begin{tabular}{|c|c|c|c|}
+\hline  & \centering случай &
+\begin{tabular}{c}переменная\\перебора\end{tabular} & система \\
+\hline \hline \multirow{10}{*}{\rotatebox{90}{кэш-попадание}} &
+\makecell[c{p{0.35\textwidth}}]{тегсет находится в начальном
+состоянии буфера, к нему нет обращений до данной инструкции и он всё
+ещё не вытеснен} & $\lambda \in L_0$ &
+$\left\{\begin{array}{l} x = \lambda\\
+x \notin \{x_1, ..., x_n\}\\
+\bigwedge\limits_{x_m:\mbox{miss}}\sum\limits_{i=1}^W v_m(\xi_i) +
+\sum\limits^{m-1}_{i=1} u_m(x_i) < W
+\end{array}\right.
+$ \\ \hhline{~|---} & \makecell[c{p{0.35\textwidth}}]{тегсет
+находится в начальном состоянии буфера, к нему есть обращение до
+данной инструкции и он всё ещё не вытеснен} & $\lambda \in L_0$ &
+$\left\{\begin{array}{l} x = \lambda\\
+x \in \{x_1, ..., x_n\}\\
+\bigwedge\limits_{x_m:\mbox{miss}}\sum\limits^{m-1}_{i=1} u_m(x_i) <
+W
+\end{array}\right.
+$ \\  \hhline{~|---} & \makecell[c{p{0.35\textwidth}}]{тегсет был
+внесен одним из кэш-промахов и с того момента не вытеснен} & -- &
+$\left\{\begin{array}{l}
+x \in [x_1, ..., x_n]_{miss}\\
+\bigwedge\limits_{x_m:\mbox{miss}}\sum\limits^{m-1}_{i=1} u_m(x_i) <
+W
+\end{array}\right.
+$ \\ \hline \hline \multirow{20}{*}{\rotatebox{90}{кэш-промах}} &
+\makecell[c{p{0.35\textwidth}}]{тегсет встречается впервые} & -- &
+$\left\{\begin{array}{l} x \notin L_0\\
+x \notin [x_1, ..., x_n]_{miss}\\
+\end{array}\right.
+$ \\ \hhline{~|---} & \makecell[c{p{0.35\textwidth}}]{тегсет ранее
+был внесен одной из инструкций шаблона, затем вытеснен} & -- &
+$\left\{\begin{array}{l}
+x \in [x_1, ..., x_n]_{miss}\\
+\bigvee\limits_{x_m : \mbox{miss}}\sum\limits^{m-1}_{i=1} u_m(x_i) \geqslant W\\
+\end{array}\right.$ \\  \hhline{~|---} &
+\makecell[c{p{0.35\textwidth}}]{тегсет находился в начальном
+состоянии буфера и был вытеснен, к нему не было обращений в шаблоне}
+& $\lambda \in L_0$ & $\left\{\begin{array}{l}
+x = \lambda\\
+x \notin \{x_1, ..., x_n\}\\
+\bigvee\limits_{x_m : \mbox{miss}}\sum\limits^W_{i=1} v_m(\xi_i) + \sum\limits^{m-1}_{i=1} u_m(x_i) \geqslant W\\
+\end{array}\right.
+$ \\ \hhline{~|---} & \makecell[c{p{0.35\textwidth}}]{тегсет
+находился в начальном состоянии буфера и был вытеснен, к нему было
+обращение в шаблоне после последнего внесения в буфер} & $\lambda
+\in L_0$ &
+$\left\{\begin{array}{l} x = \lambda\\
+x \in \{x_1, ..., x_n\}\\
+\bigvee\limits_{x_m : \mbox{miss}}\sum\limits^{m-1}_{i=1} u_m(x_i) \geqslant W\\
+\end{array}\right.
+$ \\ \hline
+\end{tabular}
+\caption{Таблица систем уравнений в случае стратегии вытеснения
+\PseudoLRU c использованием функций полезности}\label{plru_table}
+\end{table}
+
+
+\begin{landscape}
+\begin{table}[p]\small
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline  & \centering случай &
+\begin{tabular}{c}переменная\\перебора\end{tabular} & система &
+\begin{tabular}{c}функция полезности\\для кэш-попадания\end{tabular} &
+\begin{tabular}{c}функция полезности\\для кэш-промаха\end{tabular} \\
+\hline \hline \multirow{10}{*}{\rotatebox{90}{кэш-попадание}} &
+\makecell[c{p{0.38\textwidth}}]{тегсет находится в начальном
+состоянии буфера, к нему нет обращений до данной инструкции и он всё
+ещё не вытеснен} & $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \notin \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) \leqslant w - \delta
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x_i \in \{ \lambda_{\delta+1}, ..., \lambda_w\}$\\
+$\wedge~x_i \notin \{x_1, ..., x_{i-1}\}$
+\end{tabular}
+& $R(x_i) = R(x)$
+\\ \hhline{~|-----}
+& \makecell[c{p{0.38\textwidth}}]{тегсет находится в начальном
+состоянии буфера, к нему есть обращение до данной инструкции и он
+всё ещё не вытеснен} & $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \in \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) < w
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~x_i \in \{ \lambda_{\delta+1}, ..., \lambda_w\}$\\
+$\wedge~\sum_{j=1}^{i-1} c_i (x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin \{x_j, ..., x_i\}$\\
+$\wedge~x_i = x_j)$\\
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\  \hhline{~|-----}
+& \makecell[c{p{0.38\textwidth}}]{тегсет был внесен одним из
+кэш-промахов и с того момента не вытеснен} & -- &
+$\left\{\begin{array}{l} x \in [x_1, ..., x_n]_{miss}\\
+\sum\limits^n_{i=1} u(x_i) < w
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)~\wedge$\\
+$\sum^{i-1}_{j=1} c_i(x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin \{x_j, ..., x_i\}$\\
+$\wedge~x_i = x_j)$\\
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hline \hline \multirow{15}{*}{\rotatebox{90}{кэш-промах}}
+& \makecell[l]{тегсет встречается впервые} & -- &
+$\left\{\begin{array}{l} x \notin D\\
+x \notin [x_1, ..., x_n]_{miss}\\
+\end{array}\right.
+$ & -- & -- \\ \hhline{~|-----} &
+\makecell[l{p{0.38\textwidth}}]{тегсет ранее был внесен одной из
+инструкций шаблона, затем вытеснен} & -- & $\left\{\begin{array}{l}
+x \in [x_1, ..., x_n]_{miss}\\
+\sum\limits^n_{i=1} u(x_i) \geqslant w\\
+\end{array}\right.$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)~\wedge$\\
+$\sum_{j=1}^{i-1}c_i(x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin\{x_j, ..., x_i\}$\\
+$\wedge~x_i = x_j)$
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\  \hhline{~|-----} &
+\makecell[c{p{0.38\textwidth}}]{тегсет находился в начальном
+состоянии буфера и был вытеснен, к нему не было обращений в шаблоне}
+& $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \notin \{x_1, ..., x_n\}\\
+\sum^n_{i=1} u(x_i) \geqslant w - \delta + 1\\
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x_i \in\{\lambda_{\delta+1}, ..., \lambda_w\}$\\
+$\wedge~x_i \notin \{x_1, ..., x_{i-1}\}$\\
+\end{tabular}
+&
+\begin{tabular}{c}
+$R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hhline{~|-----} &
+\makecell[c{p{0.38\textwidth}}]{тегсет находился в начальном
+состоянии буфера и был вытеснен, к нему было обращение в шаблоне
+после последнего внесения в буфер} & $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \in \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) \geqslant w\\
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~x_i \in \{\lambda_{\delta+1}, ..., \lambda_w\}$\\
+$\wedge~\sum_{j=1}^{i-1}c_i(x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin\{x_j, ..., x_i\}$\\
+$\wedge~x_i = x_j)$
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hline
+\end{tabular}
+\caption{Таблица систем уравнений для тестовых ситуаций в \LRU
+кэширующих буферах c использованием функций
+полезности}\label{hit_miss_table}
+\end{table}
+\end{landscape}
+
+\begin{landscape}
+\begin{table}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline  & \centering случай &
+\begin{tabular}{c}переменная\\перебора\end{tabular} & система &
+\begin{tabular}{c}функция\\полезности\\для кэш-\\попадания\end{tabular} &
+\begin{tabular}{c}функция\\полезности\\для кэш-\\промаха\end{tabular} \\
+\hline \hline \rotatebox{90}{кэш-попадание} & -- & -- & -- & -- & --
+\\ \hline \hline \multirow{15}{*}{\rotatebox{90}{кэш-промах}} &
+\makecell[c{p{0.35\textwidth}}]{тегсет встречается впервые} & -- &
+$\left\{\begin{array}{l} x \notin D\\
+x \notin [x_1, ..., x_n]_{miss}\\
+\end{array}\right.
+$ & -- & -- \\ \hhline{~|-----} &
+\makecell[c{p{0.35\textwidth}}]{тегсет ранее был внесен одной из
+инструкций шаблона, затем вытеснен} & -- & $\left\{\begin{array}{l}
+x \in [x_1, ..., x_n]_{miss}\\
+\left[ \sum\limits^n_{i=1} \right]_{miss} u(x_i) \geqslant w - \delta + 1\\
+\end{array}\right.$& -- &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\  \hhline{~|-----} &
+\makecell[c{p{0.35\textwidth}}]{тегсет находился в начальном
+состоянии буфера и был вытеснен, к нему не было обращений в шаблоне}
+& $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \notin \{x_1, ..., x_n\}\\
+\left[ \sum\limits^n_{i=1} \right]_{miss} u(x_i) \geqslant w - \delta + 1\\
+\end{array}\right.$ & -- &
+\begin{tabular}{c}
+$R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hhline{~|-----} &
+\makecell[c{p{0.35\textwidth}}]{тегсет находился в начальном
+состоянии буфера и был вытеснен, к нему было обращение в шаблоне
+после последнего внесения в буфер} & $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \in \{x_1, ..., x_n\}\\
+\left[ \sum\limits^n_{i=1} \right]_{miss} u(x_i) \geqslant w\\
+\end{array}\right.$ & -- &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hline
+\end{tabular}
+\caption{Таблица систем ограничений в случае стратегии вытеснения
+\FIFO c использованием функций полезности}\label{fifo_table}
+\end{table}
+\end{landscape}
+
+\begin{landscape}
+\begin{table} \small
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline  & \centering случай &
+\begin{tabular}{c}переменная\\перебора\end{tabular} & система &
+\begin{tabular}{c}функция полезности\\для кэш-попадания\end{tabular} &
+\begin{tabular}{c}функция полезности\\для кэш-промаха\end{tabular} \\
+\hline \hline \multirow{10}{*}{\rotatebox{90}{кэш-попадание}} &
+\makecell[c{p{0.38\textwidth}}]{тегсет находится в начальном
+состоянии буфера, к нему нет обращений до данной инструкции и он всё
+ещё не вытеснен} & $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \notin \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) \leqslant w - \delta
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x_i \in \{ \lambda_{\delta+1}, ..., \lambda_\Delta\}$\\
+$\wedge~x_i \notin \{x_1, ..., x_{i-1}\}$
+\end{tabular}
+& $R(x_i) = R(x)$
+\\ \hhline{~|-----}
+& \makecell[c{p{0.38\textwidth}}]{тегсет находится в начальном
+состоянии буфера, к нему есть обращение до данной инструкции и он
+всё ещё не вытеснен} & $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \in \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) < w
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~x_i \in \{ \lambda_{\delta+1}, ..., \lambda_\Delta\}$\\
+$\wedge~\sum_{j=1}^{i-1} c_i (x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin \{x_j, ..., x_i\}$\\
+$\wedge~x_i = x_j)$\\
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\  \hhline{~|-----}
+& \makecell[c{p{0.38\textwidth}}]{тегсет был внесен одним из
+кэш-промахов и с того момента не вытеснен} & -- &
+$\left\{\begin{array}{l} x \in [x_1, ..., x_n]_{miss}\\
+\sum\limits^n_{i=1} u(x_i) < w
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)~\wedge$\\
+$\sum^{i-1}_{j=1} c_i(x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin \{x_j, ..., x_i\}$\\
+$\wedge~x_i = x_j)$\\
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hline \hline \multirow{20}{*}{\rotatebox{90}{кэш-промах}}
+& \makecell[c{p{0.38\textwidth}}]{тегсет встречается впервые} & -- &
+$\left\{\begin{array}{l} x \notin D\\
+x \notin [x_1, ..., x_n]_{miss}\\
+\end{array}\right.
+$ & -- & -- \\ \hhline{~|-----} &
+\makecell[c{p{0.38\textwidth}}]{тегсет ранее был внесен одной из
+инструкций шаблона, затем вытеснен} & -- &
+$\left\{\begin{array}{l} x \in [x_1, ..., x_n]_{miss}\\
+\sum\limits^n_{i=1} u(x_i) \geqslant w\\
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)~\wedge$\\
+$\sum_{j=1}^{i-1}c_i(x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin\{x_j, ..., x_i\}$\\
+$\wedge~x_i = x_j)$
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\  \hhline{~|-----} &
+\makecell[c{p{0.38\textwidth}}]{тегсет находился в начальном
+состоянии буфера и был вытеснен, к нему не было обращений в шаблоне}
+& $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \notin \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) \geqslant w - \delta + 1\\
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x_i \in\{\lambda_{\delta+1}, ..., \lambda_\Delta\}$\\
+$\wedge~x_i \notin \{x_1, ..., x_{i-1}\}$\\
+\end{tabular}
+&
+\begin{tabular}{c}
+$R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hhline{~|-----} &
+\makecell[c{p{0.38\textwidth}}]{тегсет находился в начальном
+состоянии буфера и был вытеснен, к нему было обращение в шаблоне
+после последнего внесения в буфер} & $\lambda_\delta \in D$ &
+$\left\{\begin{array}{l} x = \lambda_\delta\\
+x \in \{x_1, ..., x_n\}\\
+\sum\limits^n_{i=1} u(x_i) \geqslant w\\
+\end{array}\right.
+$ &
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~x_i \in \{\lambda_{\delta+1}, ..., \lambda_\Delta\}$\\
+$\wedge~\sum_{j=1}^{i-1}c_i(x_j) = 0,$\\
+$c_i(x_j) \equiv (x\notin\{x_j, ..., x_i\}$\\
+$\wedge~x_i = x_j)$
+\end{tabular}
+&
+\begin{tabular}{c}
+$x \notin \{x_i, ..., x_n\}$\\
+$\wedge~R(x_i) = R(x)$\\
+\end{tabular}
+\\ \hline
+\end{tabular}
+\caption{Таблица систем уравнений для тестовых ситуаций в \LRU
+кэширующем буфере c <<грязными>> ячейками в начальном состоянии,
+использующих функции полезности}\label{dirty_hit_miss_table}
+\end{table}
+\end{landscape}
