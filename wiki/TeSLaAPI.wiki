@@ -1,5 +1,4 @@
 #summary описание API решателя TeSLa
-#labels Featured
 
 = Описание интерфейса TeSLa =
 
