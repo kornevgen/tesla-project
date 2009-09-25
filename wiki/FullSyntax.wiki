@@ -1,5 +1,4 @@
 #summary Грамматика языка описания тестовых ситуаций
-#labels Featured
 {{{
 program :
 	( 'VAR' ('RESULT' | 'READONLY' | 'OPTIONAL')? ID ':' INTEGER )-list[ ';' ]
