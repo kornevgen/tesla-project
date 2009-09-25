@@ -1,11 +1,11 @@
 ﻿<template>
-	<register id="x" length="64" />	<!-- регистр -->
-	<register id="y" length="64" />	
-	<register id="z" length="64" />		
-	<constant id="c" length="16" />	<!-- константа -->	
+	<register name="x" length="64" />	<!-- регистр -->
+	<register name="y" length="64" />	
+	<register name="z" length="64" />		
+	<constant name="c" length="16" />	<!-- константа -->	
 	
-	<instruction name="ADD">  <!-- очередная инструкция тестовой программы -->
-		<argument name="x" />  <!-- аргумент инструкции - регистр или константа -->
+	<instruction name="ADD" id="2">  <!-- очередная инструкция тестовой программы -->
+		<argument name="x" />  <!-- аргумент инструкции - регистр, константа, внш.переменная -->
 		<argument name="y" />
 		<argument name="z" />
 		<external name="v1" id="virtual" /> <!-- имена переменных, которые выносят на уровень шаблона все "ветви" этой инструкции -->
@@ -28,21 +28,22 @@
 			<!-- семантически должно проверяться, что
 				в каждой "ветви" есть все указанные тут обращения -->
 				<cache level="1" type="DATA" id="miss" />  <!-- обращение в кэш-память -->
-				<cache level="2" type="DATA" id="miss" /> <!-- наполнение атрибутами зависит от архитектуры -->
+				<cache level="2" type="DATA" id="replace" from="1"/> <!-- наполнение атрибутами зависит от архитектуры -->
 				<cache level="3" type="DATA" id="hit" />
-				<tlb  id="invalid"> <!-- обращение в TLB -->
-					<microtlb type="DATA" id="miss"></microtlb>
-				</tlb>
+				<tlb  id="invalid" /> <!-- обращение в TLB -->
+				<microtlb type="DATA" id="miss" />
 			</access>
 			
 		</situation>
 	</instruction>
 	
-	<assert>   <!-- "assertion" на значения регистров, констант и введенные переменные -->
+	<assume>   <!-- "assertion" на значения регистров, констант и введенные переменные -->
 		<!-- может использоваться для задания доп.ограничения на адреса разных инструкций
 			 или для задания пути в графе потока управления тестовой программы (используется
 			 при тестировании инструкций переходов BRANCH) -->
-		<or>
+		<argument name="x" />  <!-- аргумент допущения -->
+		<argument name="y" />
+		<argument name="z" />		<or>
 			<and>
 				<branch name="ff1" />
 				<branch name="ff2" />
@@ -50,6 +51,5 @@
 			</and>
 			<branch name="ff4" />
 		</or>
-	</assert>
+	</assume>
 </template>
-					

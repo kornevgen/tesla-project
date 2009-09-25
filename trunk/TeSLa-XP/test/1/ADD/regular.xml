@@ -5,8 +5,8 @@
 	
 	<assert>
 		<and>
-			<predicate name="wordvalue">rs</predicate>
-			<predicate name="wordvalue">rt</predicate>
+			<predicate name="wordvalue"><var>rs</var></predicate>
+			<predicate name="wordvalue"><var>rt</var></predicate>
 		</and>
 	</assert>
 	
