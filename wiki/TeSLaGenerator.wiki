@@ -1,5 +1,5 @@
 #summary описание проекта TeSLa-Generator
-#labels Featured,Phase-Implementation
+#labels Phase-Implementation
 
 = Цель проекта =
 
