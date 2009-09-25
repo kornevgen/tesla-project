@@ -1,0 +1,20 @@
+<template>
+	<register id="x" length="64" />	
+	<register id="y" length="64" />	
+	<constant id="z" length="64" />		
+	
+	<instruction name="ADD" clone="32">
+		<argument>x</argument>
+		<argument>x</argument>
+		<argument>x</argument>
+		<situation name="regular" />
+	</instruction>
+	
+	<instruction name="ADD">
+		<argument>y</argument>
+		<argument>x</argument>
+		<argument>x</argument>
+		<situation name="overflow" />
+	</instruction>
+</template>
+					
