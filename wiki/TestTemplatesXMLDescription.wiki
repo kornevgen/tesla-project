@@ -1,9 +1,9 @@
 #summary Формат XML-описания тестового шаблона
 #labels Featured
 
-= Introduction =
+= Формат =
 
-Add your content here.
+Корнем является `template`
 
 
 = Details =
