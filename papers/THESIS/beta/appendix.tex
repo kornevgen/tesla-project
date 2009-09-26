@@ -6,7 +6,7 @@
 \hline  & \centering случай &
 \begin{tabular}{c}переменная\\перебора\end{tabular} & система \\
 \hline \hline \multirow{10}{*}{\rotatebox{90}{кэш-попадание}} &
-\makecell[c{p{0.35\textwidth}}]{тегсет находится в начальном
+\makecell[c{p{0.3\textwidth}}]{тегсет находится в начальном
 состоянии буфера, к нему нет обращений до данной инструкции и он всё
 ещё не вытеснен} & $\lambda \in L_0$ &
 $\left\{\begin{array}{l} x = \lambda\\
@@ -14,7 +14,7 @@ x \notin \{x_1, ..., x_n\}\\
 \bigwedge\limits_{x_m:\mbox{miss}}\sum\limits_{i=1}^W v_m(\xi_i) +
 \sum\limits^{m-1}_{i=1} u_m(x_i) < W
 \end{array}\right.
-$ \\ \hhline{~|---} & \makecell[c{p{0.35\textwidth}}]{тегсет
+$ \\ \hhline{~|---} & \makecell[c{p{0.3\textwidth}}]{тегсет
 находится в начальном состоянии буфера, к нему есть обращение до
 данной инструкции и он всё ещё не вытеснен} & $\lambda \in L_0$ &
 $\left\{\begin{array}{l} x = \lambda\\
@@ -22,7 +22,7 @@ x \in \{x_1, ..., x_n\}\\
 \bigwedge\limits_{x_m:\mbox{miss}}\sum\limits^{m-1}_{i=1} u_m(x_i) <
 W
 \end{array}\right.
-$ \\  \hhline{~|---} & \makecell[c{p{0.35\textwidth}}]{тегсет был
+$ \\  \hhline{~|---} & \makecell[c{p{0.3\textwidth}}]{тегсет был
 внесен одним из кэш-промахов и с того момента не вытеснен} & -- &
 $\left\{\begin{array}{l}
 x \in [x_1, ..., x_n]_{miss}\\
@@ -30,24 +30,24 @@ x \in [x_1, ..., x_n]_{miss}\\
 W
 \end{array}\right.
 $ \\ \hline \hline \multirow{20}{*}{\rotatebox{90}{кэш-промах}} &
-\makecell[c{p{0.35\textwidth}}]{тегсет встречается впервые} & -- &
+\makecell[c{p{0.3\textwidth}}]{тегсет встречается впервые} & -- &
 $\left\{\begin{array}{l} x \notin L_0\\
 x \notin [x_1, ..., x_n]_{miss}\\
 \end{array}\right.
-$ \\ \hhline{~|---} & \makecell[c{p{0.35\textwidth}}]{тегсет ранее
+$ \\ \hhline{~|---} & \makecell[c{p{0.3\textwidth}}]{тегсет ранее
 был внесен одной из инструкций шаблона, затем вытеснен} & -- &
 $\left\{\begin{array}{l}
 x \in [x_1, ..., x_n]_{miss}\\
 \bigvee\limits_{x_m : \mbox{miss}}\sum\limits^{m-1}_{i=1} u_m(x_i) \geqslant W\\
 \end{array}\right.$ \\  \hhline{~|---} &
-\makecell[c{p{0.35\textwidth}}]{тегсет находился в начальном
+\makecell[c{p{0.3\textwidth}}]{тегсет находился в начальном
 состоянии буфера и был вытеснен, к нему не было обращений в шаблоне}
 & $\lambda \in L_0$ & $\left\{\begin{array}{l}
 x = \lambda\\
 x \notin \{x_1, ..., x_n\}\\
 \bigvee\limits_{x_m : \mbox{miss}}\sum\limits^W_{i=1} v_m(\xi_i) + \sum\limits^{m-1}_{i=1} u_m(x_i) \geqslant W\\
 \end{array}\right.
-$ \\ \hhline{~|---} & \makecell[c{p{0.35\textwidth}}]{тегсет
+$ \\ \hhline{~|---} & \makecell[c{p{0.3\textwidth}}]{тегсет
 находился в начальном состоянии буфера и был вытеснен, к нему было
 обращение в шаблоне после последнего внесения в буфер} & $\lambda
 \in L_0$ &
