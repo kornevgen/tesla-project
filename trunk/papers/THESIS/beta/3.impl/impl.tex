@@ -283,10 +283,10 @@ CSP) и сосредоточиться на упрощении генерируемых ограничений для
 invalid} заложена в части генератора ограничений, ответственного за
 тестируемую архитектуру.
 
-Кроме инструкций тестовый шаблон может содержать ограничения
-(assert) на текущее состояние микропроцессора и введенные внешние
-переменные. Можно выделить следующие основные применения этих
-ограничений:
+Кроме инструкций тестовый шаблон может содержать <<допущения>>
+(assume) -- некоторые ограничения на текущее состояние
+микропроцессора и введенные внешние переменные. Можно выделить
+следующие основные применения этих ограничений:
 \begin{enumerate}
 \item задание зависимостей на адреса разных инструкций (например, у
 двух инструкций одинаковые физические адреса при разных виртуальных
@@ -307,7 +307,7 @@ invalid} заложена в части генератора ограничений, ответственного за
 Описание ограничения, как и описание тестовой ситуации, может
 состоять из указания ветви или их комбинаций. Пример: {\small
 \begin{verbatim}
-    <assert>
+    <assume>
         <or>
             <and>
                 <branch name="ff1" />
@@ -316,7 +316,7 @@ invalid} заложена в части генератора ограничений, ответственного за
             </and>
             <branch name="ff4" />
         </or>
-    </assert>
+    </assume>
 \end{verbatim}}
 
 Пример описания тестового шаблона целиком: {\small
@@ -354,7 +354,7 @@ invalid} заложена в части генератора ограничений, ответственного за
         </situation>
     </instruction>
 
-    <assert>
+    <assume>
         <or>
             <and>
                 <branch name="ff1" />
@@ -363,7 +363,7 @@ invalid} заложена в части генератора ограничений, ответственного за
             </and>
             <branch name="ff4" />
         </or>
-    </assert>
+    </assume>
 </template>
 \end{verbatim}
  }
@@ -408,8 +408,8 @@ invalid} заложена в части генератора ограничений, ответственного за
 \begin{itemize}
   \item оператор \texttt{let} -- объявление новой локальной
   переменной вместе с ее инициализацией;
-  \item оператор \texttt{assert} -- фиксация некоторого ограничения
-  на значения переменных;
+  \item оператор \texttt{assume} -- фиксация некоторого ограничения
+  (<<допущения>>) на значения переменных;
   \item оператор \texttt{procedure} -- вызов процедуры (ее семантика
     не задается в описании тестовой ситуации).
 \end{itemize}
@@ -457,17 +457,17 @@ invalid} заложена в части генератора ограничений, ответственного за
 </let>
 \end{verbatim}}
 
-Оператор \texttt{assert} позволяет указать ограничение, справедливое
+Оператор \texttt{assume} позволяет указать ограничение, справедливое
 в некоторый момент на значениях аргументов тестовой ситуации и
 локальных переменных. Выражения объединяются с помощью отношений
 сравнения. Пример: {\small
 \begin{verbatim}
-    <assert>
+    <assume>
         <eq>
             <bits end="1" start="0"><var>vAddr</var></bits>
             <constant length="2">0</constant>
         </eq>
-    </assert>
+    </assume>
 \end{verbatim}}
 
 Оператор \texttt{procedure} позволяет указать более сложное
@@ -482,7 +482,7 @@ invalid} заложена в части генератора ограничений, ответственного за
   переменные; выражение задается с использованием того же
   синтаксиса, что и в операторе \texttt{let};
   \item новая переменная (\texttt{new});
-  \item символьная константа (\texttt{symbol}).
+  \item символьная константа.
 \end{itemize}
 
 Набор допустимых процедур и идентификаторов их аргументов задается
@@ -491,10 +491,10 @@ invalid} заложена в части генератора ограничений, ответственного за
 Пример: {\small
 \begin{verbatim}
 <procedure name="AddressTranslation">
-        <argument id="physical"><new name="pAddr"/></argument>
+        <argument id="physical"><new length="64">pAddr</argument>
         <argument id="virtual"><var>vAddr</var></argument>
-        <argument id="points_to"><symbol name="DATA"/></argument>
-        <argument id="points_for"><symbol name="LOAD"/></argument>
+        <argument id="points_to">DATA</argument>
+        <argument id="points_for">LOAD</argument>
 </procedure>
 \end{verbatim}}
 
@@ -512,18 +512,18 @@ invalid} заложена в части генератора ограничений, ответственного за
         </sum>
     </let>
 
-    <assert>
+    <assume>
         <eq>
             <bits end="1" start="0"><var>vAddr</var></bits>
             <constant length="2">0</constant>
         </eq>
-    </assert>
+    </assume>
 
     <procedure name="AddressTranslation">
-        <argument id="physical"><new name="pAddr"/></argument>
+        <argument id="physical"><new length="64">pAddr</argument>
         <argument id="virtual"><var>vAddr</var></argument>
-        <argument id="points_to"><symbol name="DATA"/></argument>
-        <argument id="points_for"><symbol name="LOAD"/></argument>
+        <argument id="points_to">DATA</argument>
+        <argument id="points_for">LOAD</argument>
     </procedure>
 
     <let id="physical"><var>pAddr</var></let>
@@ -536,26 +536,26 @@ invalid} заложена в части генератора ограничений, ответственного за
          according to BigEndian/LittleEndian -->
 
     <procedure name="LoadMemory">
-        <argument id="data"><new name="memdoubleword"/></argument>
-        <argument id="size"><symbol name="WORD"/></argument>
+        <argument id="data"><new length="64">memdoubleword</argument>
+        <argument id="size">WORD</argument>
         <argument id="physical"><var>pAddr</var></argument>
         <argument id="virtual"><var>vAddr</var></argument>
-        <argument id="points_to"><symbol name="DATA"/></argument>
+        <argument id="points_to">DATA</argument>
     </procedure>
 
     <procedure name="BytesSelect">
-        <argument id="type"><symbol name="WORD"/></argument>
-        <argument id="from"><new name="data"/></argument>
+        <argument id="type">WORD</argument>
+        <argument id="from"><new length="32">data</argument>
         <argument id="content"><var>memdoubleword</var></arument>
         <argument id="index"><var>dwByteOffset</var></argument>
     </procedure>
 
-    <assert>
+    <assume>
         <eq>
             <var>rt</var>
             <sign_extend size="64"><var>data</var></sign_extend>
         </eq>
-    </assert>
+    </assume>
 </situation>
 \end{verbatim}}
 
