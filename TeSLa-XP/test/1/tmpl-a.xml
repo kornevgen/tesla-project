@@ -3,18 +3,22 @@
 	<register id="y" length="64" />	
 	<constant id="z" length="64" />		
 	
-	<instruction name="ADD" clone="32">
+	<instruction name="ADD" clone="31">
 		<argument>x</argument>
 		<argument>x</argument>
 		<argument>x</argument>
-		<situation name="regular" />
+		<situation>
+			<branch name="regular" />
+		</situation>
 	</instruction>
 	
 	<instruction name="ADD">
 		<argument>y</argument>
 		<argument>x</argument>
 		<argument>x</argument>
-		<situation name="overflow" />
+		<situation>
+			<branch name="overflow" />
+		</situation>
 	</instruction>
 </template>
 					

@@ -4,7 +4,7 @@ require "rexml/document"
 
 class Solver
 
-def constraintsfrom_assert( operator, full_context )
+def constraintsfrom_assume( operator, full_context )
   puts ":assumption"
   puts send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) 
 end
@@ -87,8 +87,9 @@ end
 def process_instruction(instruction)
   @instruction = instruction
   
+  #TODO ввести поддержку композиции ветвей
   path = instruction.attributes['name'] +
-  "/" + instruction.elements['situation'].attributes['name'] + ".xml"
+  "/" + instruction.elements['situation'].elements['branch'].attributes['name'] + ".xml"
   test_situation = REXML::Document.new File.new(path)  
 
   reverse_synonyms = Hash[*test_situation.get_elements('situation/argument').  ## перевести в текст??
@@ -113,6 +114,10 @@ def process_instruction(instruction)
       send( "constraintsfrom_#{operator.name}", operator, full_context )
   }
   
+  #TODO поддержка идентификаторов инструкций
+  
+  #TODO поддержка внешних переменных
+  
   test_situation.elements.each('//[@state="result"]'){|arg|
        @synonyms[reverse_synonyms[arg].text] = "#{@synonyms[reverse_synonyms[arg].text]}_X"
   }
@@ -127,9 +132,13 @@ def constraintsfrom_let( operator, full_context )
   puts ":assumption"
   puts "(= #{new_name} " + 
       send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + ")"
+      
+  #TODO сделать поддержку опциональности имени
+  #TODO сделать поддержку идентификаторов (в том числе опциональных)
 end
 
 def constraintsfrom_procedure( operator, full_context )
+  #TODO сделать поддержку new-аргументов (extrafuns)
   send("constraintsfrom_#{operator.attributes['name']}", operator, full_context)
 end
 
@@ -212,12 +221,16 @@ def solve template_file
       @varlengths[reg.attributes['id']] = reg.attributes['length'].to_i
   }
   
-  # странслировать определния тестовых ситуаций
+  #TODO сделать поддержку идентификаторов инструкций
+  
+  # странслировать определения тестовых ситуаций
   doc.elements.each('template/instruction') {|instruction|
       (instruction.attributes["clone"]||"1").to_i.times{|i|
           process_instruction instruction
       }
   }
+  
+  #TODO сделать поддержку допущений (assume) шаблонов
  
   puts ")"
 end

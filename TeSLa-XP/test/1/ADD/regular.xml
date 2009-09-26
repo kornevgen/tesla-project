@@ -3,12 +3,12 @@
 	<argument name="rs" state="readonly" length="64" />
 	<argument name="rt" state="readonly" length="64" />
 	
-	<assert>
+	<assume>
 		<and>
 			<predicate name="wordvalue"><var>rs</var></predicate>
 			<predicate name="wordvalue"><var>rt</var></predicate>
 		</and>
-	</assert>
+	</assume>
 	
 	<let name="temp">
 		<sum>
@@ -23,17 +23,17 @@
 		</sum>
 	</let>
 	
-	<assert>
+	<assume>
 		<eq>
 			<bit index="32"><var>temp</var></bit>
 			<bit index="31"><var>temp</var></bit>
 		</eq>
-	</assert>
+	</assume>
 	
-	<assert>
+	<assume>
 		<eq>
 			<var>rd</var>
 			<sign_extend size="64"><bits end="31" start="0"><var>temp</var></bits></sign_extend>
 		</eq>
-	</assert>
+	</assume>
 </situation>
