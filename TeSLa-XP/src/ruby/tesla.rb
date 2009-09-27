@@ -138,7 +138,14 @@ def constraintsfrom_let( operator, full_context )
 end
 
 def constraintsfrom_procedure( operator, full_context )
-  #TODO сделать поддержку new-аргументов (extrafuns)
+  operator.elements.each('argument/new') {|n|
+      raise "Redefinition of '#{n.text}'" if full_context.has_key?(n.text)
+      new_name = "_localvar_#{@unique_counter += 1}"
+      full_context.merge!( {n.text => new_name } )
+      @lengths_context[n.text] = n.attributes['length'].to_i
+      puts ":extrafuns((#{new_name} BitVec[#{n.attributes['length']}]))"
+  }
+  
   send("constraintsfrom_#{operator.attributes['name']}", operator, full_context)
 end
 
@@ -210,7 +217,7 @@ def solve template_file
   
   doc = REXML::Document.new template
 
-  procedures_preparations
+  procedures_preparations doc
 
   @synonyms = Hash.new
   @varlengths = Hash.new
@@ -247,16 +254,16 @@ class Runner
   #TODO добавить анализ текста, который печатает Z3: выделение из него значений переменных
   def run( solver, *params )
     orig = $stdout
-    smt_file = Tempfile.new( "out-smt", "." )
+    smt_file = File.new( "out-smt", "w" )
     $stdout = smt_file
-    solver.solve *params
+    solver.send("solve#{params.length}", *params)
     $stdout = orig
     smt_file.close
-    #puts ">>> #{smt_file.path}"
+    puts ">>> #{smt_file.path}"
     #File.open(smt_file.path).each{|s| puts s }
     output = `z3 /m #{smt_file.path}`
     #puts output
-    smt_file.unlink
+    #smt_file.unlink
     output
   end
 end
