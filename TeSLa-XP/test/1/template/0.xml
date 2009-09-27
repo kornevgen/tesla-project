@@ -1,0 +1,22 @@
+<template>
+<register id='x1' length='64' />
+<register id='y1' length='64' />
+<register id='z1' length='64' />
+<register id='u1' length='64' />
+<register id='x2' length='64' />
+<register id='y2' length='64' />
+<register id='z2' length='64' />
+<register id='u2' length='64' />
+<constant id="c" length="16" />
+<instruction name="LW">
+<argument>u2</argument>
+<argument>x1</argument>
+<argument>c</argument>
+<situation><branch name="load2"/>
+<memory>
+<cache id='l1Hit' />
+<microtlb id='mtlbHit' />
+</memory>
+</situation>
+</instruction>
+</template>

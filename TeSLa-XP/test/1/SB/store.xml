@@ -17,12 +17,12 @@
 		</sum>
 	</let>
 	
-	<assert>
+	<assume>
 		<eq>
 			<bits end="1" start="0"><var>vAddr</var></bits>
 			<constant length="2">0</constant>
 		</eq>
-	</assert>
+	</assume>
 	
 	<procedure name="AddressTranslation">
 			<physical>pAddr</physical>

@@ -1,0 +1,12 @@
+<situation>
+	<argument name="rt" state="result" length="64" />
+	<argument name="base" state="readonly" length="64" />
+	<argument name="offset" state="readonly" length="16" />
+	
+	<procedure name="BytesSelect">
+	 	<argument id="type">WORD</argument>
+	 	<argument id="selected"><new length="32">data</new></argument>
+		<argument id="content"><var>base</var></argument>
+		<argument id="index"><bits end="2" start="0"><var>offset</var></bits></argument>
+	</procedure>	
+</situation>
