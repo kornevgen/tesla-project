@@ -16,18 +16,18 @@
 		</sum>
 	</let>
 	
-	<assert>
+	<assume>
 		<eq>
 			<bits end="1" start="0"><var>vAddr</var></bits>
 			<constant length="2">0</constant>
 		</eq>
-	</assert>
+	</assume>
 	
 	<procedure name="AddressTranslation">
-			<physical>pAddr</physical>
-			<virtual>vAddr</virtual>
-			<points_to>DATA</points_to>
-			<points_for>LOAD</points_for>
+			<argument id="physical"><new length="????">pAddr</new></argument>
+			<argument id="virtual"><var>vAddr</var></argument>
+			<argument id="points_to">DATA</argument>
+			<argument id="points_for">LOAD</argument>
 	</procedure>
 	
 	<let name="dwByteOffset">
@@ -37,18 +37,24 @@
 	<!-- dwByteOffset can be changed according to BigEndian/LittleEndian -->
 	
 	<procedure name="LoadMemory">
-		<data>memdoubleword</data> WORD pAddr vAddr DATA
+		<argument id="data"><new length="64">memdoubleword</new></argument>
+		<argument>WORD</argument>
+		<argument><var>pAddr</var></argument>
+		<argument><var>vAddr</var></argument>
+		<argument>DATA</argument>
 	</procedure>
 
-	<bytes_select type="WORD" name="data">
-		<content>memdoubleword</content>
-		<index>dwByteOffset</index>
-	</bytes_select>
+	<procedure name="BytesSelect">
+	 	<argument id="type">WORD</argument>
+	 	<argument id="selected"><new length="32">data</new></argument>
+		<argument id="content"><var>memdoubleword</var></argument>
+		<argument id="index"><var>dwByteOffset</var></argument>
+	</procedure>
 	
-	<assert>
+	<assume>
 		<eq>
 			<var>rt</var>
 			<sign_extend size="64"><var>data</var></sign_extend>
 		</eq>
-	</assert>
+	</assume>
 </situation>
