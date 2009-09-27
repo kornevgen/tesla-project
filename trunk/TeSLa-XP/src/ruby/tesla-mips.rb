@@ -600,7 +600,7 @@ end
 
 class MirrorSolver < Solver
 
-def solve template_file, data_file
+def solve2 template_file, data_file
     @data_builder = DataBuilder.new data_file
     solve template_file
 end
@@ -745,24 +745,29 @@ def tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, m)
   end
 end
 
-def constraintsfrom_bytes_select( operator, full_context )
-  new_name = "_localvar_#{@unique_counter += 1}"
-  full_context[operator.attributes['name']] = new_name
+def constraintsfrom_BytesSelect( operator, full_context )
+  selected = full_context[operator.elements['argument[@id="selected"]/new'].text]
+  index = "_localvar_#{@unique_counter += 1}"
+  index_node = operator.elements['argument[@id="index"]'][0]  # text? body!
+  content = "_localvar_#{@unique_counter += 1}"
+  content_node = operator.elements['argument[@id="content"]'][0]  # text? body!
+  type = operator.elements['argument[@id="type"]'][0]
   
-  bitlen = send("length_#{operator.attributes['type']}" )
-  @lengths_context[operator.attributes['name']] = bitlen
-  puts ":extrafuns (( #{new_name} BitVec[#{bitlen}] ))"
   puts ":assumption"
-
-  if operator.attributes['type'] == "WORD"
-     puts "(ite (= bv0[3] #{full_context[operator.elements['index'].text]}) " + 
-        "(= #{new_name} (extract[31:0] #{full_context[operator.elements['content'].text]}))" +
-        "(= #{new_name} (extract[63:32] #{full_context[operator.elements['content'].text]}))" + ")"
-  elsif operator.attributes['type'] == "DOUBLEWORD"
-     puts "(= #{new_name} #{full_context[operator.elements['content'].text]})"
+  if type == "WORD"
+    puts "(let (#{index} " + send("constraintsfrom_#{index_node.name}", index_node, full_context) + ")" 
+    puts "(let (#{content} " + send("constraintsfrom_#{content_node.name}", content_node, full_context) + ")" 
+    puts     "(ite (= bv0[3] #{index}) " + 
+                "(= #{selected} (extract[31:0] #{content}))" +
+                "(= #{selected} (extract[63:32] #{content}))" + 
+             ")" +
+        "))"
+  elsif type == "DOUBLEWORD"
+    puts "(let (#{content} " + send("constraintsfrom_#{content_node.name}", content_node, full_context) + ")" 
+    puts "(= #{selected} #{content}))"
   #TODO elsif остальные типы
   else
-    raise "unknown bytes-select type '#{operator.attributes['type']}'"
+    raise "Unknown bytes-select type '#{type}}'"
   end
 end
 
@@ -885,7 +890,7 @@ end
 
 
 
-def procedures_preparations
+def procedures_preparations doc
   @l1Hits = []
   @mtlbHits = []
   previous_tagsets = []
