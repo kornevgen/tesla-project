@@ -49,7 +49,6 @@
 				<branch name="ff2" />
 				<branch name="ff3" />
 			</and>
-			<branch name="ff4" />
 		</or>
 	</assume>
 </template>

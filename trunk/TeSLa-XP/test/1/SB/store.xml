@@ -25,10 +25,10 @@
 	</assume>
 	
 	<procedure name="AddressTranslation">
-			<physical>pAddr</physical>
-			<virtual>vAddr</virtual>
-			<points_to>DATA</points_to>
-			<points_for>STORE</points_for>
+			<argument id="physical"><new length="36">pAddr</new></argument>
+			<argument id="virtual"><var>vAddr</var></argument>
+			<argument id="points_to">DATA</argument>
+			<argument id="points_for">STORE</argument>
 	</procedure>
 	
 	<let name="dwByteOffset">
@@ -37,12 +37,18 @@
 	
 	<!-- dwByteOffset can be changed according to BigEndian/LittleEndian -->
 	
-	<bytes_expand type="BYTE" name="datadoubleword">
-		<content>rt</content>
-		<index>dwByteOffset</index>
-	</bytes_expand>
+	<procedure name="BytesExpand">
+		<argument id="type">BYTE</argument>
+		<argument id="expanded"><new length="64">datadoubleword</new></argument>
+		<argument id="content"><var>rt</var></argument>
+		<argument id="index"><var>dwByteOffset</var></argument>
+	</procedure>
 	
 	<procedure name="StoreMemory">
-		<data>datadoubleword</data> BYTE pAddr vAddr DATA
+		<argument id="data"><var>datadoubleword</var></argument>
+		<argument id="type">BYTE</argument>
+		<argument id="physical"><var>pAddr</var></argument>
+		<argument id="virtual"><var>vAddr</var></argument>
+		<argument id="points_to">DATA</argument>
 	</procedure>
 </situation>

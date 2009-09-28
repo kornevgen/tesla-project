@@ -24,7 +24,7 @@
 	</assume>
 	
 	<procedure name="AddressTranslation">
-			<argument id="physical"><new length="????">pAddr</new></argument>
+			<argument id="physical"><new length="36">pAddr</new></argument>
 			<argument id="virtual"><var>vAddr</var></argument>
 			<argument id="points_to">DATA</argument>
 			<argument id="points_for">LOAD</argument>
@@ -38,10 +38,10 @@
 	
 	<procedure name="LoadMemory">
 		<argument id="data"><new length="64">memdoubleword</new></argument>
-		<argument>WORD</argument>
-		<argument><var>pAddr</var></argument>
-		<argument><var>vAddr</var></argument>
-		<argument>DATA</argument>
+		<argument id="type">WORD</argument>
+		<argument id="physical"><var>pAddr</var></argument>
+		<argument id="virtual"><var>vAddr</var></argument>
+		<argument id="points_to">DATA</argument>
 	</procedure>
 
 	<procedure name="BytesSelect">
