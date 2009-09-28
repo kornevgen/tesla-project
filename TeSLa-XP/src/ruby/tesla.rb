@@ -1,7 +1,5 @@
 require "rexml/document"
 
-# TODO сделать поддержку нового формата XML-описаний (шаблонов, тестовых ситуаций, состояний)
-
 class Solver
 
 def constraintsfrom_assume( operator, full_context )
@@ -11,7 +9,7 @@ end
 
 def binary_constraint( sign, operator, full_context )
   "(#{sign} " +
-      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) +
+      send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + " " +
       send("constraintsfrom_#{operator.elements[2].name}", operator.elements[2], full_context) + ")"
 end
 
@@ -127,6 +125,7 @@ def constraintsfrom_let( operator, full_context )
   bitlen = send("length_#{operator.elements[1].name}", operator.elements[1] )
   new_name = "_localvar_#{@unique_counter += 1}"
   full_context.merge!( {operator.attributes['name'] => new_name } )
+  @lengths_context[operator.attributes['name']] = bitlen
   
   puts ":extrafuns (( #{new_name} BitVec[#{bitlen}] ))"
   puts ":assumption"
@@ -186,6 +185,10 @@ def length_var(operator)
   l = @lengths_context[operator.text]
   raise "unknown length for '#{operator.text}'" if l == nil
   l
+end
+
+def length_constant(node)
+  node.attributes['length'].to_i
 end
 
 def length_DOUBLEWORD
@@ -254,16 +257,18 @@ class Runner
   #TODO добавить анализ текста, который печатает Z3: выделение из него значений переменных
   def run( solver, *params )
     orig = $stdout
-    smt_file = File.new( "out-smt", "w" )
+    smt_file = Tempfile.new( "out-smt", "." )
     $stdout = smt_file
     solver.send("solve#{params.length}", *params)
     $stdout = orig
     smt_file.close
-    puts ">>> #{smt_file.path}"
     #File.open(smt_file.path).each{|s| puts s }
-    output = `z3 /m #{smt_file.path}`
+    output = `z3 /m #{smt_file.path} /T:15`
     #puts output
-    #smt_file.unlink
+    puts "timeout" if output.include?("timeout")
+    puts "sat" if !output.include?("unsat") && !output.include?("timeout")
+    puts "unsat" if output.include?("unsat")
+    smt_file.unlink
     output
   end
 end

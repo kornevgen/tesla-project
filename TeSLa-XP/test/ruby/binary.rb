@@ -1,7 +1,3 @@
-# TODO эта версия корректно работает только со случаями Cached >< Mapped!
-
-# TODO сделать поддержку нового формата XML-описаний (шаблонов, тестовых ситуаций, состояний)
-
 require "rexml/document"
 
 $LOAD_PATH << "../../src/ruby"
@@ -9,80 +5,18 @@ $LOAD_PATH << "../../src/ruby"
 require "tesla.rb"
 require "tesla-mips.rb"
 
-def canonical(vars)
-  result = Array.new
-  next_number = 0
-  viewed = Hash.new
-  vars.each{|var|
-    number = viewed[var]
-    number = (next_number += 1) if number == nil
-    result << number
-    viewed.merge!({var => number})
-  }
-  result
-end
-
-#orig = $stdout
-#f = File.open('out.smt', 'w')
-#$stdout = f
-#Solver.new.solve "template/5.xml", "data/data5.xml" 
-#f.close
-#$stdout = orig
-#puts `z3 /m out.smt` ## sat
-#
-#$initlength = 5
-#
-#orig = $stdout
-#f = File.open('out-m.smt', 'w')
-#$stdout = f
-#MirrorSolver.new.solve "template/5.xml", "data/data5.xml" 
-#f.close
-#$stdout = orig
-#puts `z3 /m out-m.smt`   ## unsat
-
-$initlength = 1
-Runner.new.run( MirrorSolver.new, "template/0.xml", "data/data0.xml" )
-__END__
-
-
-# реализовать итерирование по разным тестовым шаблонам
-#combined_solver = CombinedSolver.new
-mirror_solver = MirrorSolver.new
-#sat_all = 0
-#incompatible_combined_only = 0
-#incompatible_all = 0
+mirror_solver = MIPS_MirrorSolver.new
 i = 0
-startTime = Time.now
-#canonicals = []
 ALL = ["x1", "y1", "z1", "u1", "x2", "y2", "z2", "u2"]
-#xs = []
-#[ALL[0]].each{|x1| xs = xs | [x1]
-#(xs + [(ALL-xs)[0]]).uniq.each{|x2| xs = xs | [x2]
-#(xs + [(ALL-xs)[0]]).uniq.each{|x3| xs = xs | [x3]
-#(xs + [(ALL-xs)[0]]).uniq.each{|x4| xs = xs | [x4]
-#(xs + [(ALL-xs)[0]]).uniq.each{|x5| xs = xs | [x6]
-#(xs + [(ALL-xs)[0]]).compact.uniq.each{|x6|
 
 histogram = Hash.new
-($L1ASSOC+1 .. ALL.length * ($L1ASSOC + 1)/2 ).each{|t|
+(1 .. ALL.length * ($L1ASSOC + 1)/2 ).each{|t|
   histogram.merge!({t => 0})
 }
 
 10000.times{
 
-#begin
-xs = Array.new(ALL.length){|iiiiiii| ALL[rand(ALL.length)]}
-#c = canonical(xs)
-#end while canonicals.include?(c)
-#
-#canonicals << c
-
-#["l1Hit", "l1Miss"].each{|cts1|
-#["mtlbHit", "mtlbMiss"].each{|mts1|
-#["l1Hit", "l1Miss"].each{|cts2|
-#["mtlbHit", "mtlbMiss"].each{|mts2|
-#["l1Hit", "l1Miss"].each{|cts3|
-#["mtlbHit", "mtlbMiss"].each{|mts3|
+xs = Array.new(ALL.length){ ALL[rand(ALL.length)]}
 cts1 = ["l1Hit", "l1Miss"][rand(2)]
 mts1 = ["mtlbHit", "mtlbMiss"][rand(2)]
 cts2 = ["l1Hit", "l1Miss"][rand(2)]
@@ -213,19 +147,21 @@ File.open(data_file, "w"){|f|
   f.puts "</data>"
 }
 
+# пробуем максимальное значение $initlength
 $initlength = ALL.length/2 * $L1ASSOC + [cts1,cts2,cts3,cts4].reject{|ii| ii == "l1Miss"}.length
 f1 = Runner.new.run( mirror_solver, template_file, data_file )
-return
-next if f1.include?("unsat")
+next if f1.include?("unsat") || f1.include?("timeout")
 
 # начинаем искать минимальный initlength
 max = $initlength
-min = 1 + $L1ASSOC
+min = 1
+puts "initlength : #{min} .. #{max}"
 
 while max >= min
   $initlength = (max + min)/2
+  puts "initlength = #{$initlength}:"
   f1 = Runner.new.run( mirror_solver, template_file, data_file )
-  if f1.include?("unsat")
+  if f1.include?("unsat") || f1.include?("timeout")
     min = $initlength + 1
   else
     max = $initlength - 1
@@ -234,16 +170,7 @@ end
 histogram.merge!({min => histogram[min]+1})
 
 
-#puts "=======END===OF==#{i-1}=========================="
-
-#}}}
-#}}}
+histogram.each{|length, count| puts "#{length} => #{count} раз" } if i % 3 == 0
 
 }
-
-endTime = Time.now
-
 histogram.each{|length, count| puts "#{length} => #{count} раз" }
-
-duration = endTime - startTime
-puts "общее время: #{duration.to_s} с."

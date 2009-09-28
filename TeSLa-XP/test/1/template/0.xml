@@ -9,12 +9,45 @@
 <register id='u2' length='64' />
 <constant id="c" length="16" />
 <instruction name="LW">
+<argument>y1</argument>
 <argument>u2</argument>
-<argument>x1</argument>
 <argument>c</argument>
-<situation><branch name="load2"/>
+<situation><branch name="load"/>
 <memory>
 <cache id='l1Hit' />
+<microtlb id='mtlbHit' />
+</memory>
+</situation>
+</instruction>
+<instruction name="SB">
+<argument>y2</argument>
+<argument>x2</argument>
+<argument>c</argument>
+<situation><branch name="store"/>
+<memory>
+<cache id='l1Miss' />
+<microtlb id='mtlbMiss' />
+</memory>
+</situation>
+</instruction>
+<instruction name="LW">
+<argument>x2</argument>
+<argument>y1</argument>
+<argument>c</argument>
+<situation><branch name="load"/>
+<memory>
+<cache id='l1Miss' />
+<microtlb id='mtlbMiss' />
+</memory>
+</situation>
+</instruction>
+<instruction name="SB">
+<argument>z1</argument>
+<argument>z2</argument>
+<argument>c</argument>
+<situation><branch name="store"/>
+<memory>
+<cache id='l1Miss' />
 <microtlb id='mtlbHit' />
 </memory>
 </situation>

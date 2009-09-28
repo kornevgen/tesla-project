@@ -1,9 +1,5 @@
 # TODO эта версия корректно работает только со случаями Cached >< Mapped!
 
-# TODO сделать поддержку нового формата XML-описаний (шаблонов, тестовых ситуаций, состояний)
-
-# TODO новое представление аргументов процедур!
-
 # TODO по-другому задается тестовая ситуация: через access, а не memory
 
 require "rexml/document"
@@ -88,14 +84,6 @@ class TLBLine
   attr_accessor :CCA1
 end
 
-class Instruction
-  attr_accessor :virtual_address
-  attr_accessor :tagset
-  attr_accessor :phys_after_translation
-  attr_accessor :phys_before_memaccess
-  attr_accessor :data
-end
-
 class MemoryAccess
   attr_accessor :dwPhysAddr
   attr_accessor :type
@@ -111,9 +99,13 @@ $SEGBITS = 40
 $PABITS = 36
 $MASK = 0
 
-class CombinedSolver < Solver
+=begin
+  класс содержит процедуры для MIPS, но не содержит способа генерации ограничений
+  для последовательности тегсетов
+=end
+class MIPS_Solver < Solver
   
-def solve template_file, data_file
+def solve2 template_file, data_file
     @data_builder = DataBuilder.new data_file
     solve template_file
 end
@@ -125,6 +117,177 @@ end
 def getRegion(tagset)
   "(extract[6:0] #{tagset})"
 end
+  
+def let_block(var, node, full_context, &body)
+    puts "(let (#{var} " + send("constraintsfrom_#{node.name}", node, full_context) + ")" 
+    yield
+    puts ")"
+end
+
+def def_localvar(operator, full_context, id, required_length = 0)
+  var = "_localvar_#{@unique_counter += 1}"
+  node = operator.elements["argument[@id='#{id}']"][0]  
+  
+  bitlen = send("length_#{node.name}", node )
+  if required_length > 0 && bitlen != required_length
+    raise "Bit length of #{id} must be #{required_length}"
+  end
+
+  puts ":extrafuns ((#{var} BitVec[#{bitlen}]))"
+  puts ":assumption"
+  puts "(= #{var} " + send("constraintsfrom_#{node.name}", node, full_context) + ")" 
+
+  var
+end
+
+def constraintsfrom_BytesSelect( operator, full_context )
+  selected = full_context[operator.elements['argument[@id="selected"]/new'].text]
+  index = "_localvar_#{@unique_counter += 1}"
+  index_node = operator.elements['argument[@id="index"]'][0]
+  content = "_localvar_#{@unique_counter += 1}"
+  content_node = operator.elements['argument[@id="content"]'][0]
+  type = operator.elements['argument[@id="type"]'][0]
+  
+  puts ":assumption"
+  if type == "WORD"
+    let_block(index, index_node, full_context ){
+    let_block(content, content_node, full_context ){
+          puts     "(ite (= bv0[3] #{index}) " + 
+                      "(= #{selected} (extract[31:0] #{content}))" +
+                      "(= #{selected} (extract[63:32] #{content}))" + 
+                   ")" }}
+  elsif type == "DOUBLEWORD"
+    let_block(content, content_node, full_context ){
+          puts "(= #{selected} #{content})" }
+  #TODO elsif остальные типы
+  else
+    raise "Unknown bytes-select type '#{type}}'"
+  end
+end
+
+def constraintsfrom_BytesExpand( operator, full_context )  
+  expanded = full_context[operator.elements['argument[@id="expanded"]/new'].text]
+  type = operator.elements['argument[@id="type"]'][0]
+  index = "_localvar_#{@unique_counter += 1}"
+  index_node = operator.elements['argument[@id="index"]'][0]
+  content = "_localvar_#{@unique_counter += 1}"
+  content_node = operator.elements['argument[@id="content"]'][0]
+  
+  puts ":assumption"
+  if type == "BYTE"
+    let_block(index, index_node, full_context ){
+    let_block(content, content_node, full_context ){
+          (0..7).each{|number|
+              puts "(ite (= #{index} bv#{number}[3])" +
+                "(= #{expanded} (concat (concat bv0[#{56-8*number}] (extract[7:0] #{content})) bv0[#{8*number}]))"
+          }
+          puts "false"
+          puts (1..8).collect{")"}.join }}
+  elsif type == "DOUBLEWORD"
+    let_block(content, content_node, full_context ){
+          puts "(= #{expanded} #{content})" }
+  #TODO elsif сделать остальные типы
+  else
+    raise "unknown bytes-select type '#{type}'"
+  end
+end
+
+def constraintsfrom_AddressTranslation( operator, full_context )
+  tagset = @tagsets[@instruction]
+  
+  virtual_address = def_localvar(operator, full_context, "virtual", 64)
+  
+  raise "Bit length of physical address must be #{$PABITS}" \
+    if operator.elements['argument[@id="physical"]/new'].attributes['length'].to_i != $PABITS
+  
+  # модель виртуальной памяти
+  #TODO можно сделать более полный Cached Mapped сегмент
+  puts ":assumption"
+  puts "(= bv0[33] (extract[63:31] #{virtual_address}))"  
+
+  # соответствие некоторой строке TLB
+  pfn_name = "_localvar_#{@unique_counter += 1}"
+  vpndiv2_name = "_localvar_#{@unique_counter += 1}"
+  puts ":assumption"
+  puts "(let (#{pfn_name} #{getPfn( tagset )})"
+  puts "(let (#{vpndiv2_name} (extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{virtual_address}))"
+  
+  puts "(or "
+  @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
+    if tlbline.CCA0 == "Cached"
+      puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
+          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+    end
+    if tlbline.CCA1 == "Cached"
+      puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
+          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+    end
+  }
+  puts")))"
+    
+  # определение physical_after_translation
+  puts ":assumption"
+  puts "(= " + full_context[operator.elements['argument[@id="physical"]/new'].text] + 
+    "(concat (extract[#{$TAGSETLEN-1}:#{$TAGSETLEN-$PFNLEN}] #{tagset}) " + 
+            "(extract[#{$PABITS-$PFNLEN-1}:0] #{virtual_address}) ) )"
+            
+  # часть виртуального адреса -- это часть тегсета (сет)
+  puts ":assumption"
+  puts "(= (extract[#{$PABITS-$PFNLEN-1}:#{$PABITS-$TAGSETLEN}] #{virtual_address}) " + 
+          "(extract[#{$TAGSETLEN - $PFNLEN - 1}:0] #{tagset})  )"
+end
+
+def constraintsfrom_LoadMemory( operator, full_context )
+  data = full_context[operator.elements['argument[@id="data"]/new'].text]  
+  physical_address = def_localvar(operator, full_context, "physical", $PABITS)
+  
+  ma = MemoryAccess.new
+  ma.dwPhysAddr = "_localvar_#{@unique_counter += 1}"
+  ma.type = "LOAD"
+  ma.data = data
+  puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{$PABITS-3}] ))"
+  puts ":assumption"
+  puts "(= #{ma.dwPhysAddr} (extract[#{$PABITS-1}:3] #{physical_address}) )"
+  
+  puts ":assumption"
+  puts "(= #{@tagsets[@instruction]} (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
+  
+  puts ":assumption"
+  puts "(and true "
+  @memory_accesses.reverse.each{|maccess|
+      if maccess.type == "LOAD"
+          puts "(implies (= #{maccess.dwPhysAddr} #{ma.dwPhysAddr}) (= #{data} #{maccess.data}))"
+      else
+          puts "(ite (= #{maccess.dwPhysAddr} #{ma.dwPhysAddr}) (= #{data} #{maccess.data}) (and true "
+      end
+  }
+  @memory_accesses.select{|m| m.type=="STORE"}.each{|m| puts "))" }
+  puts ")"
+  
+  @memory_accesses << ma
+end
+
+def constraintsfrom_StoreMemory( operator, full_context )
+  physical_address = def_localvar(operator, full_context, "physical", $PABITS)
+  data = def_localvar(operator, full_context, "data", 64)
+  
+  ma = MemoryAccess.new
+  ma.dwPhysAddr = "_localvar_#{@unique_counter += 1}"
+  ma.type = "STORE"
+  ma.data = data
+  puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{$PABITS-3}] ))"
+  puts ":assumption"
+  puts "(= #{ma.dwPhysAddr} (extract[#{$PABITS-1}:3] #{physical_address}))"
+  
+  puts ":assumption"
+  puts "(= #{@tagsets[@instruction]} (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
+  
+  @memory_accesses << ma
+end
+end
+
+
+class MIPS_CombinedSolver < MIPS_Solver
 
 def l1Hit_mtlbHit_part1(previous_tagsets, current_tagset)
 #    "(and " +
@@ -409,163 +572,12 @@ def l1Miss_mtlbMiss( previous_tagsets, tagset )
 end
 
 
-def constraintsfrom_bytes_select( operator, full_context )
-  new_name = "_localvar_#{@unique_counter += 1}"
-  full_context[operator.attributes['name']] = new_name
-  
-  bitlen = send("length_#{operator.attributes['type']}" )
-  @lengths_context[operator.attributes['name']] = bitlen
-  puts ":extrafuns (( #{new_name} BitVec[#{bitlen}] ))"
-  puts ":assumption"
-
-  if operator.attributes['type'] == "WORD"
-     puts "(ite (= bv0[3] #{full_context[operator.elements['index'].text]}) " + 
-        "(= #{new_name} (extract[31:0] #{full_context[operator.elements['content'].text]}))" +
-        "(= #{new_name} (extract[63:32] #{full_context[operator.elements['content'].text]}))" + ")"
-  elsif operator.attributes['type'] == "DOUBLEWORD"
-     puts "(= #{new_name} #{full_context[operator.elements['content'].text]})"
-  #TODO elsif остальные типы
-  else
-    raise "unknown bytes-select type '#{operator.attributes['type']}'"
-  end
-end
-
-def constraintsfrom_bytes_expand( operator, full_context )
-  ins_object = @instructions_objects[@instruction]
-  
-  ins_object = @instructions_objects[@instruction]
-  new_name = "_localvar_#{@unique_counter += 1}"
-  full_context[operator.attributes['name']] = new_name
-  
-  @lengths_context[operator.attributes['name']] = 64
-  puts ":extrafuns (( #{new_name} BitVec[64] ))"
-  puts ":extrafuns (( #{ins_object.data} BitVec[64] ))"
-  puts ":assumption"
-
-  if operator.attributes['type'] == "BYTE"
-    (0..7).each{|number|
-        puts "(ite (= #{full_context[operator.elements['index'].text]} bv#{number}[3])" +
-          "(= #{new_name} (concat (concat bv0[#{56-8*number}] (extract[7:0] #{full_context[operator.elements['content'].text]})) bv0[#{8*number}]))"
-    }
-    puts "false"
-    puts (1..8).collect{")"}.join
-  elsif operator.attributes['type'] == "DOUBLEWORD"
-    puts "(= #{new_name} #{full_context[operator.elements['content'].text]})"
-  #TODO elsif сделать остальные типы
-  else
-    raise "unknown bytes-select type '#{operator.attributes['type']}'"
-  end
-end
-
-
-def constraintsfrom_AddressTranslation( operator, full_context )
-  ins_object = @instructions_objects[@instruction]
-  
-  @lengths_context.merge!({operator.elements['physical'].text => $PABITS})
-  
-  # get physical var from instructions repository
-  physical = ins_object.phys_after_translation
-  full_context[operator.elements['physical'].text] = physical
-    
-  puts ":extrafuns(( #{ins_object.virtual_address} BitVec[64] ))"
-  puts ":extrafuns(( #{ins_object.phys_after_translation} BitVec[#{$PABITS}] ))"
-  
-  puts ":assumption"
-  puts "(= #{ins_object.virtual_address} #{full_context[operator.elements['virtual'].text]})"
-  
-  puts ":assumption"
-  puts "(= #{ins_object.phys_after_translation} #{full_context[operator.elements['physical'].text]})"
-  
-  # модель виртуальной памяти
-  #TODO можно сделать более полный Cached Mapped сегмент
-  puts ":assumption"
-  puts "(= bv0[33] (extract[63:31] #{ins_object.virtual_address}))"  
-
-  # соответствие некоторой строке TLB
-  pfn_name = "_localvar_#{@unique_counter += 1}"
-  vpndiv2_name = "_localvar_#{@unique_counter += 1}"
-  puts ":assumption"
-  puts "(let (#{pfn_name} #{getPfn( ins_object.tagset )})"
-  puts "(let (#{vpndiv2_name} (extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{ins_object.virtual_address}))"
-  
-  puts "(or "
-  @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
-    if tlbline.CCA0 == "Cached"
-      puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
-          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
-    end
-    if tlbline.CCA1 == "Cached"
-      puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
-          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
-    end
-  }
-  puts")))"
-    
-  # определение physical_after_translation
-  puts ":assumption"
-  puts "(= #{ins_object.phys_after_translation} " + 
-    "(concat (extract[#{$TAGSETLEN-1}:#{$TAGSETLEN-$PFNLEN}] #{ins_object.tagset}) " + 
-            "(extract[#{$PABITS-$PFNLEN-1}:0] #{ins_object.virtual_address}) ) )"
-            
-  # TODO (это только частный случай) часть виртуального адреса -- это часть тегсета (сет)
-  puts ":assumption"
-  puts "(= (extract[11:5] #{ins_object.virtual_address}) (extract[6:0] #{ins_object.tagset}))"
-end
-
-def constraintsfrom_LoadMemory( operator, full_context )
-  ins_object = @instructions_objects[@instruction]
-  
-  @lengths_context[operator.elements[1].text] = 64
-  
-  data = ins_object.data
-  full_context[operator.elements[1].text] = data
-  
-  puts ":extrafuns(( #{ins_object.data} BitVec[64] ))"
-  ma = MemoryAccess.new
-  ma.dwPhysAddr = "_localvar_#{@unique_counter += 1}"
-  ma.type = "LOAD"
-  ma.data = ins_object.data
-  puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{$PABITS-3}] ))"
-  
-  puts ":assumption"
-  puts "(= #{ins_object.data} #{full_context[operator.elements['data'].text]})"
-  
-  puts ":assumption"
-  puts "(and true "
-  @memory_accesses.reverse.each{|maccess|
-      if maccess.type == "LOAD"
-          puts "(implies (= #{maccess.dwPhysAddr} #{ma.dwPhysAddr}) (= #{ins_object.data} #{maccess.data}))"
-      else
-          puts "(ite (= #{maccess.dwPhysAddr} #{ma.dwPhysAddr}) (= #{ins_object.data} #{maccess.data}) (and true "
-      end
-  }
-  @memory_accesses.select{|m| m.type=="STORE"}.each{|m| puts "))" }
-  puts ")"
-  
-  @memory_accesses << ma
-end
-
-def constraintsfrom_StoreMemory( operator, full_context )
-  ins_object = @instructions_objects[@instruction]
-  
-  ma = MemoryAccess.new
-  ma.dwPhysAddr = "_localvar_#{@unique_counter += 1}"
-  ma.type = "STORE"
-  ma.data = ins_object.data
-  puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{$PABITS-3}] ))"
-  
-  puts ":assumption"
-  puts "(= #{ins_object.data} #{full_context[operator.elements['data'].text]})"
-  
-  @memory_accesses << ma
-end
-
-def procedures_preparations
+def procedures_preparations doc
   @l1Hits = []
   @mtlbHits = []
   previous_tagsets = []
   
-  @instructions_objects = Hash.new
+  @tagsets = Hash.new
   
   #совместная генерация не дает возможности разделить этот цикл на части по процедурам
   doc.elements.each('template/instruction/situation/memory'){ |memory|
@@ -582,36 +594,14 @@ def procedures_preparations
     send("#{cacheTestSituation}_#{microTLBSituation}", previous_tagsets, tagset)
     previous_tagsets << tagset
     
-    instruction = memory.parent.parent
-    ins = Instruction.new
-    @instructions_objects.merge!( {instruction => ins} )
-    
-    # ввести виртуальный адрес инструкции
-    ins.virtual_address = "va#{@unique_counter += 1}"
-    ins.phys_after_translation = "pat#{@unique_counter += 1}"
-    ins.phys_before_memaccess = "pbma#{@unique_counter += 1}"
-    ins.tagset = tagset
-    ins.data = "data#{@unique_counter += 1}"
+    @tagsets.merge!( {memory.parent.parent => tagset} )
   }
 end
 
 end
 
 
-class MirrorSolver < Solver
-
-def solve2 template_file, data_file
-    @data_builder = DataBuilder.new data_file
-    solve template_file
-end
-
-def getPfn(tagset)
-  "(extract[30:7] #{tagset})"
-end
-
-def getRegion(tagset)
-  "(extract[6:0] #{tagset})"
-end
+class MIPS_MirrorSolver < MIPS_Solver
 
 def l1Hit( init_tagsets, previous_tagsets, current_tagset )
   mirror init_tagsets, previous_tagsets, current_tagset, ">",\
@@ -745,168 +735,18 @@ def tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, m)
   end
 end
 
-def constraintsfrom_BytesSelect( operator, full_context )
-  selected = full_context[operator.elements['argument[@id="selected"]/new'].text]
-  index = "_localvar_#{@unique_counter += 1}"
-  index_node = operator.elements['argument[@id="index"]'][0]  # text? body!
-  content = "_localvar_#{@unique_counter += 1}"
-  content_node = operator.elements['argument[@id="content"]'][0]  # text? body!
-  type = operator.elements['argument[@id="type"]'][0]
-  
-  puts ":assumption"
-  if type == "WORD"
-    puts "(let (#{index} " + send("constraintsfrom_#{index_node.name}", index_node, full_context) + ")" 
-    puts "(let (#{content} " + send("constraintsfrom_#{content_node.name}", content_node, full_context) + ")" 
-    puts     "(ite (= bv0[3] #{index}) " + 
-                "(= #{selected} (extract[31:0] #{content}))" +
-                "(= #{selected} (extract[63:32] #{content}))" + 
-             ")" +
-        "))"
-  elsif type == "DOUBLEWORD"
-    puts "(let (#{content} " + send("constraintsfrom_#{content_node.name}", content_node, full_context) + ")" 
-    puts "(= #{selected} #{content}))"
-  #TODO elsif остальные типы
-  else
-    raise "Unknown bytes-select type '#{type}}'"
-  end
-end
-
-def constraintsfrom_bytes_expand( operator, full_context )
-  ins_object = @instructions_objects[@instruction]
-  
-  new_name = "_localvar_#{@unique_counter += 1}"
-  full_context[operator.attributes['name']] = new_name
-  
-  @lengths_context[operator.attributes['name']] = 64
-  puts ":extrafuns (( #{new_name} BitVec[64] ))"
-  puts ":extrafuns (( #{ins_object.data} BitVec[64] ))"
-  puts ":assumption"
-
-  if operator.attributes['type'] == "BYTE"
-    (0..7).each{|number|
-        puts "(ite (= #{full_context[operator.elements['index'].text]} bv#{number}[3])" +
-          "(= #{new_name} (concat (concat bv0[#{56-8*number}] (extract[7:0] #{full_context[operator.elements['content'].text]})) bv0[#{8*number}]))"
-    }
-    puts "false"
-    puts (1..8).collect{")"}.join
-  elsif operator.attributes['type'] == "DOUBLEWORD"
-    puts "(= #{new_name} #{full_context[operator.elements['content'].text]})"
-  #TODO elsif сделать остальные типы
-  else
-    raise "unknown bytes-select type '#{operator.attributes['type']}'"
-  end
-end
-
-def constraintsfrom_AddressTranslation( operator, full_context )
-  ins_object = @instructions_objects[@instruction]
-  
-  puts ":extrafuns(( #{ins_object.virtual_address} BitVec[64] ))"
-  puts ":extrafuns(( #{ins_object.phys_after_translation} BitVec[#{$PABITS}] ))"
-  
-  puts ":assumption"
-  puts "(= #{ins_object.virtual_address} #{full_context[operator.elements['virtual'].text]})"
-  
-  puts ":assumption"
-  puts "(= #{ins_object.phys_after_translation} #{full_context[operator.elements['physical'].text]})"
-  
-  # модель виртуальной памяти
-  #TODO можно сделать более полный Cached Mapped сегмент
-  puts ":assumption"
-  puts "(= bv0[33] (extract[63:31] #{ins_object.virtual_address}))"  
-
-  # соответствие некоторой строке TLB
-  pfn_name = "_localvar_#{@unique_counter += 1}"
-  vpndiv2_name = "_localvar_#{@unique_counter += 1}"
-  puts ":assumption"
-  puts "(let (#{pfn_name} #{getPfn( ins_object.tagset )})"
-  puts "(let (#{vpndiv2_name} (extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{ins_object.virtual_address}))"
-  
-  puts "(or "
-  @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
-    if tlbline.CCA0 == "Cached"
-      puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
-          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
-    end
-    if tlbline.CCA1 == "Cached"
-      puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
-          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
-    end
-  }
-  puts")))"
-    
-  # определение physical_after_translation
-  puts ":assumption"
-  puts "(= #{ins_object.phys_after_translation} " + 
-    "(concat (extract[#{$TAGSETLEN-1}:#{$TAGSETLEN-$PFNLEN}] #{ins_object.tagset}) " + 
-            "(extract[#{$PABITS-$PFNLEN-1}:0] #{ins_object.virtual_address}) ) )"
-            
-  # TODO (это только частный случай) часть виртуального адреса -- это часть тегсета (сет)
-  puts ":assumption"
-  puts "(= (extract[11:5] #{ins_object.virtual_address}) (extract[6:0] #{ins_object.tagset}))"
-end
-
-def constraintsfrom_LoadMemory( operator, full_context )
-  ins_object = @instructions_objects[@instruction]
-  
-  puts ":extrafuns(( #{ins_object.data} BitVec[64] ))"
-  ma = MemoryAccess.new
-  ma.dwPhysAddr = "_localvar_#{@unique_counter += 1}"
-  ma.type = "LOAD"
-  ma.data = ins_object.data
-  puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{$PABITS-3}] ))"
-  
-  puts ":assumption"
-  puts "(= #{ins_object.data} #{full_context[operator.elements['data'].text]})"
-  
-  puts ":assumption"
-  puts "(and true "
-  @memory_accesses.reverse.each{|maccess|
-      if maccess.type == "LOAD"
-          puts "(implies (= #{maccess.dwPhysAddr} #{ma.dwPhysAddr}) (= #{ins_object.data} #{maccess.data}))"
-      else
-          puts "(ite (= #{maccess.dwPhysAddr} #{ma.dwPhysAddr}) (= #{ins_object.data} #{maccess.data}) (and true "
-      end
-  }
-  @memory_accesses.select{|m| m.type=="STORE"}.each{|m| puts "))" }
-  puts ")"
-  
-  @memory_accesses << ma
-end
-
-def constraintsfrom_StoreMemory( operator, full_context )
-  ins_object = @instructions_objects[@instruction]
-  
-  ma = MemoryAccess.new
-  ma.dwPhysAddr = "_localvar_#{@unique_counter += 1}"
-  ma.type = "STORE"
-  ma.data = ins_object.data
-  puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{$PABITS-3}] ))"
-  
-  puts ":assumption"
-  puts "(= #{ins_object.data} #{full_context[operator.elements['data'].text]})"
-  
-  @memory_accesses << ma
-end
-
-
 
 def procedures_preparations doc
   @l1Hits = []
   @mtlbHits = []
   previous_tagsets = []
   
-  init_tagsets = []
-  (1..$initlength).each{|i|
-    tagset = "tagset#{@unique_counter += 1}" 
-    puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ))"
-    puts ":assumption"
-      puts "(and true "
-      init_tagsets.each{|t| puts "(= bit0 (bvcomp #{t} #{tagset}))"}
-      puts ")"
-    init_tagsets << tagset
-  }
+  init_tagsets = Array.new($initlength){"tagset#{@unique_counter += 1}"}
+  init_tagsets.each{|t| puts ":extrafuns (( #{t} #{$TAGSETTYPE} ))" }
+  puts ":assumption"
+  puts "(distinct #{init_tagsets.join(' ')})"
   
-  @instructions_objects = Hash.new 
+  @tagsets = Hash.new 
   doc.elements.each('template/instruction/situation/memory'){ |memory|
     cacheTestSituation = memory.elements['cache'].attributes['id']
     microTLBSituation = memory.elements['microtlb'].attributes['id']
@@ -924,17 +764,9 @@ def procedures_preparations doc
     puts send(microTLBSituation, previous_tagsets, tagset)
     previous_tagsets << tagset
     
-    instruction = memory.parent.parent
-    ins = Instruction.new
-    @instructions_objects.merge!( {instruction => ins} )
-    
-    # ввести виртуальный адрес инструкции
-    ins.virtual_address = "va#{@unique_counter += 1}"
-    ins.phys_after_translation = "pat#{@unique_counter += 1}"
-    ins.phys_before_memaccess = "pbma#{@unique_counter += 1}"
-    ins.tagset = tagset
-    ins.data = "data#{@unique_counter += 1}"
+    @tagsets.merge!( {memory.parent.parent => tagset} )
   }
 end
 
 end
+
