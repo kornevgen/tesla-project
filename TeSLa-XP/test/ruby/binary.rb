@@ -1,3 +1,5 @@
+N = (ARGV[0]||"8").to_i
+
 require "rexml/document"
 
 $LOAD_PATH << "../../src/ruby"
@@ -7,7 +9,9 @@ require "tesla-mips.rb"
 
 mirror_solver = MIPS_MirrorSolver.new
 i = 0
-ALL = ["x1", "y1", "z1", "u1", "x2", "y2", "z2", "u2"]
+ALL = Array.new(2*N){|aLL_index| "x#{aLL_index}" }
+Ins1 = Array.new(N){ ["LW", "SB"] }.flatten
+Ins4 = Array.new(N) { ["load", "store"] }.flatten
 
 histogram = Hash.new
 (1 .. ALL.length * ($L1ASSOC + 1)/2 ).each{|t|
@@ -17,14 +21,9 @@ histogram = Hash.new
 10000.times{
 
 xs = Array.new(ALL.length){ ALL[rand(ALL.length)]}
-cts1 = ["l1Hit", "l1Miss"][rand(2)]
-mts1 = ["mtlbHit", "mtlbMiss"][rand(2)]
-cts2 = ["l1Hit", "l1Miss"][rand(2)]
-mts2 = ["mtlbHit", "mtlbMiss"][rand(2)]
-cts3 = ["l1Hit", "l1Miss"][rand(2)]
-mts3 = ["mtlbHit", "mtlbMiss"][rand(2)]
-cts4 = ["l1Hit", "l1Miss"][rand(2)]
-mts4 = ["mtlbHit", "mtlbMiss"][rand(2)]
+
+ins2 = Array.new(N){ ["l1Hit", "l1Miss"][rand(2)] }
+ins3 = Array.new(N){ ["mtlbHit", "mtlbMiss"][rand(2)] }
 
 i += 1
 
@@ -44,53 +43,20 @@ f.puts('<constant id="c" length="16" />')
 #    <situation name="overflow" />
 #  </instruction>
 
-f.puts('<instruction name="LW">')
-f.puts("<argument>#{xs[0]}</argument>")
-f.puts("<argument>#{xs[1]}</argument>")
-f.puts('<argument>c</argument>')
-f.puts('<situation><branch name="load"/>')
-f.puts('<memory>')
-f.puts("<cache id='#{cts1}' />")
-f.puts("<microtlb id='#{mts1}' />")
-f.puts('</memory>')
-f.puts('</situation>')
-f.puts('</instruction>')
 
-f.puts('<instruction name="SB">')
-f.puts("<argument>#{xs[2]}</argument>")
-f.puts("<argument>#{xs[3]}</argument>")
-f.puts('<argument>c</argument>')
-f.puts('<situation><branch name="store"/>')
-f.puts('<memory>')
-f.puts("<cache id='#{cts2}' />")
-f.puts("<microtlb id='#{mts2}' />")
-f.puts('</memory>')
-f.puts('</situation>')
-f.puts('</instruction>')
-
-f.puts('<instruction name="LW">')
-f.puts("<argument>#{xs[4]}</argument>")
-f.puts("<argument>#{xs[5]}</argument>")
-f.puts('<argument>c</argument>')
-f.puts('<situation><branch name="load"/>')
-f.puts('<memory>')
-f.puts("<cache id='#{cts3}' />")
-f.puts("<microtlb id='#{mts3}' />")
-f.puts('</memory>')
-f.puts('</situation>')
-f.puts('</instruction>')
-
-f.puts('<instruction name="SB">')
-f.puts("<argument>#{xs[6]}</argument>")
-f.puts("<argument>#{xs[7]}</argument>")
-f.puts('<argument>c</argument>')
-f.puts('<situation><branch name="store"/>')
-f.puts('<memory>')
-f.puts("<cache id='#{cts4}' />")
-f.puts("<microtlb id='#{mts4}' />")
-f.puts('</memory>')
-f.puts('</situation>')
-f.puts('</instruction>')
+(0..N-1).each{|ins|
+  f.puts("<instruction name='#{Ins1[ins]}'>")
+  f.puts("<argument>#{xs[2*ins]}</argument>")
+  f.puts("<argument>#{xs[2*ins+1]}</argument>")
+  f.puts('<argument>c</argument>')
+  f.puts("<situation><branch name='#{Ins4[ins]}'/>")
+  f.puts('<memory>')
+  f.puts("<cache id='#{ins2[ins]}' />")
+  f.puts("<microtlb id='#{ins3[ins]}' />")
+  f.puts('</memory>')
+  f.puts('</situation>')
+  f.puts('</instruction>')
+}
 
 f.puts("</template>")
 }
@@ -148,7 +114,7 @@ File.open(data_file, "w"){|f|
 }
 
 # пробуем максимальное значение $initlength
-$initlength = ALL.length/2 * $L1ASSOC + [cts1,cts2,cts3,cts4].reject{|ii| ii == "l1Miss"}.length
+$initlength = ALL.length/2 * $L1ASSOC + ins2.reject{|ii| ii == "l1Miss"}.length
 f1 = Runner.new.run( mirror_solver, template_file, data_file )
 next if f1.include?("unsat") || f1.include?("timeout")
 
@@ -166,6 +132,9 @@ while max >= min
   else
     max = $initlength - 1
   end
+  
+  
+  return if $initlength == 3 && f1.include?("timeout")
 end
 histogram.merge!({min => histogram[min]+1})
 
