@@ -6,6 +6,11 @@ require "rexml/document"
 
 require "tesla"
 
+class Instruction
+  attr_accessor :tagset
+  attr_accessor :virtual_address
+end
+
 class DataBuilder
   
   def initialize(data_file)
@@ -72,6 +77,10 @@ class DataBuilder
   def PFNminusM
     @nonmicropfns
   end
+  
+  def getVPNdiv2(m)
+      @tlb.select{|tlbline| tlbline.pfn0 == m || tlbline.pfn1 == m }.first.vpndiv2
+  end
 end
 
 class TLBLine
@@ -98,6 +107,7 @@ $TLBASSOC = 4
 $SEGBITS = 40
 $PABITS = 36
 $MASK = 0
+$VPNdiv2LEN = $SEGBITS - $PABITS + $PFNLEN
 
 =begin
   класс содержит процедуры для MIPS, но не содержит способа генерации ограничений
@@ -116,6 +126,10 @@ end
 
 def getRegion(tagset)
   "(extract[6:0] #{tagset})"
+end
+
+def getVPNdiv2(virtual_address)
+  "(extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{virtual_address})"
 end
   
 def let_block(var, node, full_context, &body)
@@ -193,9 +207,12 @@ def constraintsfrom_BytesExpand( operator, full_context )
 end
 
 def constraintsfrom_AddressTranslation( operator, full_context )
-  tagset = @tagsets[@instruction]
+  ins_object = @instruction_objects[@instruction]
+  tagset = ins_object.tagset
   
   virtual_address = def_localvar(operator, full_context, "virtual", 64)
+  puts ":assumption"
+  puts "(= #{virtual_address} #{ins_object.virtual_address})"
   
   raise "Bit length of physical address must be #{$PABITS}" \
     if operator.elements['argument[@id="physical"]/new'].attributes['length'].to_i != $PABITS
@@ -205,25 +222,25 @@ def constraintsfrom_AddressTranslation( operator, full_context )
   puts ":assumption"
   puts "(= bv0[33] (extract[63:31] #{virtual_address}))"  
 
-  # соответствие некоторой строке TLB
-  pfn_name = "_localvar_#{@unique_counter += 1}"
-  vpndiv2_name = "_localvar_#{@unique_counter += 1}"
-  puts ":assumption"
-  puts "(let (#{pfn_name} #{getPfn( tagset )})"
-  puts "(let (#{vpndiv2_name} (extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{virtual_address}))"
-  
-  puts "(or "
-  @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
-    if tlbline.CCA0 == "Cached"
-      puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
-          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
-    end
-    if tlbline.CCA1 == "Cached"
-      puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
-          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
-    end
-  }
-  puts")))"
+#  # соответствие некоторой строке TLB
+#  pfn_name = "_localvar_#{@unique_counter += 1}"
+#  vpndiv2_name = "_localvar_#{@unique_counter += 1}"
+#  puts ":assumption"
+#  puts "(let (#{pfn_name} #{getPfn( tagset )})"
+#  puts "(let (#{vpndiv2_name} (extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{virtual_address}))"
+#  
+#  puts "(or "
+#  @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
+#    if tlbline.CCA0 == "Cached"
+#      puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
+#          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+#    end
+#    if tlbline.CCA1 == "Cached"
+#      puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
+#          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+#    end
+#  }
+#  puts")))"
     
   # определение physical_after_translation
   puts ":assumption"
@@ -250,7 +267,8 @@ def constraintsfrom_LoadMemory( operator, full_context )
   puts "(= #{ma.dwPhysAddr} (extract[#{$PABITS-1}:3] #{physical_address}) )"
   
   puts ":assumption"
-  puts "(= #{@tagsets[@instruction]} (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
+  puts "(= #{@instruction_objects[@instruction].tagset} " +
+      " (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
   
   puts ":assumption"
   puts "(and true "
@@ -280,7 +298,7 @@ def constraintsfrom_StoreMemory( operator, full_context )
   puts "(= #{ma.dwPhysAddr} (extract[#{$PABITS-1}:3] #{physical_address}))"
   
   puts ":assumption"
-  puts "(= #{@tagsets[@instruction]} (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
+  puts "(= #{@instruction_objects[@instruction].tagset} (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
   
   @memory_accesses << ma
 end
@@ -288,6 +306,28 @@ end
 
 
 class MIPS_CombinedSolver < MIPS_Solver
+  
+def vpn_pfn(tagset, virtual_address)
+    # соответствие некоторой строке TLB
+  pfn_name = "_pfn#{@unique_counter += 1}"
+  vpndiv2_name = "_vpndiv2#{@unique_counter += 1}"
+  puts ":assumption"
+  puts "(let (#{pfn_name} #{getPfn( tagset )})"
+  puts "(let (#{vpndiv2_name} (extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{virtual_address}))"
+  
+  puts "(or "
+  @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
+    if tlbline.CCA0 == "Cached"
+      puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
+          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+    end
+    if tlbline.CCA1 == "Cached"
+      puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
+          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+    end
+  }
+  puts")))"
+end
 
 def l1Hit_mtlbHit_part1(previous_tagsets, current_tagset)
 #    "(and " +
@@ -337,11 +377,13 @@ def l1Hit_mtlbHit_part4(previous_tagsets, current_tagset)
         ")" }.join + ")"
 end
 
-def l1Hit_mtlbHit(previous_tagsets, tagset)
+def l1Hit_mtlbHit(previous_tagsets, tagset, virtual_address)
   puts ":assumption"
   puts "(or "
   (1..4).each{|n| puts send("l1Hit_mtlbHit_part#{n}", previous_tagsets, tagset) }
   puts ")"
+  
+  vpn_pfn(tagset, virtual_address)
 end
 
 def l1Hit_mtlbMiss_part1(previous_tagsets, current_tagset)
@@ -444,7 +486,7 @@ def tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, m)
 end
 
 
-def l1Hit_mtlbMiss(previous_tagsets, tagset)
+def l1Hit_mtlbMiss(previous_tagsets, tagset, virtual_address)
   previous_tagsets.each{|t|
     puts ":assumption"
     puts "(= bit0 (bvcomp #{getRegion t} #{getRegion tagset}))"
@@ -454,6 +496,8 @@ def l1Hit_mtlbMiss(previous_tagsets, tagset)
   puts "(or "
   (1..2).each{|n| puts send("l1Hit_mtlbMiss_part#{n}", previous_tagsets, tagset) }
   puts ")"
+  
+  vpn_pfn(tagset, virtual_address)
 end
 
 def l1Miss_mtlbHit_part1 previous_tagsets, tagset
@@ -547,7 +591,7 @@ def l1Miss_mtlbMiss_part4 previous_tagsets, tagset
       }.join + ")"
 end
 
-def l1Miss_mtlbHit( previous_tagsets, tagset )
+def l1Miss_mtlbHit( previous_tagsets, tagset, virtual_address )
   previous_tagsets.each{|t|
     puts ":assumption"
     puts "(= bit0 (bvcomp #{t} #{tagset}))"
@@ -556,10 +600,12 @@ def l1Miss_mtlbHit( previous_tagsets, tagset )
   puts ":assumption"
   puts "(or "
   (1..4).each{|n| puts send("l1Miss_mtlbHit_part#{n}", previous_tagsets, tagset) }
-  puts ")"  
+  puts ")" 
+  
+  vpn_pfn(tagset, virtual_address)
 end
 
-def l1Miss_mtlbMiss( previous_tagsets, tagset )
+def l1Miss_mtlbMiss( previous_tagsets, tagset, virtual_address )
   previous_tagsets.each{|t|
     puts ":assumption"
     puts "(= bit0 (bvcomp #{getRegion t} #{getRegion tagset}))"
@@ -569,6 +615,8 @@ def l1Miss_mtlbMiss( previous_tagsets, tagset )
   puts "(or "
   (1..4).each{|n| puts send("l1Miss_mtlbMiss_part#{n}", previous_tagsets, tagset) }
   puts ")"
+  
+  vpn_pfn(tagset, virtual_address)
 end
 
 
@@ -585,16 +633,20 @@ def procedures_preparations doc
     microTLBSituation = memory.elements['microtlb'].attributes['id']
       
     # ввести переменную для этой тестовой ситуации и записать ее в SMT-LIB
-    tagset = "tagset#{@unique_counter += 1}" 
-    puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ))"
+    tagset = "_ts#{@unique_counter += 1}"
+    virtual_address = "_va#{@unique_counter += 1}"
+    puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ) ( #{virtual_address} BitVec[64]))"
      
     # сделать ограничения для cacheTS >< microTLBS и выдать их на out
     @l1Hits << tagset if cacheTestSituation == "l1Hit"
     @mtlbHits << tagset if microTLBSituation == "mtlbHit"
-    send("#{cacheTestSituation}_#{microTLBSituation}", previous_tagsets, tagset)
+    send("#{cacheTestSituation}_#{microTLBSituation}", previous_tagsets, tagset, virtual_address)
     previous_tagsets << tagset
     
-    @tagsets.merge!( {memory.parent.parent => tagset} )
+    ins_object = Instruction.new
+    ins_object.tagset = tagset
+    ins_object.virtual_address = virtual_address
+    @instruction_objects.merge!( {memory.parent.parent => ins_object} )
   }
 end
 
@@ -624,7 +676,7 @@ def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlen
           
           # u(t_i)
           (0.. init_tagsets.length-1).each{|i|
-            puts "(ite (and "
+            puts "(ite (and true "
                init_tagsets[i..init_tagsets.length-1].each{|t|
                       puts "(= bit0 (bvcomp #{t} #{current_tagset}))" } 
                previous_tagsets.each{|t|
@@ -634,7 +686,7 @@ def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlen
             
           # u(x_i): S_i = miss/hit
           (0.. previous_tagsets.length-1).each{|i|
-            puts "(ite (and "
+            puts "(ite (and true "
                previous_tagsets[i..previous_tagsets.length-1].each{|t|
                       puts "(= bit0 (bvcomp #{t} #{current_tagset}))"
                }
@@ -664,7 +716,7 @@ def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlen
       puts " )))"
 end
 
-def mtlbHit(previous_tagsets, current_tagset)  
+def mtlbHit(previous_tagsets, current_tagset, virtual_address)  
     "(or false " +
       @data_builder.M.delete_if{|m|
         delta_T = @data_builder.M.index(m) + 1
@@ -672,6 +724,7 @@ def mtlbHit(previous_tagsets, current_tagset)
       }.collect{|m|
             "(and " +
               "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) " +
+              "(= #{getVPNdiv2(virtual_address)} bv#{@data_builder.getVPNdiv2(m)}[#{$VPNdiv2LEN}] ) " +
                tlb_pfn_is_not_displaced_yet(previous_tagsets, current_tagset, m) + ")"
           }.join + 
     
@@ -679,11 +732,14 @@ def mtlbHit(previous_tagsets, current_tagset)
           " (= #{getPfn current_tagset} #{getPfn tagset}) " }.join + ")"
 end
 
-def mtlbMiss(previous_tagsets, current_tagset)  
+def mtlbMiss(previous_tagsets, current_tagset, virtual_address)  
   "(and " +
     "(or " +
       @data_builder.PFNminusM.collect{|m|
-        "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) "
+        "(and " +
+          "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) " +
+          "(= #{getVPNdiv2(virtual_address)} bv#{@data_builder.getVPNdiv2(m)}[#{$VPNdiv2LEN}] ) " +
+        ")"
       }.join +
       @data_builder.M.delete_if{|m|
         delta_T = @data_builder.M.index(m) + 1
@@ -691,6 +747,7 @@ def mtlbMiss(previous_tagsets, current_tagset)
       }.collect{|m|
             "(and " +
               "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) " +
+              "(= #{getVPNdiv2(virtual_address)} bv#{@data_builder.getVPNdiv2(m)}[#{$VPNdiv2LEN}] ) " +
                tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, m) + ")"
           }.join + 
     ")" +    
@@ -707,8 +764,12 @@ def tlb_cardinality_constraint(delta_T, previous_tagsets, relation, sumlength)
                     "(= #{getPfn previous_tagsets[i]} bv#{mtail}[#{$PFNLEN}]) " }.join +
                 ")" +
                 
-                previous_tagsets[0..i-1].collect{|t|
-                  "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn t} )) " }.join +
+                if i > 0 
+                  previous_tagsets[0..i-1].collect{|t|
+                  "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn t} )) " }.join
+                else
+                  ""
+                end +
             ")"
           end }.compact.collect{|f| " (ite #{f} 1 0)"}.join +                     
       "))"  
@@ -747,19 +808,20 @@ def procedures_preparations doc
   @mtlbHits = []
   previous_tagsets = []
   
-  init_tagsets = Array.new($initlength){"tagset#{@unique_counter += 1}"}
+  init_tagsets = Array.new($initlength){"_its#{@unique_counter += 1}"}
   init_tagsets.each{|t| puts ":extrafuns (( #{t} #{$TAGSETTYPE} ))" }
   puts ":assumption"
   puts "(distinct #{init_tagsets.join(' ')})"
   
-  @tagsets = Hash.new 
+  @instruction_objects = Hash.new 
   doc.elements.each('template/instruction/situation/memory'){ |memory|
     cacheTestSituation = memory.elements['cache'].attributes['id']
     microTLBSituation = memory.elements['microtlb'].attributes['id']
       
     # ввести переменную для этой тестовой ситуации и записать ее в SMT-LIB
-    tagset = "tagset#{@unique_counter += 1}" 
-    puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ))"
+    tagset = "_ts#{@unique_counter += 1}"
+    virtual_address = "_va#{@unique_counter += 1}"
+    puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ) (#{virtual_address} BitVec[64]))"
      
     # сделать ограничения для cacheTS >< microTLBS и выдать их на out
     @l1Hits << tagset if cacheTestSituation == "l1Hit"
@@ -767,10 +829,13 @@ def procedures_preparations doc
     puts ":assumption"
     send(cacheTestSituation, init_tagsets, previous_tagsets, tagset)
     puts ":assumption"
-    puts send(microTLBSituation, previous_tagsets, tagset)
+    puts send(microTLBSituation, previous_tagsets, tagset, virtual_address)
     previous_tagsets << tagset
     
-    @tagsets.merge!( {memory.parent.parent => tagset} )
+    instruction_object = Instruction.new
+    instruction_object.tagset = tagset
+    instruction_object.virtual_address = virtual_address
+    @instruction_objects.merge!( {memory.parent.parent => instruction_object} )
   }
 end
 
