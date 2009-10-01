@@ -665,8 +665,11 @@ def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlen
 end
 
 def mtlbHit(previous_tagsets, current_tagset)  
-    "(or " +
-      @data_builder.M.collect{|m|
+    "(or false " +
+      @data_builder.M.delete_if{|m|
+        delta_T = @data_builder.M.index(m) + 1
+        $TLBASSOC - delta_T - (previous_tagsets.length - @mtlbHits.length) <= 0
+      }.collect{|m|
             "(and " +
               "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) " +
                tlb_pfn_is_not_displaced_yet(previous_tagsets, current_tagset, m) + ")"
@@ -682,7 +685,10 @@ def mtlbMiss(previous_tagsets, current_tagset)
       @data_builder.PFNminusM.collect{|m|
         "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) "
       }.join +
-      @data_builder.M.collect{|m|
+      @data_builder.M.delete_if{|m|
+        delta_T = @data_builder.M.index(m) + 1
+        $TLBASSOC - delta_T - previous_tagsets.length >= 0
+      }.collect{|m|
             "(and " +
               "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) " +
                tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, m) + ")"
@@ -712,7 +718,7 @@ def tlb_pfn_is_not_displaced_yet(previous_tagsets, current_tagset, m)
   delta_T = @data_builder.M.index(m) + 1
   
   if $TLBASSOC - delta_T - previous_tagsets.length > 0
-    " true "
+    "" #(and X true) === (and X "")
   elsif $TLBASSOC - delta_T - (previous_tagsets.length - @mtlbHits.length) <= 0
     " false "
   else
@@ -726,7 +732,7 @@ def tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, m)
   mtlbmissc = previous_tagsets.length - @mtlbHits.length
   
   if $TLBASSOC - delta_T - mtlbmissc <= -1
-    " true "
+    " "
   elsif $TLBASSOC - delta_T - previous_tagsets.length >= 0
     " false "
   else
