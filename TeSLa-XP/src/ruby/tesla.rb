@@ -255,20 +255,20 @@ require 'tempfile'
 class Runner
 
   #TODO добавить анализ текста, который печатает Z3: выделение из него значений переменных
-  def run( solver, *params )
+  def run( solver, i, *params )
     orig = $stdout
-    smt_file = Tempfile.new( "out-smt", "." )
+    smt_file = File.new( "out#{i}.smt", "w" )
     $stdout = smt_file
     solver.send("solve#{params.length}", *params)
     $stdout = orig
     smt_file.close
     #File.open(smt_file.path).each{|s| puts s }
-    output = `z3 /m #{smt_file.path} /T:15`
+    output = `z3 /m #{smt_file.path} /T:60`
     #puts output
-    puts "timeout" if output.include?("timeout")
-    puts "sat" if !output.include?("unsat") && !output.include?("timeout")
-    puts "unsat" if output.include?("unsat")
-    smt_file.unlink
+    puts "out#{i}.smt: timeout" if output.include?("timeout")
+    puts "out#{i}.smt: sat" if !output.include?("unsat") && !output.include?("timeout")
+    puts "out#{i}.smt: unsat" if output.include?("unsat")
+    #smt_file.unlink
     output
   end
 end
