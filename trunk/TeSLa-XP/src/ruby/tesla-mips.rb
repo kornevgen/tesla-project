@@ -266,9 +266,10 @@ def constraintsfrom_LoadMemory( operator, full_context )
   puts ":assumption"
   puts "(= #{ma.dwPhysAddr} (extract[#{$PABITS-1}:3] #{physical_address}) )"
   
-  puts ":assumption"
-  puts "(= #{@instruction_objects[@instruction].tagset} " +
-      " (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
+# это ограничение нужно, если физический адрес после трансляции адреса меняется:
+#  puts ":assumption"
+#  puts "(= #{@instruction_objects[@instruction].tagset} " +
+#      " (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
   
   puts ":assumption"
   puts "(and true "
@@ -296,9 +297,12 @@ def constraintsfrom_StoreMemory( operator, full_context )
   puts ":extrafuns(( #{ma.dwPhysAddr} BitVec[#{$PABITS-3}] ))"
   puts ":assumption"
   puts "(= #{ma.dwPhysAddr} (extract[#{$PABITS-1}:3] #{physical_address}))"
+
   
-  puts ":assumption"
-  puts "(= #{@instruction_objects[@instruction].tagset} (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
+# это ограничение нужно, если физический адрес после трансляции адреса меняется:
+#  puts ":assumption"
+#  puts "(= #{@instruction_objects[@instruction].tagset} " + 
+#  " (extract[#{$PABITS-1}:#{$PABITS-$TAGSETLEN}] #{physical_address}))" 
   
   @memory_accesses << ma
 end
@@ -415,8 +419,8 @@ def cache_cardinality_constraint( lambda, delta, previous_tagsets, current_tagse
                                "(= #{previous_tagsets[i]} bv#{l}[#{$TAGSETLEN}]) "
                           }.join + ")" +
                       
-                      previous_tagsets[0..i-1].collect{|t|
-                        "(= bit0 (bvcomp #{previous_tagsets[i]} #{t} )) " }.join +
+                      (0..i-1).collect{|i1| 
+                        "(= bit0 (bvcomp #{previous_tagsets[i]} #{previous_tagsets[i1]} )) " }.join +
                   ")"
               else
                 "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset} )"
@@ -451,8 +455,8 @@ def tlb_cardinality_constraint(delta_T, previous_tagsets, relation, sumlength)
                     "(= #{getPfn previous_tagsets[i]} bv#{mtail}[#{$PFNLEN}]) " }.join +
                 ")" +
                 
-                previous_tagsets[0..i-1].collect{|t|
-                  "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn t} )) " }.join +
+                (0..i-1).collect{|i1|
+                  "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn previous_tagsets[i1]} )) " }.join +
             ")"
           end }.compact.collect{|f| " (ite #{f} bv1[#{sumlength}] bv0[#{sumlength}])"}.join +                     
       "))"  
@@ -698,8 +702,8 @@ def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlen
                     # c(t_j) = 0
                     init_tagsets[j..init_tagsets.length-1].each{|t|
                         puts "(= #{current_tagset} #{t})" }
-                    previous_tagsets[0..i-1].each{|t|
-                        puts "(= #{current_tagset} #{t})" }
+                    (0..i-1).each{|i1|
+                        puts "(= #{current_tagset} #{previous_tagsets[i1]})" }
                     puts "(= bit0 (bvcomp #{previous_tagsets[i]} #{init_tagsets[j]})))"
                 }
                 (0..i-1).each{|j|
@@ -764,12 +768,8 @@ def tlb_cardinality_constraint(delta_T, previous_tagsets, relation, sumlength)
                     "(= #{getPfn previous_tagsets[i]} bv#{mtail}[#{$PFNLEN}]) " }.join +
                 ")" +
                 
-                if i > 0 
-                  previous_tagsets[0..i-1].collect{|t|
-                  "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn t} )) " }.join
-                else
-                  ""
-                end +
+                (0..i-1).collect{|i1|
+                "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn previous_tagsets[i1]} )) " }.join +
             ")"
           end }.compact.collect{|f| " (ite #{f} 1 0)"}.join +                     
       "))"  
