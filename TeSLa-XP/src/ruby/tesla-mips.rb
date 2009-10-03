@@ -679,13 +679,15 @@ def l1Miss( init_tagsets, previous_tagsets, current_tagset )
 end
 
 def mtlbHit( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
-  mirror_mtlb init_vpnd2s, previous_vpnd2s, current_vpnd2, ">",\
-      (Math.log([$TLBASSOC, init_vpnd2s.length + previous_vpnd2s.length].max + 1)/Math.log(2)).ceil
+  mirror_mtlb init_vpnd2s.last($TLBASSOC-1), previous_vpnd2s, current_vpnd2, ">"
 end
 
 def mtlbMiss( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
-  mirror_mtlb init_vpnd2s, previous_vpnd2s, current_vpnd2, "<=",\
-      (Math.log([$TLBASSOC, init_vpnd2s.length + previous_vpnd2s.length].max + 1)/Math.log(2)).ceil
+  puts "(or" # or нужен только лишь в том случае, если длина init > TLBASSOC-1
+  (0..init_vpnd2s.length - $TLBASSOC).each{|i|
+      puts "(= #{current_vpnd2} #{init_vpnd2s[i]})" }
+  mirror_mtlb(init_vpnd2s.last($TLBASSOC-1), previous_vpnd2s, current_vpnd2, "<=")
+  puts ")"
 end
 
 def mirror_l1( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlength )
@@ -740,7 +742,7 @@ def mirror_l1( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sum
 end
 
 
-def mirror_mtlb( init_vpnd2s, previous_vpnd2s, current_vpnd2, mirrrelation, sumlength )
+def mirror_mtlb( init_vpnd2s, previous_vpnd2s, current_vpnd2, mirrrelation )
   puts "(and "
     puts "(or "
           (init_vpnd2s + previous_vpnd2s).each{|t|
@@ -803,17 +805,21 @@ def procedures_preparations doc
   
   init_tagsets = Array.new($initlength){"_its#{@unique_counter += 1}"}
   init_tagsets.each{|t| puts ":extrafuns (( #{t} #{$TAGSETTYPE} ))" }
-#  puts ":assumption"
-#  puts "(distinct #{init_tagsets.join(' ')})"
-  init_tagsets.inject([]){|ts,t|
-    ts.each{|t1| puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))"}
-    ts + [t]
-  }
+  puts ":assumption"
+  puts "(distinct #{init_tagsets.join(' ')})"
+#  init_tagsets.inject([]){|ts,t|
+#    ts.each{|t1| puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))"}
+#    ts + [t]
+#  }
   
   init_vpnd2s = Array.new($initlength_mtlb){"_ivpnd#{@unique_counter += 1}"}
   init_vpnd2s.each{|t| puts ":extrafuns (( #{t} #{$VPNd2TYPE} ))" }
-  puts ":assumption"
-  puts "(distinct #{init_vpnd2s.join(' ')})"
+#  puts ":assumption"
+#  puts "(distinct #{init_vpnd2s.join(' ')})"
+  init_vpnd2s.inject([]){|ts,t|
+    ts.each{|t1| puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))"}
+    ts + [t]
+  }
   
   @instruction_objects = Hash.new 
   doc.elements.each('template/instruction/situation/memory'){ |memory|
