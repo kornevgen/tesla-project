@@ -7,7 +7,7 @@ $LOAD_PATH << "C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\
 require "tesla-mips"
 require "tesla"
 
-mirror_solver = MIPS_MirrorSolver.new
+mirror_solver = MIPS_FullMirrorSolver.new
 i = 0
 
 ALL = Array.new(2*N){|aLL_w_index| "x#{aLL_w_index}" }
@@ -28,7 +28,8 @@ i += 1
 
 template_file = "tmpl#{(i-1)%10}.xml"
 
-$initlength = ALL.length/2 * $L1ASSOC + ins2.reject{|ii| ii == "l1Miss"}.length
+$initlength = ALL.length/2 * $L1ASSOC + ins2.select{|ii| ii == "l1Hit"}.length
+$initlength_mtlb = ALL.length/2 * $TLBASSOC + ins3.select{|ii| ii == "mtlbHit"}.length
 
 
 File.new(template_file, "w")
