@@ -2,6 +2,9 @@
 
 # TODO по-другому задается тестовая ситуация: через access, а не memory
 
+#TODO при построении ограничений учтено, что TLB не меняется... 
+#(т.е. тут только TLBHit, но возможны mtlbHit и mtlbMiss)
+
 require "rexml/document"
 
 require "tesla"
@@ -9,6 +12,7 @@ require "tesla"
 class Instruction
   attr_accessor :tagset
   attr_accessor :virtual_address
+  attr_accessor :vpnd2
 end
 
 class DataBuilder
@@ -108,6 +112,7 @@ $SEGBITS = 40
 $PABITS = 36
 $MASK = 0
 $VPNdiv2LEN = $SEGBITS - $PABITS + $PFNLEN
+$VPNd2TYPE = "BitVec[#{$VPNdiv2LEN}]"
 
 =begin
   класс содержит процедуры для MIPS, но не содержит способа генерации ограничений
@@ -130,6 +135,10 @@ end
 
 def getVPNdiv2(virtual_address)
   "(extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{virtual_address})"
+end
+
+def getOddBit(virtual_address)
+  "(extract[#{$PABITS - $PFNLEN}:#{$PABITS - $PFNLEN}] #{virtual_address})"
 end
   
 def let_block(var, node, full_context, &body)
@@ -651,6 +660,203 @@ def procedures_preparations doc
     ins_object.tagset = tagset
     ins_object.virtual_address = virtual_address
     @instruction_objects.merge!( {memory.parent.parent => ins_object} )
+  }
+end
+
+end
+
+
+class MIPS_FullMirrorSolver < MIPS_Solver
+
+def l1Hit( init_tagsets, previous_tagsets, current_tagset )
+  mirror_l1 init_tagsets, previous_tagsets, current_tagset, ">",\
+      (Math.log([$L1ASSOC, init_tagsets.length + previous_tagsets.length].max + 1)/Math.log(2)).ceil
+end
+
+def l1Miss( init_tagsets, previous_tagsets, current_tagset )
+  mirror_l1 init_tagsets, previous_tagsets, current_tagset, "<=",\
+      (Math.log([$L1ASSOC, init_tagsets.length + previous_tagsets.length].max + 1)/Math.log(2)).ceil
+end
+
+def mtlbHit( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
+  mirror_mtlb init_vpnd2s, previous_vpnd2s, current_vpnd2, ">",\
+      (Math.log([$TLBASSOC, init_vpnd2s.length + previous_vpnd2s.length].max + 1)/Math.log(2)).ceil
+end
+
+def mtlbMiss( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
+  mirror_mtlb init_vpnd2s, previous_vpnd2s, current_vpnd2, "<=",\
+      (Math.log([$TLBASSOC, init_vpnd2s.length + previous_vpnd2s.length].max + 1)/Math.log(2)).ceil
+end
+
+def mirror_l1( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlength )
+  puts "(and "
+    puts "(or "
+          (init_tagsets + previous_tagsets).each{|t|
+              puts "(= #{t} #{current_tagset})"  }
+    puts ")"
+    
+    puts "(#{mirrrelation} #{$L1ASSOC} (+ 0 "
+          
+          # u(t_i)
+          (0.. init_tagsets.length-1).each{|i|
+            puts "(ite (and true "
+               init_tagsets[i..init_tagsets.length-1].each{|t|
+                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))" } 
+               previous_tagsets.each{|t|
+                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))" }
+               puts "(= #{getRegion init_tagsets[i]} #{getRegion current_tagset}))" +
+            " 1 0 ) " }
+            
+          # u(x_i): S_i = miss/hit
+          (0.. previous_tagsets.length-1).each{|i|
+            puts "(ite (and true "
+               previous_tagsets[i..previous_tagsets.length-1].each{|t|
+                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))"
+               }
+               puts "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset})"
+               
+               if @l1Hits.include?( previous_tagsets[i])
+                (0..init_tagsets.length-1).each{|j|
+                  puts "(or "
+                    # c(t_j) = 0
+                    init_tagsets[j..init_tagsets.length-1].each{|t|
+                        puts "(= #{current_tagset} #{t})" }
+                    (0..i-1).each{|i1|
+                        puts "(= #{current_tagset} #{previous_tagsets[i1]})" }
+                    puts "(= bit0 (bvcomp #{previous_tagsets[i]} #{init_tagsets[j]})))"
+                }
+                (0..i-1).each{|j|
+                  puts "(or "
+                    # c(t_j) = 0
+                    previous_tagsets[j..i-1].each{|t|
+                        puts "(= #{current_tagset} #{t})" }
+                    puts "(= bit0 (bvcomp #{previous_tagsets[i]} #{previous_tagsets[j]})))"
+                }
+               end
+                
+            puts " ) 1 0 ) " }
+          
+      puts " )))"
+end
+
+
+def mirror_mtlb( init_vpnd2s, previous_vpnd2s, current_vpnd2, mirrrelation, sumlength )
+  puts "(and "
+    puts "(or "
+          (init_vpnd2s + previous_vpnd2s).each{|t|
+              puts "(= #{t} #{current_vpnd2})"  }
+    puts ")"
+    
+    puts "(#{mirrrelation} #{$TLBASSOC} (+ 0 "
+          
+          # u(t_i)
+          (0.. init_vpnd2s.length-1).each{|i|
+            puts "(ite (and true "
+               (init_vpnd2s[i..init_vpnd2s.length-1] + previous_vpnd2s).each{|t|
+                     puts "(= bit0 (bvcomp #{t} #{current_vpnd2}))" } 
+               puts ") 1 0 ) " }
+            
+          # u(x_i): S_i = miss/hit
+          (0.. previous_vpnd2s.length-1).each{|i|
+            puts "(ite (and true "
+               previous_vpnd2s[i..previous_vpnd2s.length-1].each{|t|
+                      puts "(= bit0 (bvcomp #{t} #{current_vpnd2}))"
+               }
+               
+               if @mtlbHits.include?( previous_vpnd2s[i])
+                (0..init_vpnd2s.length-1).each{|j|
+                  puts "(or "
+                    # c(t_j) = 0
+                    init_vpnd2s[j..init_vpnd2s.length-1].each{|t|
+                        puts "(= #{current_vpnd2} #{t})" }
+                    (0..i-1).each{|i1|
+                        puts "(= #{current_vpnd2} #{previous_vpnd2s[i1]})" }
+                    puts "(= bit0 (bvcomp #{previous_vpnd2s[i]} #{init_vpnd2s[j]})))"
+                }
+                (0..i-1).each{|j|
+                  puts "(or "
+                    # c(t_j) = 0
+                    previous_vpnd2s[j..i-1].each{|t|
+                        puts "(= #{current_vpnd2} #{t})" }
+                    puts "(= bit0 (bvcomp #{previous_vpnd2s[i]} #{previous_vpnd2s[j]})))"
+                }
+               end
+                
+            puts " ) 1 0 ) " }
+          
+      puts " )))"
+end
+
+def to_h(keys, values)
+  Hash[*([keys, values].transpose.flatten)]
+end
+
+def procedures_preparations doc
+  raise "Please define initlength" if $initlength.nil? || $initlength == 0
+  raise "Please define initlength_mtlb" if $initlength_mtlb.nil? || $initlength_mtlb == 0
+  
+  @l1Hits = []
+  @mtlbHits = []
+  previous_tagsets = []
+  previous_objects = []
+  previous_vpnd2s = []
+  
+  init_tagsets = Array.new($initlength){"_its#{@unique_counter += 1}"}
+  init_tagsets.each{|t| puts ":extrafuns (( #{t} #{$TAGSETTYPE} ))" }
+  puts ":assumption"
+  puts "(distinct #{init_tagsets.join(' ')})"
+  
+  init_vpnd2s = Array.new($initlength_mtlb){"_ivpnd#{@unique_counter += 1}"}
+  init_vpnd2s.each{|t| puts ":extrafuns (( #{t} #{$VPNd2TYPE} ))" }
+  puts ":assumption"
+  puts "(distinct #{init_vpnd2s.join(' ')})"
+  
+  @instruction_objects = Hash.new 
+  doc.elements.each('template/instruction/situation/memory'){ |memory|
+    cacheTestSituation = memory.elements['cache'].attributes['id']
+    microTLBSituation = memory.elements['microtlb'].attributes['id']
+      
+    # ввести переменную для этой тестовой ситуации и записать ее в SMT-LIB
+    tagset = "_ts#{@unique_counter += 1}"
+    vpnd2 = "_vpnd#{@unique_counter += 1}"
+    virtual_address = "_va#{@unique_counter += 1}"
+    puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ) " + 
+         "(#{virtual_address} BitVec[64])" +
+         "(#{vpnd2} #{$VPNd2TYPE}))"
+    
+    # vpnd2 is bits of virtual_address
+    puts ":assumption"
+    puts "(= #{getVPNdiv2 virtual_address} #{vpnd2})"
+    
+    # разных vpn'в не более количества строк TLB, но для маленьких экспериментов это всегда верно
+
+    #каждый init_vpnd2 не может быть одновременно использован с разными oddbit
+    #если совпадают vpn, то совпадают pfn
+    previous_objects.each{|o|
+        puts ":assumption"
+        puts "(implies (= #{vpnd2} #{o.vpnd2}) " +
+        "(ite (= #{getOddBit virtual_address} #{getOddBit o.virtual_address} ) "
+        puts "(= #{o.tagset} #{tagset}) " +
+          init_vpnd2s.inject("(and true "){|s, v| s+"(= bit0 (bvcomp #{v} #{vpnd2}))" } + " )" +
+        "))"
+    }
+    
+    # сделать ограничения для cacheTS >< microTLBS и выдать их на out
+    @l1Hits << tagset if cacheTestSituation == "l1Hit"
+    @mtlbHits << vpnd2 if microTLBSituation == "mtlbHit"
+    puts ":assumption"
+    send(cacheTestSituation, init_tagsets, previous_tagsets, tagset)
+    puts ":assumption"
+    send(microTLBSituation, init_vpnd2s, previous_vpnd2s, vpnd2)
+    previous_tagsets << tagset
+    previous_vpnd2s << vpnd2
+    
+    instruction_object = Instruction.new
+    instruction_object.tagset = tagset
+    instruction_object.vpnd2 = vpnd2
+    instruction_object.virtual_address = virtual_address
+    @instruction_objects.merge!( {memory.parent.parent => instruction_object} )
+    previous_objects << instruction_object
   }
 end
 
