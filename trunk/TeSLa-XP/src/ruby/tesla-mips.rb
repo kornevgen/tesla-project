@@ -803,8 +803,12 @@ def procedures_preparations doc
   
   init_tagsets = Array.new($initlength){"_its#{@unique_counter += 1}"}
   init_tagsets.each{|t| puts ":extrafuns (( #{t} #{$TAGSETTYPE} ))" }
-  puts ":assumption"
-  puts "(distinct #{init_tagsets.join(' ')})"
+#  puts ":assumption"
+#  puts "(distinct #{init_tagsets.join(' ')})"
+  init_tagsets.inject([]){|ts,t|
+    ts.each{|t1| puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))"}
+    ts + [t]
+  }
   
   init_vpnd2s = Array.new($initlength_mtlb){"_ivpnd#{@unique_counter += 1}"}
   init_vpnd2s.each{|t| puts ":extrafuns (( #{t} #{$VPNd2TYPE} ))" }
