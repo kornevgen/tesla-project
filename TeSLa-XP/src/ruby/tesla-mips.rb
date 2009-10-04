@@ -753,8 +753,11 @@ def mirror_mtlb( init_vpnd2s, previous_vpnd2s, current_vpnd2, mirrrelation )
           
           # u(t_i)
           (0.. init_vpnd2s.length-1).each{|i|
-            puts "(ite (and true "
-               (init_vpnd2s[i..init_vpnd2s.length-1] + previous_vpnd2s).each{|t|
+            puts "(ite (and true (or false "
+               (0..i-1).each{|i1|
+                     puts "(= #{init_vpnd2s[i1]} #{current_vpnd2})" }
+               puts ")"
+               previous_vpnd2s.each{|t|
                      puts "(= bit0 (bvcomp #{t} #{current_vpnd2}))" } 
                puts ") 1 0 ) " }
             
