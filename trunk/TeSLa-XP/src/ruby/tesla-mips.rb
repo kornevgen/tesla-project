@@ -700,14 +700,21 @@ def mirror_l1( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sum
     puts "(#{mirrrelation} #{$L1ASSOC} (+ 0 "
           
           # u(t_i)
-          (0.. init_tagsets.length-1).each{|i|
-            puts "(ite (and true "
-               init_tagsets[i..init_tagsets.length-1].each{|t|
-                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))" } 
-               previous_tagsets.each{|t|
-                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))" }
-               puts "(= #{getRegion init_tagsets[i]} #{getRegion current_tagset}))" +
-            " 1 0 ) " }
+          if ! previous_tagsets.empty?
+            puts "(ite (or "
+            previous_tagsets.each{|t|
+                  puts "(= #{t} #{current_tagset})" }
+            puts ") 0 (+ 0 "
+            
+            (0.. init_tagsets.length-1).each{|i|
+              puts "(ite (and true (or false "
+                 (0..i-1).each{|i1|
+                        puts "(= #{init_tagsets[i1]} #{current_tagset})" } 
+                 puts ")"
+                 puts "(= #{getRegion init_tagsets[i]} #{getRegion current_tagset}))" +
+              " 1 0 ) " }
+            puts"))"
+          end
             
           # u(x_i): S_i = miss/hit
           (0.. previous_tagsets.length-1).each{|i|
@@ -752,14 +759,19 @@ def mirror_mtlb( init_vpnd2s, previous_vpnd2s, current_vpnd2, mirrrelation )
     puts "(#{mirrrelation} #{$TLBASSOC} (+ 0 "
           
           # u(t_i)
-          (0.. init_vpnd2s.length-1).each{|i|
-            puts "(ite (and true (or false "
-               (0..i-1).each{|i1|
-                     puts "(= #{init_vpnd2s[i1]} #{current_vpnd2})" }
-               puts ")"
+          if ! previous_vpnd2s.empty?
+            puts "(ite (or "
                previous_vpnd2s.each{|t|
-                     puts "(= bit0 (bvcomp #{t} #{current_vpnd2}))" } 
-               puts ") 1 0 ) " }
+                     puts "(= #{t} #{current_vpnd2})" }
+               puts ") 0 (+ 0 "
+            (0.. init_vpnd2s.length-1).each{|i|
+              puts "(ite (or false "
+                 (0..i-1).each{|i1|
+                       puts "(= #{init_vpnd2s[i1]} #{current_vpnd2})" }
+              puts ") 1 0)"
+             }
+             puts"))"
+         end
             
           # u(x_i): S_i = miss/hit
           (0.. previous_vpnd2s.length-1).each{|i|
@@ -768,7 +780,7 @@ def mirror_mtlb( init_vpnd2s, previous_vpnd2s, current_vpnd2, mirrrelation )
                       puts "(= bit0 (bvcomp #{t} #{current_vpnd2}))"
                }
                
-               if @mtlbHits.include?( previous_vpnd2s[i])
+               if @mtlbHits.include?( previous_vpnd2s[i] )
                 (0..init_vpnd2s.length-1).each{|j|
                   puts "(or "
                     # c(t_j) = 0
