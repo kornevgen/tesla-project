@@ -8,11 +8,13 @@ $LOAD_PATH << "C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertatio
 require "tesla-mips"
 require "tesla"
 
-mirror_solver = MIPS_MirrorSolver.new
+#mirror_solver = MIPS_MirrorSolver.new
+mirror_solver = MIPS_FullMirrorSolver.new
 
 template_file = "0.xml"
 
-$initlength = 3
+$initlength = 4
+$initlength_mtlb = 5
 i = 0
 #сгенерировать новый data.xml
 begin
