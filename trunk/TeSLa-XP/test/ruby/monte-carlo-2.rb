@@ -19,14 +19,16 @@ Ins4 = Array.new(N) { ["load", "store"] }.flatten
 begin
 
 xs = Array.new(ALL.length){ ALL[rand(ALL.length)]}
-next if xs[0] == xs[3] || xs[0] == xs[5]  # убираем косвенные обращения
+#next if xs[0] == xs[3] || xs[0] == xs[5]  # убираем косвенные обращения
 
 ins2 = Array.new(N){ ["l1Hit", "l1Miss"][rand(2)] }
 ins3 = Array.new(N){ ["mtlbHit", "mtlbMiss"][rand(2)] }
 
 i += 1
 
-template_file = "tmpl#{(i-1)%10}.xml"
+File.delete("out#{i-4}.smt") if File.exists?("out#{i-4}.smt")
+File.delete("tmpl#{i-4}.xml") if File.exists?("tmpl#{i-4}.xml")
+template_file = "tmpl#{i}.xml"
 
 $initlength = ALL.length/2 * $L1ASSOC + ins2.select{|ii| ii == "l1Hit"}.length
 $initlength_mtlb = ALL.length/2 * $TLBASSOC + ins3.select{|ii| ii == "mtlbHit"}.length
@@ -61,7 +63,8 @@ f.puts("</template>")
 }
 
 #сгенерировать новый data.xml
-data_file = "data#{(i-1)%10}.xml"
+File.delete("data#{i-4}.xml") if File.exists?("data#{i-4}.xml")
+data_file = "data#{i}.xml"
 File.new(data_file, "w")
 File.open(data_file, "w"){|f|
   f.puts "<data>"

@@ -1,4 +1,5 @@
-N = (ARGV[0]||"3").to_i
+raise "Define N" if ARGV[0].nil?
+N = ARGV[0].to_i
 
 require "rexml/document"
 
@@ -7,13 +8,11 @@ $LOAD_PATH << "C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\
 require "tesla-mips"
 require "tesla"
 
-combined_solver = MIPS_CombinedSolver.new
-mirror_solver = MIPS_FullMirrorSolver.new
-sat_all = 0
-incompatible_combined_only = 0
-incompatible_all = 0
+mirror_solver = MIPS_MirrorSolver.new
+full_solver = MIPS_FullMirrorSolver.new
+timeout = 0
+all = 0
 i = 0
-startTime = Time.now
 
 ALL = Array.new(2*N){|aLL_w_index| "x#{aLL_w_index}" }
 Ins1 = Array.new(N){ ["LW", "SB"] }.flatten
@@ -23,7 +22,7 @@ Ins4 = Array.new(N) { ["load", "store"] }.flatten
 
 10000.times{
 
-xs = Array.new(2*N){ ALL[rand(2*N)]}
+xs = Array.new(ALL.length){ ALL[rand(ALL.length)]}
 
 ins2 = Array.new(N){ ["l1Hit", "l1Miss"][rand(2)] }
 ins3 = Array.new(N){ ["mtlbHit", "mtlbMiss"][rand(2)] }
@@ -119,45 +118,18 @@ File.open(data_file, "w"){|f|
   f.puts "</data>"
 }
 
-s = Time.now
-f = Runner.new.run( combined_solver, i, template_file, data_file )
-e = Time.now
-puts "совместная: #{e-s} с."
+f = Runner.new.run( mirror_solver, i, template_file, data_file )
+f1 = Runner.new.run( full_solver, i, template_file, data_file )
 
-raise RuntimeError, "Combined Timeout" if f.include?("timeout")
+raise RuntimeError, "Mirror sat /\\ Full unsat" if ! f.include?("unsat") && f1.include?("unsat")
+raise RuntimeError, "Mirror unsat /\\ Full sat" if f.include?("unsat") && ! f1.include?("unsat")
+raise RuntimeError, "Full Timeout" if f1.include?("timeout")
 
-sat_all += 1 if ! f.include?("unsat")
+timeout += 1 if f.include?("timeout")
+all += 1
 
-s = Time.now
-f1 = Runner.new.run( mirror_solver, i, template_file, data_file )
-e = Time.now
-puts "зеркальная: #{e-s} с."
-
-raise RuntimeError, "Combined sat /\\ Mirror unsat" if ! f.include?("unsat") && f1.include?("unsat")
-raise RuntimeError, "FullMirror Timeout" if f1.include?("timeout")
-
-incompatible_combined_only += 1 if !f1.include?("unsat") && !f1.include?("timeout") && f.include?("unsat")
-incompatible_all += 1 if f1.include?("unsat") || (f1.include?("timeout") && f.include?("unsat"))
-
-aaa = sat_all + incompatible_all + incompatible_combined_only
-puts "все: #{aaa}"
-puts "combined: #{sat_all * 100 / aaa} % ( #{sat_all} / #{aaa} )"
-puts "incompatible combined only: #{incompatible_combined_only * 100 / aaa} % ( #{incompatible_combined_only} / #{aaa} )"
-puts "incompatible: #{incompatible_all * 100 / aaa} % ( #{incompatible_all} / #{aaa} )" 
-puts "КПД совместной: #{sat_all * 100 / (sat_all + incompatible_combined_only)} % ( #{sat_all} / #{(sat_all + incompatible_combined_only)} )" \
-              if sat_all + incompatible_combined_only > 0
+puts "КПД: #{(all-timeout) * 100 / all} %"
 puts "=======NEXT===DEPENDENCIES======================="
 puts ""
 
 }
-
-endTime = Time.now
-
-#puts "все: #{sat_all + incompatible_all}"
-#puts "combined: #{sat_all * 100 / (sat_all + incompatible_all)} %"
-#puts "incompatible combined only: #{incompatible_combined_only * 100 / (sat_all + incompatible_all)} %"
-#puts "incompatible: #{incompatible_all * 100 / (sat_all + incompatible_all)} %"
-#puts "КПД совместной: #{sat_all * 100 / (sat_all + incompatible_combined_only)} %"
-
-duration = endTime - startTime
-puts "общее время: #{duration.to_s} с."
