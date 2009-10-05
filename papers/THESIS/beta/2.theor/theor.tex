@@ -2995,18 +2995,18 @@ $$u(x_i) \equiv \left\{
 $$u(x_i) \equiv \left\{
 \begin{array}{l}
     x \notin \{x_i, ..., x_n\} \wedge x_i \in \{ \lambda_{\delta+1},
-..., \lambda_w\} \wedge \sum_{j=1}^{i-1} c_i(x_j) = 0,\\ \qquad \mbox{если}~S_i=\mbox{hit} \\
+..., \lambda_w\}, \mbox{если}~S_i=\mbox{hit} \\
     x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x), \mbox{если}~S_i=\mbox{miss}\\
 \end{array}
 \right.$$
 
 $\delta \in \{1, 2, ..., w\}$ -- индекс $\lambda$ в своем наборе
-$L_0$ согласно метрике вытеснения \LRU ($\lambda = \lambda_\delta$),
+$L_0$ согласно метрике вытеснения \LRU ($\lambda = \lambda_\delta$).
 
-$$
-c_i(x_j) \equiv (x \notin \{x_j, x_{j+1}, ..., x_i\} \wedge x_i =
-x_j)
-$$
+%$$
+%c_i(x_j) \equiv (x \notin \{x_j, x_{j+1}, ..., x_i\} \wedge x_i =
+%x_j)
+%$$
 
 \end{lemma}
 \begin{proof}
@@ -3125,18 +3125,18 @@ x_2, ..., x_n]_{\mbox{miss}}$, где $x_1, x_2, ..., x_n$ -- тегсеты
 инструкции согласно определению \LRU на списках тогда и только
 тогда, когда $\sum^n_{i=1} u(x_i) < w$, где $u(x_i)$ (\emph{функция
 полезности}) определена следующим образом:
-
-$$u(x_i) = \left\{
-\begin{array}{l}
-    x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x) \wedge \sum\limits_{j=1}^{i-1} c_i(x_j) = 0,
-         \mbox{если}~S_i=\mbox{hit} \\
-    x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x), \mbox{если}~S_i=\mbox{miss}\\
-\end{array}
-\right.$$
-$$
-c_i(x_j) \equiv (x \notin \{x_j, x_{j+1}, ..., x_i\} \wedge x_i =
-x_j)
-$$
+$$u(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x))$$
+%$$u(x_i) = \left\{
+%\begin{array}{l}
+%    x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x) \wedge \sum\limits_{j=1}^{i-1} c_i(x_j) = 0,
+%         \mbox{если}~S_i=\mbox{hit} \\
+%    x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x), \mbox{если}~S_i=\mbox{miss}\\
+%\end{array}
+%\right.$$
+%$$
+%c_i(x_j) \equiv (x \notin \{x_j, x_{j+1}, ..., x_i\} \wedge x_i =
+%x_j)
+%$$
 
 \end{lemma}
 \begin{proof}
@@ -3185,19 +3185,19 @@ x_n]_{\mbox{miss}}$, где $x_1, x_2, ..., x_n$ -- тегсеты предыдущих
 согласно определению \LRU на списках тогда и только тогда, когда
 $\sum^n_{i=1} u(x_i) \geqslant w$, где $u(x_i)$ (\emph{функция
 полезности}) определена следующим образом:
-
-$$u(x_i) = \left\{
-\begin{array}{l}
-    x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x) \wedge \sum\limits_{j=1}^{i-1} c_i(x_j) = 0,
-        \mbox{если}~S_i=\mbox{hit} \\
-    x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x), \mbox{если}~S_i=\mbox{miss}\\
-\end{array}
-\right.$$
-
-$$
-c_i(x_j) \equiv (x \notin \{x_j, x_{j+1}, ..., x_i\} \wedge x_i =
-x_j)
-$$
+$$u(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x))$$
+%$$u(x_i) = \left\{
+%\begin{array}{l}
+%    x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x) \wedge \sum\limits_{j=1}^{i-1} c_i(x_j) = 0,
+%        \mbox{если}~S_i=\mbox{hit} \\
+%    x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x), \mbox{если}~S_i=\mbox{miss}\\
+%\end{array}
+%\right.$$
+%
+%$$
+%c_i(x_j) \equiv (x \notin \{x_j, x_{j+1}, ..., x_i\} \wedge x_i =
+%x_j)
+%$$
 
 \end{lemma}
 \begin{proof}
@@ -3257,19 +3257,19 @@ $$u(x_i) \equiv \left\{
 $$u(x_i) = \left\{
 \begin{array}{l}
     x \notin \{x_i, ..., x_n\} \wedge x_i \in \{ \lambda_{\delta+1},
-..., \lambda_w\} \wedge \sum_{j=1}^{i-1} c_i(x_j) = 0,\\
-        \qquad \mbox{если}~S_i=\mbox{hit} \\
+..., \lambda_w\} %\wedge \sum_{j=1}^{i-1} c_i(x_j) = 0,\\ \qquad
+, \mbox{если}~S_i=\mbox{hit} \\
     x \notin \{x_i, ..., x_n\} \wedge R(x_i) = R(x), \mbox{если}~S_i=\mbox{miss}\\
 \end{array}
 \right.$$
 
 $\delta \in \{1, 2, ..., w\}$ -- индекс $\lambda$ в своем наборе
-$L_0$ согласно метрике вытеснения \LRU ($\lambda = \lambda_\delta$),
+$L_0$ согласно метрике вытеснения \LRU ($\lambda = \lambda_\delta$).
 
-$$
-c_i(x_j) \equiv (x \notin \{x_j, x_{j+1}, ..., x_i\} \wedge x_i =
-x_j
-$$
+%$$
+%c_i(x_j) \equiv (x \notin \{x_j, x_{j+1}, ..., x_i\} \wedge x_i =
+%x_j
+%$$
 
 \end{lemma}
 \begin{proof}
@@ -3438,7 +3438,7 @@ $\delta_j$, иными словами, только и только тогда, когда существует
 $k$ такое, что $\delta_i < 2^k \leqslant \delta_j$; с использованием
 битовых операций этот предикат можно записать в следующем виде:
 $P(\delta_i, \delta_j) \equiv (\delta_j
-> \delta_i \wedge \delta_j \oplus \delta_i > \delta_i)$, сравнения
+> \delta_i~~\wedge~~\delta_j \oplus \delta_i > \delta_i)$, сравнения
 беззнаковые.
 \end{itemize}
 
@@ -3463,7 +3463,7 @@ $x \in \{x_1, x_2, ..., x_n\}$, где $x_1, x_2, ..., x_n$ -- тегсеты
 $$u_m(x_i) \equiv
     (x \notin \{x_i, x_{i+1}, \dots, x_{m-1}\} \wedge R(x_i) = R(x) \wedge \bigwedge_{j=i+1}^{m-1} P(\pi_i \oplus \pi,
        \pi_j \oplus \pi))$$
-$$P(\delta_i, \delta_j) \equiv (\delta_j > \delta_i \wedge \delta_j \oplus \delta_i > \delta_i)$$
+$$P(\delta_i, \delta_j) \equiv (\delta_j > \delta_i~~\wedge~~\delta_j \oplus \delta_i > \delta_i)$$
 \end{lemma}
 \begin{proof}
   Согласно определению на ветвях бинарного дерева тег $x$ будет
@@ -3602,7 +3602,7 @@ W$, где $W = \log_2 w$, $(\xi_1~\xi_2~\dots~\xi_W)$ -- начальные
 $$u_m(x_i) \equiv
     (R(x_i) = R(x) \wedge \bigwedge_{j=i+1}^{m-1} P(\pi_i \oplus \pi,
        \pi_j \oplus \pi))$$
-$$P(\delta_i, \delta_j) \equiv (\delta_j > \delta_i \wedge \delta_j \oplus \delta_i > \delta_i)$$
+$$P(\delta_i, \delta_j) \equiv (\delta_j > \delta_i~~\wedge~~\delta_j \oplus \delta_i > \delta_i)$$
 $$v_m(\xi_i) \equiv
     \bigwedge_{j=1}^{m-1} P(2^{W-i} \oplus \pi, \pi_j \oplus \pi)$$
 \end{lemma}
@@ -4077,9 +4077,10 @@ $$
 В таблице~\ref{dirty_hit_miss_table} символ $\Delta$ означает
 количество <<чистых>> ячеек в начальном состоянии того региона, про
 который идет речь в уравнении. На самом деле $\Delta$ есть функция
-региона ($\Delta = \Delta(\lambda_\delta)$, но для сокращения записи
-оставлен только функциональный символ. Кроме того, в приведенных
-уравнениях домен переменной включает только <<чистые>> ячейки.
+региона ($\Delta = \Delta(\lambda_\delta)$), но для сокращения
+записи оставлен только функциональный символ. Кроме того, в
+приведенных уравнениях домен переменной включает только <<чистые>>
+ячейки.
 
 Сходства уравнений (со случаем кэширующих буферов без <<грязных>>
 ячеек) удалось добиться за счет рассмотрения <<грязных>> ячеек, как
@@ -4142,18 +4143,27 @@ $\delta + 1 < \Delta$, то функция полезности, в которую входит
 тестового шаблона, причем $x \in \{t_1, ..., t_m, x_1, ..., x_n\}$ и
 $\{t_1, ..., t_m\}$ --- все разные. Тогда $x$ не вытеснен согласно
 определению на списках тогда и только тогда, когда
-$$\sum\limits_{i=1}^m \tilde{u}_x(t_i) + \sum\limits_{i=1}^n u_x(x_i) < w$$
-где функции полезности определены следующим образом:
-$$\tilde{u}_x(t_i) \equiv (x \notin \{t_i, ..., t_m, x_1, ..., x_n\} \wedge
-R(x) = R(t_i))$$
-$$\begin{array}{c}u_x(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x) =
-R(x_i)), \mbox{если}~S_i=\mbox{miss}\end{array}$$
-$$\begin{array}{c}u_x(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x) =
-R(x_i) \wedge \sum\limits_{j=1}^{m} \tilde{c}_{x_i}(t_j) = 0
-\wedge \sum\limits_{j=1}^{i-1} c_i(x_j) = 0),\\
-\mbox{если}~S_i=\mbox{hit}\end{array}$$
-$$c_i(x_j) \equiv (x \notin \{x_j, ..., x_{i-1}\} \wedge x_i = x_j)$$
-$$\tilde{c}_{x_i}(t_j) \equiv (x \notin \{t_j, ..., t_m, x_1, ..., x_{i-1}\} \wedge x_i = t_j)$$
+$$\sum\limits_{i=1}^{m+n} u_x(s_i) < w$$
+где последовательность $s \equiv \langle t_1, ..., t_m, x_1, ...,
+x_n\rangle$, а функция полезности определена следующим образом:
+$$u_x(s_i) \equiv (x \notin \{s_i, ..., s_{m+n}\} \wedge
+R(x) = R(s_i))$$
+
+%$$\sum\limits_{i=1}^m \tilde{u}_x(t_i) + \sum\limits_{i=1}^n u_x(x_i) < w$$
+%где функции полезности определены следующим образом:
+%$$\begin{array}{c}
+%\tilde{u}_x(t_i) \equiv (x \notin \{t_i, ..., t_m, x_1, ..., x_n\}
+%\wedge R(x) = R(t_i))\\u_x(x_i) \equiv (x \notin \{x_i, ..., x_n\}
+%\wedge R(x) = R(x_i))\end{array}$$
+
+%$$\begin{array}{c}u_x(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x) =
+%R(x_i)), \mbox{если}~S_i=\mbox{miss}\end{array}$$
+%$$\begin{array}{c}u_x(x_i) \equiv (x \notin \{x_i, ..., x_n\} \wedge R(x) =
+%R(x_i) \wedge \sum\limits_{j=1}^{m} \tilde{c}_{x_i}(t_j) = 0
+%\wedge \sum\limits_{j=1}^{i-1} c_i(x_j) = 0),\\
+%\mbox{если}~S_i=\mbox{hit}\end{array}$$
+%$$c_i(x_j) \equiv (x \notin \{x_j, ..., x_{i-1}\} \wedge x_i = x_j)$$
+%$$\tilde{c}_{x_i}(t_j) \equiv (x \notin \{t_j, ..., t_m, x_1, ..., x_{i-1}\} \wedge x_i = t_j)$$
 \end{theorem}
 \begin{proof}
 Воспользуемся леммой~\ref{hit_II}. При этом в качестве
@@ -4177,6 +4187,20 @@ t_2,~\dots,~t_m$ из формулировки леммы~\ref{hit_II} получить нельзя,
 разные, то повторное обращение возможно лишь среди
 $x_1,~x_2,~\dots,~x_n$ -- поэтому в функцию полезности для этих
 тегов добавлено отличие от $t_1,~t_2,~\dots,~t_m$.
+\end{proof}
+\begin{sld}[Корректность ограничений, генерируемые зеркальным методом с
+использованием функций полезности для полностью ассоциативного \LRU
+буфера] Пусть $t_1, t_2, ..., t_m$ -- теги инициализирующей
+последовательности, $x$ -- текущий тег тестового шаблона, $x_1, x_2,
+..., x_n$ -- теги предыдущих инструкций тестового шаблона, причем $x
+\in \{t_1, ..., t_m, x_1, ..., x_n\}$ и $\{t_1, ..., t_m\}$ --- все
+разные. Тогда $x$ не вытеснен из полностью ассоциативного буфера
+согласно определению на списках тогда и только тогда, когда
+$$x \in \{s_{m+n-w+1}, ..., s_{m+n}\}$$ где последовательность $s
+\equiv \langle t_1, ..., t_m, x_1, ..., x_n\rangle$.
+\end{sld}
+\begin{proof}
+  //TODO
 \end{proof}
 
 Из теоремы~\ref{correct_mirror_LRU} следует система уравнений для
