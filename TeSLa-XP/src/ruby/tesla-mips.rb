@@ -669,139 +669,51 @@ end
 class MIPS_FullMirrorSolver < MIPS_Solver
 
 def l1Hit( init_tagsets, previous_tagsets, current_tagset )
-  mirror_l1 init_tagsets, previous_tagsets, current_tagset, ">",\
-      (Math.log([$L1ASSOC, init_tagsets.length + previous_tagsets.length].max + 1)/Math.log(2)).ceil
+  mirror_l1 init_tagsets, previous_tagsets, current_tagset, ">"
 end
 
 def l1Miss( init_tagsets, previous_tagsets, current_tagset )
-  mirror_l1 init_tagsets, previous_tagsets, current_tagset, "<=",\
-      (Math.log([$L1ASSOC, init_tagsets.length + previous_tagsets.length].max + 1)/Math.log(2)).ceil
+  mirror_l1 init_tagsets, previous_tagsets, current_tagset, "<="
 end
 
 def mtlbHit( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
-  mirror_mtlb init_vpnd2s.last($TLBASSOC-1), previous_vpnd2s, current_vpnd2, ">"
-end
-
-def mtlbMiss( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
-  puts "(or" # or нужен только лишь в том случае, если длина init > TLBASSOC-1
-  (0..init_vpnd2s.length - $TLBASSOC).each{|i|
-      puts "(= #{current_vpnd2} #{init_vpnd2s[i]})" }
-  mirror_mtlb(init_vpnd2s.last($TLBASSOC-1), previous_vpnd2s, current_vpnd2, "<=")
+  puts "(or false "
+  (init_vpnd2s + previous_vpnd2s).last($TLBASSOC-1).each{|t|
+      puts "(= #{current_vpnd2} #{t})"
+  }
   puts ")"
 end
 
-def mirror_l1( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlength )
+def mtlbMiss( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
+  puts "(and "
+    puts "(or false "
+    (init_vpnd2s + previous_vpnd2s).first(init_vpnd2s.length + previous_vpnd2s.length-$TLBASSOC+1).each{|t|
+        puts "(= #{current_vpnd2} #{t})"
+    }
+    puts ")"
+    (init_vpnd2s + previous_vpnd2s).last($TLBASSOC-1).each{|t|
+      puts "(= bit0 (bvcomp #{current_vpnd2} #{t}))"
+    }
+  puts ")"
+end
+
+def mirror_l1( init_tagsets, previous_tagsets, current_tagset, mirrrelation )
   puts "(and "
     puts "(or "
           (init_tagsets + previous_tagsets).each{|t|
               puts "(= #{t} #{current_tagset})"  }
     puts ")"
     
-    puts "(#{mirrrelation} #{$L1ASSOC} (+ 0 "
-          
-          # u(t_i)
-          if ! previous_tagsets.empty?
-            puts "(ite (or "
-            previous_tagsets.each{|t|
-                  puts "(= #{t} #{current_tagset})" }
-            puts ") 0 (+ 0 "
-            
-            (0.. init_tagsets.length-1).each{|i|
-              puts "(ite (and true (or false "
-                 (0..i-1).each{|i1|
-                        puts "(= #{init_tagsets[i1]} #{current_tagset})" } 
-                 puts ")"
-                 puts "(= #{getRegion init_tagsets[i]} #{getRegion current_tagset}))" +
-              " 1 0 ) " }
-            puts"))"
-          end
-            
-          # u(x_i): S_i = miss/hit
-          (0.. previous_tagsets.length-1).each{|i|
-            puts "(ite (and true "
-               previous_tagsets[i..previous_tagsets.length-1].each{|t|
-                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))"
-               }
-               puts "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset})"
-               
-               if @l1Hits.include?( previous_tagsets[i])
-                (0..init_tagsets.length-1).each{|j|
-                  puts "(or "
-                    # c(t_j) = 0
-                    init_tagsets[j..init_tagsets.length-1].each{|t|
-                        puts "(= #{current_tagset} #{t})" }
-                    (0..i-1).each{|i1|
-                        puts "(= #{current_tagset} #{previous_tagsets[i1]})" }
-                    puts "(= bit0 (bvcomp #{previous_tagsets[i]} #{init_tagsets[j]})))"
-                }
-                (0..i-1).each{|j|
-                  puts "(or "
-                    # c(t_j) = 0
-                    previous_tagsets[j..i-1].each{|t|
-                        puts "(= #{current_tagset} #{t})" }
-                    puts "(= bit0 (bvcomp #{previous_tagsets[i]} #{previous_tagsets[j]})))"
-                }
-               end
-                
-            puts " ) 1 0 ) " }
-          
-      puts " )))"
-end
-
-
-def mirror_mtlb( init_vpnd2s, previous_vpnd2s, current_vpnd2, mirrrelation )
-  puts "(and "
-    puts "(or "
-          (init_vpnd2s + previous_vpnd2s).each{|t|
-              puts "(= #{t} #{current_vpnd2})"  }
-    puts ")"
-    
-    puts "(#{mirrrelation} #{$TLBASSOC} (+ 0 "
-          
-          # u(t_i)
-          if ! previous_vpnd2s.empty?
-            puts "(ite (or "
-               previous_vpnd2s.each{|t|
-                     puts "(= #{t} #{current_vpnd2})" }
-               puts ") 0 (+ 0 "
-            (0.. init_vpnd2s.length-1).each{|i|
-              puts "(ite (or false "
-                 (0..i-1).each{|i1|
-                       puts "(= #{init_vpnd2s[i1]} #{current_vpnd2})" }
-              puts ") 1 0)"
-             }
-             puts"))"
-         end
-            
-          # u(x_i): S_i = miss/hit
-          (0.. previous_vpnd2s.length-1).each{|i|
-            puts "(ite (and true "
-               previous_vpnd2s[i..previous_vpnd2s.length-1].each{|t|
-                      puts "(= bit0 (bvcomp #{t} #{current_vpnd2}))"
-               }
-               
-               if @mtlbHits.include?( previous_vpnd2s[i] )
-                (0..init_vpnd2s.length-1).each{|j|
-                  puts "(or "
-                    # c(t_j) = 0
-                    init_vpnd2s[j..init_vpnd2s.length-1].each{|t|
-                        puts "(= #{current_vpnd2} #{t})" }
-                    (0..i-1).each{|i1|
-                        puts "(= #{current_vpnd2} #{previous_vpnd2s[i1]})" }
-                    puts "(= bit0 (bvcomp #{previous_vpnd2s[i]} #{init_vpnd2s[j]})))"
-                }
-                (0..i-1).each{|j|
-                  puts "(or "
-                    # c(t_j) = 0
-                    previous_vpnd2s[j..i-1].each{|t|
-                        puts "(= #{current_vpnd2} #{t})" }
-                    puts "(= bit0 (bvcomp #{previous_vpnd2s[i]} #{previous_vpnd2s[j]})))"
-                }
-               end
-                
-            puts " ) 1 0 ) " }
-          
-      puts " )))"
+    puts "(#{mirrrelation} #{$L1ASSOC} (+ "
+          (init_tagsets + previous_tagsets).inject(init_tagsets + previous_tagsets){|xs,t|
+                puts "(ite (and "
+                xs.each{|p| puts "(= bit0 (bvcomp #{current_tagset} #{p}))"}
+                puts "(= #{getRegion current_tagset} #{getRegion t})"
+                puts ") 1 0)"
+                xs.last(xs.length-1)
+          }
+    puts "))"
+  puts ")"
 end
 
 def to_h(keys, values)
@@ -820,12 +732,12 @@ def procedures_preparations doc
   
   init_tagsets = Array.new($initlength){"_its#{@unique_counter += 1}"}
   init_tagsets.each{|t| puts ":extrafuns (( #{t} #{$TAGSETTYPE} ))" }
-  puts ":assumption"
-  puts "(distinct #{init_tagsets.join(' ')})"
-#  init_tagsets.inject([]){|ts,t|
-#    ts.each{|t1| puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))"}
-#    ts + [t]
-#  }
+#  puts ":assumption"
+#  puts "(distinct #{init_tagsets.join(' ')})"
+  init_tagsets.inject([]){|ts,t|
+    ts.each{|t1| puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))"}
+    ts + [t]
+  }
   
   init_vpnd2s = Array.new($initlength_mtlb){"_ivpnd#{@unique_counter += 1}"}
   init_vpnd2s.each{|t| puts ":extrafuns (( #{t} #{$VPNd2TYPE} ))" }
@@ -891,16 +803,14 @@ end
 class MIPS_MirrorSolver < MIPS_Solver
 
 def l1Hit( init_tagsets, previous_tagsets, current_tagset )
-  mirror init_tagsets, previous_tagsets, current_tagset, ">",\
-      (Math.log([$L1ASSOC, init_tagsets.length + previous_tagsets.length].max + 1)/Math.log(2)).ceil
+  mirror init_tagsets, previous_tagsets, current_tagset, ">"
 end
 
 def l1Miss( init_tagsets, previous_tagsets, current_tagset )
-  mirror init_tagsets, previous_tagsets, current_tagset, "<=",\
-      (Math.log([$L1ASSOC, init_tagsets.length + previous_tagsets.length].max + 1)/Math.log(2)).ceil
+  mirror init_tagsets, previous_tagsets, current_tagset, "<="
 end
 
-def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlength )
+def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation )
   puts "(and "
     puts "(or "
           (init_tagsets + previous_tagsets).each{|t|
@@ -908,47 +818,15 @@ def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation, sumlen
     puts ")"
     
     puts "(#{mirrrelation} #{$L1ASSOC} (+ "
-          
-          # u(t_i)
-          (0.. init_tagsets.length-1).each{|i|
-            puts "(ite (and true "
-               init_tagsets[i..init_tagsets.length-1].each{|t|
-                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))" } 
-               previous_tagsets.each{|t|
-                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))" }
-               puts "(= #{getRegion init_tagsets[i]} #{getRegion current_tagset}))" +
-            " 1 0 ) " }
-            
-          # u(x_i): S_i = miss/hit
-          (0.. previous_tagsets.length-1).each{|i|
-            puts "(ite (and true "
-               previous_tagsets[i..previous_tagsets.length-1].each{|t|
-                      puts "(= bit0 (bvcomp #{t} #{current_tagset}))"
-               }
-               puts "(= #{getRegion previous_tagsets[i]} #{getRegion current_tagset})"
-               
-               if @l1Hits.include?( previous_tagsets[i])
-                (0..init_tagsets.length-1).each{|j|
-                  puts "(or "
-                    # c(t_j) = 0
-                    init_tagsets[j..init_tagsets.length-1].each{|t|
-                        puts "(= #{current_tagset} #{t})" }
-                    (0..i-1).each{|i1|
-                        puts "(= #{current_tagset} #{previous_tagsets[i1]})" }
-                    puts "(= bit0 (bvcomp #{previous_tagsets[i]} #{init_tagsets[j]})))"
-                }
-                (0..i-1).each{|j|
-                  puts "(or "
-                    # c(t_j) = 0
-                    previous_tagsets[j..i-1].each{|t|
-                        puts "(= #{current_tagset} #{t})" }
-                    puts "(= bit0 (bvcomp #{previous_tagsets[i]} #{previous_tagsets[j]})))"
-                }
-               end
-                
-            puts " ) 1 0 ) " }
-          
-      puts " )))"
+          (init_tagsets + previous_tagsets).inject(init_tagsets + previous_tagsets){|xs,t|
+                puts "(ite (and "
+                xs.each{|p| puts "(= bit0 (bvcomp #{current_tagset} #{p}))"}
+                puts "(= #{getRegion current_tagset} #{getRegion t})"
+                puts ") 1 0)"
+                xs.last(xs.length-1)
+          }
+    puts "))"
+  puts ")"
 end
 
 def mtlbHit(previous_tagsets, current_tagset, virtual_address)  
