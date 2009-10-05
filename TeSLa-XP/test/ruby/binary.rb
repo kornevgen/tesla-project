@@ -1,8 +1,8 @@
-N = (ARGV[0]||"8").to_i
+N = (ARGV[0]||"4").to_i
 
 require "rexml/document"
 
-$LOAD_PATH << "../../src/ruby"
+$LOAD_PATH << "C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
 
 require "tesla.rb"
 require "tesla-mips.rb"
@@ -27,7 +27,9 @@ ins3 = Array.new(N){ ["mtlbHit", "mtlbMiss"][rand(2)] }
 
 i += 1
 
-template_file = "template/#{(i-1)%10}.xml"
+File.delete("out#{i-4}.smt") if File.exists?("out#{i-4}.smt")
+File.delete("tmpl#{i-4}.xml") if File.exists?("tmpl#{i-4}.xml")
+template_file = "tmpl#{i}.xml"
 
 
 
@@ -62,7 +64,8 @@ f.puts("</template>")
 }
 
 #сгенерировать новый data.xml
-data_file = "data/data#{(i-1)%10}.xml"
+File.delete("data#{i-4}.xml") if File.exists?("data#{i-4}.xml")
+data_file = "data#{i}.xml"
 File.new(data_file, "w")
 File.open(data_file, "w"){|f|
   f.puts "<data>"
@@ -114,8 +117,8 @@ File.open(data_file, "w"){|f|
 }
 
 # пробуем максимальное значение $initlength
-$initlength = ALL.length/2 * $L1ASSOC + ins2.reject{|ii| ii == "l1Miss"}.length
-f1 = Runner.new.run( mirror_solver, template_file, data_file )
+$initlength = ALL.length/2 * $L1ASSOC + ins2.select{|ii| ii == "l1Hit"}.length
+f1 = Runner.new.run( mirror_solver, i, template_file, data_file )
 next if f1.include?("unsat") || f1.include?("timeout")
 
 # начинаем искать минимальный initlength
@@ -126,15 +129,12 @@ puts "initlength : #{min} .. #{max}"
 while max >= min
   $initlength = (max + min)/2
   puts "initlength = #{$initlength}:"
-  f1 = Runner.new.run( mirror_solver, template_file, data_file )
+  f1 = Runner.new.run( mirror_solver, i, template_file, data_file )
   if f1.include?("unsat") || f1.include?("timeout")
     min = $initlength + 1
   else
     max = $initlength - 1
   end
-  
-  
-  return if $initlength == 3 && f1.include?("timeout")
 end
 histogram.merge!({min => histogram[min]+1})
 
