@@ -3,18 +3,17 @@ N = (ARGV[0]||"3").to_i
 require "rexml/document"
 
 #$LOAD_PATH << "../../src/ruby"
-$LOAD_PATH << "C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\TeSLa-XP\\src\\ruby"
+$LOAD_PATH << "C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
 
 require "tesla-mips"
 require "tesla"
 
-#mirror_solver = MIPS_MirrorSolver.new
 mirror_solver = MIPS_FullMirrorSolver.new
 
-template_file = "0.xml"
+template_file = "tmpl9.xml"
 
-$initlength = 4
-$initlength_mtlb = 5
+$initlength = 3
+$initlength_mtlb = 4
 i = 0
 #сгенерировать новый data.xml
 begin
