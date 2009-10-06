@@ -26,19 +26,16 @@ class DataBuilder
               @tagsets[tagvalue.to_i * 128 + set.attributes["value"].to_i ] = delta }
     }
     
-    @micropfns = dataxml.elements.collect("data/tlb/microtlb/pfn"){ |pfn|
-                      pfn.attributes["value"].to_i }
+    @micropfns = dataxml.elements.collect("data/microtlb/line"){ |line|
+            [ line.attributes["pfn0"].to_i, line.attributes["pfn1"].to_i ] }.flatten
     
-    @pfns = dataxml.elements.collect("data/tlb/content/line"){ |line|
-                      line.attributes["pfn0"].to_i } + 
-            dataxml.elements.collect("data/tlb/content/line"){ |line|
-                      line.attributes["pfn1"].to_i }
+    @nonmicropfns = dataxml.elements.collect("data/tlb/line"){ |line|
+            [ line.attributes["pfn0"].to_i, line.attributes["pfn1"].to_i ] }.flatten
     
-    @nonmicropfns = @pfns - @micropfns # в общем случае неверно -- надо допускать пересечения
+    @pfns = @micropfns + @nonmicropfns
     
     
-    @tlb = []
-    dataxml.elements.each("data/tlb/content/line") {|line|
+    @microtlb = dataxml.elements.collect("data/microtlb/line") {|line|
         tlbline = TLBLine.new
         tlbline.r = line.attributes["range"].to_i
         tlbline.vpndiv2 = line.attributes["vpndiv2"].to_i
@@ -47,7 +44,19 @@ class DataBuilder
         tlbline.CCA0 = line.attributes["CCA0"]
         tlbline.pfn1 = line.attributes["pfn1"].to_i
         tlbline.CCA1 = line.attributes["CCA1"]
-        @tlb << tlbline
+        tlbline
+    }
+    
+    @tlb = @microtlb + dataxml.elements.collect("data/tlb/line") {|line|
+        tlbline = TLBLine.new
+        tlbline.r = line.attributes["range"].to_i
+        tlbline.vpndiv2 = line.attributes["vpndiv2"].to_i
+        tlbline.mask = line.attributes["mask"].to_i
+        tlbline.pfn0 = line.attributes["pfn0"].to_i
+        tlbline.CCA0 = line.attributes["CCA0"]
+        tlbline.pfn1 = line.attributes["pfn1"].to_i
+        tlbline.CCA1 = line.attributes["CCA1"]
+        tlbline
     }
   end
   
@@ -114,6 +123,56 @@ $MASK = 0
 $VPNdiv2LEN = $SEGBITS - $PABITS + $PFNLEN
 $VPNd2TYPE = "BitVec[#{$VPNdiv2LEN}]"
 
+class Array
+  def distinct
+    self.inject([]){|ts,t|
+      ts.each{|t1| puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))"}
+      ts + [t]
+    }
+  end
+  
+  def isin(t)
+    if self.empty?
+      puts " false "
+    elsif self.length == 1
+      puts "(= #{t} #{self.at(0)})"
+    else  
+      puts "(or false "
+        self.each{|t1|
+          puts "(= #{t} #{t1})"
+        }
+      puts ")"
+    end
+  end
+  
+  def isin_s(t)
+    if self.empty?
+      " false "
+    elsif self.length == 1
+      "(= #{t} #{self.at(0)})"
+    else  
+      "(or false " + 
+        self.collect{|t1| puts "(= #{t} #{t1})" }.join +
+      ")"
+    end
+  end
+  
+  def not_isin(t)
+    if self.empty?
+      puts " true "
+    elsif self.length == 1
+      puts "(= bit0 (bvcomp #{t} #{self.at(0)}))"
+    else  
+      puts "(and true "
+        self.each{|t1|
+          puts "(= bit0 (bvcomp #{t} #{t1}))"
+        }
+      puts ")"
+    end
+  end
+end
+
+
 =begin
   класс содержит процедуры для MIPS, но не содержит способа генерации ограничений
   для последовательности тегсетов
@@ -134,6 +193,10 @@ def getRegion(tagset)
 end
 
 def getVPNdiv2(virtual_address)
+  "(extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN+1}] #{virtual_address})"
+end
+
+def getVPN(virtual_address)
   "(extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{virtual_address})"
 end
 
@@ -323,27 +386,27 @@ class MIPS_CombinedSolver < MIPS_Solver
 def vpn_pfn(tagset, virtual_address)
     # соответствие некоторой строке TLB
   pfn_name = "_pfn#{@unique_counter += 1}"
-  vpndiv2_name = "_vpndiv2#{@unique_counter += 1}"
+  vpndiv2_name = "_vpn#{@unique_counter += 1}"
   puts ":assumption"
   puts "(let (#{pfn_name} #{getPfn( tagset )})"
-  puts "(let (#{vpndiv2_name} (extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{virtual_address}))"
+  puts "(let (#{vpn_name} #{getVPN( virtual_address )}))"
   
   puts "(or "
   @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
     if tlbline.CCA0 == "Cached"
       puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
-          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+          "(= #{vpn_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
     end
     if tlbline.CCA1 == "Cached"
       puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
-          "(= #{vpndiv2_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+          "(= #{vpn_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
     end
   }
   puts")))"
 end
 
 def l1Hit_mtlbHit_part1(previous_tagsets, current_tagset)
-  previous_tagsets.isin(current_taget)
+  previous_tagsets.isin_s(current_tagset)
 end
 
 def l1Hit_mtlbHit_part2(previous_tagsets, current_tagset)
@@ -495,7 +558,7 @@ end
 
 def l1Hit_mtlbMiss(previous_tagsets, tagset, virtual_address)
   puts ":assumption"
-  previous_tagsets.collect{|t| getRegion t }.not_isin( getRegion tagset )
+  previous_tagsets.collect{|t| getRegion(t) }.not_isin( getRegion(tagset) )
   
   puts ":assumption"
   puts "(or "
@@ -628,7 +691,7 @@ def procedures_preparations doc
   @mtlbHits = []
   previous_tagsets = []
   
-  @tagsets = Hash.new
+  @instruction_objects = Hash.new
   
   #совместная генерация не дает возможности разделить этот цикл на части по процедурам
   doc.elements.each('template/instruction/situation/memory'){ |memory|
@@ -655,43 +718,6 @@ end
 
 end
 
-
-class Array
-  def distinct
-    self.inject([]){|ts,t|
-      ts.each{|t1| puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))"}
-      ts + [t]
-    }
-  end
-  
-  def isin(t)
-    if self.empty?
-      puts " false "
-    elsif self.length == 1
-      puts "(= #{t} #{self.at(0)})"
-    else  
-      puts "(or false "
-        self.each{|t1|
-          puts "(= #{t} #{t1})"
-        }
-      puts ")"
-    end
-  end
-  
-  def not_isin(t)
-    if self.empty?
-      puts " true "
-    elsif self.length == 1
-      puts "(= bit0 (bvcomp #{t} #{self.at(0)}))"
-    else  
-      puts "(and true "
-        self.each{|t1|
-          puts "(= bit0 (bvcomp #{t} #{t1}))"
-        }
-      puts ")"
-    end
-  end
-end
 
 class MIPS_MirrorSolver < MIPS_Solver
 
@@ -724,6 +750,35 @@ end
 
 def mtlbHit(previous_tagsets, current_tagset, virtual_address)  
     "(or false " +
+          previous_tagsets.collect { |tagset|
+          " (= #{getPfn current_tagset} #{getPfn tagset}) " }.join +
+          
+
+        
+    @data_builder.microtlb.
+    
+    
+    
+      pfn_name = "_pfn#{@unique_counter += 1}"
+  vpndiv2_name = "_vpn#{@unique_counter += 1}"
+  puts ":assumption"
+  puts "(let (#{pfn_name} #{getPfn( tagset )})"
+  puts "(let (#{vpn_name} #{getVPN( virtual_address )}))"
+  
+  puts "(or "
+  @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
+    if tlbline.CCA0 == "Cached"
+      puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
+          "(= #{vpn_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+    end
+    if tlbline.CCA1 == "Cached"
+      puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
+          "(= #{vpn_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
+    end
+  }
+  puts")))"
+
+    
       @data_builder.M.delete_if{|m|
         delta_T = @data_builder.M.index(m) + 1
         $TLBASSOC - delta_T - (previous_tagsets.length - @mtlbHits.length) <= 0
@@ -825,7 +880,6 @@ def procedures_preparations doc
     virtual_address = "_va#{@unique_counter += 1}"
     puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ) (#{virtual_address} BitVec[64]))"
      
-    # сделать ограничения для cacheTS >< microTLBS и выдать их на out
     @mtlbHits << tagset if microTLBSituation == "mtlbHit"
     puts ":assumption"
     send(cacheTestSituation, init_tagsets, previous_tagsets, tagset)
