@@ -15,6 +15,12 @@ class Instruction
   attr_accessor :vpnd2
 end
 
+class DomainElement
+  attr_accessor :tagset
+  attr_accessor :vpnd2
+end
+
+
 class DataBuilder
   
   def initialize(data_file)
@@ -23,7 +29,12 @@ class DataBuilder
     dataxml.elements.each("data/cache/set"){ |set|
         set.elements.each_with_index{ |tag,delta|
               tagvalue = tag.attributes["value"]
-              @tagsets[tagvalue.to_i * 128 + set.attributes["value"].to_i ] = delta }
+              @tagsets[tagvalue.to_i * 2**($TAGSETLEN - $PFNLEN) + set.attributes["value"].to_i ] = delta }
+    }
+              
+    @tagsets2 = dataxml.elements("data/cache/set").collect{ |set|
+        set.elements.collect{ |tag| 
+            tag.attributes["value"].to_i * 2**($TAGSETLEN - $PFNLEN) + set.attributes["value"].to_i }
     }
     
     @micropfns = dataxml.elements.collect("data/microtlb/line"){ |line|
@@ -34,6 +45,13 @@ class DataBuilder
     
     @pfns = @micropfns + @nonmicropfns
     
+    @microvpns = dataxml.elements.collect("data/microtlb/line"){ |line|
+            line.attributes["vpn"].to_i }
+    
+    @nonmicrovpns = dataxml.elements.collect("data/tlb/line"){ |line|
+            line.attributes["vpn"].to_i }
+    
+    @vpns = @microvpns + @nonmicrovpns
     
     @microtlb = dataxml.elements.collect("data/microtlb/line") {|line|
         tlbline = TLBLine.new
@@ -62,7 +80,7 @@ class DataBuilder
   
   def LinterPFN
     @LinterPFN ||= @tagsets.select{|tagset,delta|
-                    @pfns.include?(tagset/128) }
+                    @pfns.include?(tagset/2**($TAGSETLEN - $PFNLEN)) }
   end
   
   def L
@@ -75,12 +93,12 @@ class DataBuilder
   
   def LinterM
      @LinterM ||= @tagsets.select{|tagset,delta|
-                    @micropfns.include?(tagset/128) }
+                    @micropfns.include?(tagset/2**($TAGSETLEN - $PFNLEN)) }
   end
   
   def LinterPFNminusM
      @LinterPFNminusM ||= @tagsets.select{|tagset,delta|
-                    @nonmicropfns.include?(tagset/128) }
+                    @nonmicropfns.include?(tagset/2**($TAGSETLEN - $PFNLEN)) }
   end
   
   def TLB
@@ -93,6 +111,51 @@ class DataBuilder
   
   def getVPNdiv2(m)
       @tlb.select{|tlbline| tlbline.pfn0 == m || tlbline.pfn1 == m }.first.vpndiv2
+  end
+  
+  def getL1Position(lambda)
+    @tagsets.select{|s| s.include?(lambda) }.first.index(lambda) + 1
+  end
+  
+  def getL1Tail(lambda)
+    s = @tagsets.select{|ss| ss.include?(lambda) }.first.reverse
+    s.first(s.index(lambda))
+  end
+  
+  def getMTLBPosition(lambda)
+    @microvpns.index( lambda ) + 1
+  end
+  
+  def getMTLBTail(lambda)
+    @microvpns.reverse.first(@microvpns.reverse.index(lambda))
+  end
+  
+  def V0
+     @microvpns
+  end
+  
+  def notV0
+     @nonmicrovpns
+  end
+
+  def intersection(vpnd2s)
+      @tagsets2.flatten.select{|ts| vpnd2s.include?(ts/2**($TAGSETLEN - $PFNLEN))}.collect{ |ts|
+      d = DomainElement.new
+      d.tagset = ts
+      d.vpnd2 = ts / 2**($TAGSETLEN - $PFNLEN)
+      d }
+  end
+  
+  def L1interTLB
+    intersection @pfns
+  end
+  
+  def L1interMTLB
+    intersection @micropfns
+  end
+
+  def L1interNotMTLB  
+    intersection @nonmicropfns
   end
 end
 
@@ -125,10 +188,8 @@ $VPNd2TYPE = "BitVec[#{$VPNdiv2LEN}]"
 
 class Array
   def distinct
-    self.inject([]){|ts,t|
-      ts.each{|t1| puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))"}
-      ts + [t]
-    }
+      self.each{|t| self.first(self.index(t)).each{|t1|
+        puts ":assumption";puts"(= bit0 (bvcomp #{t} #{t1}))" }}
   end
   
   def isin(t)
@@ -137,11 +198,7 @@ class Array
     elsif self.length == 1
       puts "(= #{t} #{self.at(0)})"
     else  
-      puts "(or false "
-        self.each{|t1|
-          puts "(= #{t} #{t1})"
-        }
-      puts ")"
+      puts "(or false ";self.each{|t1| puts "(= #{t} #{t1})"};puts ")"
     end
   end
   
@@ -151,23 +208,17 @@ class Array
     elsif self.length == 1
       "(= #{t} #{self.at(0)})"
     else  
-      "(or false " + 
-        self.collect{|t1| puts "(= #{t} #{t1})" }.join +
-      ")"
+      "(or false " + self.collect{|t1| puts "(= #{t} #{t1})" }.join + ")"
     end
   end
   
-  def not_isin(t)
+  def notisin(t)
     if self.empty?
       puts " true "
     elsif self.length == 1
       puts "(= bit0 (bvcomp #{t} #{self.at(0)}))"
     else  
-      puts "(and true "
-        self.each{|t1|
-          puts "(= bit0 (bvcomp #{t} #{t1}))"
-        }
-      puts ")"
+      puts "(and true ";self.each{|t1| puts "(= bit0 (bvcomp #{t} #{t1}))"};puts ")"
     end
   end
 end
@@ -381,7 +432,7 @@ end
 end
 
 
-class MIPS_CombinedSolver < MIPS_Solver
+class MIPS_Combined2Solver < MIPS_Solver
   
 def vpn_pfn(tagset, virtual_address)
     # соответствие некоторой строке TLB
@@ -718,6 +769,217 @@ end
 
 end
 
+class MIPS_CombinedSolver < MIPS_Solver
+  def l1_useful( lambda, previous_instructions, current_instruction, relation )
+          puts "(= bv#{lambda}[#{$TAGSETLEN}] #{current_instruction.tagset}) "
+          puts "(#{relation} #{$L1ASSOC - @data_builder.getL1Position(lambda)} (+ 0 "
+              previous_instructions.collect{|i|
+                  if @l1Hits.include?(i)
+                    "(and " +
+                      @data_builder.getL1Tail(lambda).collect{|t| "bv#{t}[#{$TAGSETLEN}]"}.isin_s(i.tagset) +
+                      previous_instructions.first(previous_instructions.index(i)).notisin_s(i.tagset) +
+                    ")"
+                  else
+                    "(= #{getRegion i.tagset} #{getRegion current_instruction.tagset})"
+                  end
+              }.each{|f| puts "(ite #{f} 1 0)"}
+          puts "))"
+  end
+
+  def mtlb_useful( lambda, previous_instructions, current_instruction, relation )
+          puts "(= bv#{lambda}[#{$VPNdiv2LEN}] #{current_instruction.vpnd2}) "
+          puts "(#{relation} #{$TLBASSOC - @data_builder.getMTLBPosition(lambda) - previous_instructions.length + @mtlbHits.length} (+ 0 "
+              previous_instructions.collect{|i|
+                  if @mtlbHits.include?(i)
+                    "(and " +
+                      @data_builder.getMTLBTail(lambda).collect{|t| "bv#{t}[#{$VPNdiv2LEN}]"}.isin_s(i.vpnd2) +
+                      previous_instructions.first(previous_instructions.index(i)).notisin_s(i.vpnd2) +
+                    ")"
+                  end
+              }.compact.each{|f| puts "(ite #{f} 1 0)"}
+          puts "))"
+  end
+
+  def l1Hit_mtlbHit_part1(previous_instructions, current_instruction)
+    puts "(and "
+      previous_instructions.collect{|i| i.tagset}.isin( current_instruction.tagset )
+      puts "(or false "
+        previous_instructions.collect{|i| i.vpnd2}.isin( current_instruction.vpnd2 )
+        @data_builder.V0.each{|v| puts "(and true "; mtlb_useful( v, previous_instructions, current_instruction, ">=" ); puts ")" }
+      puts ")"
+    puts ")"
+  end
+  
+  def l1Hit_mtlbHit_part2(previous_instructions, current_instruction)
+    puts "(and "
+      previous_instructions.collect{|i| i.vpnd2}.isin( current_instruction.vpnd2 )
+      puts "(or false "
+        @data_builder.L1interTLB.each{|d|
+            puts "(and true";l1_useful( d.tagset, previous_instructions, current_instruction, ">=" );puts")" }
+      puts ")"
+    puts ")"
+  end
+  
+  def l1Hit_mtlbHit_part3(previous_instructions, current_instruction)
+    puts "(or false "
+      @data_builder.L1interMTLB.each{|d|
+        puts "(and true "
+        l1_useful( d.tagset, previous_instructions, current_instruction, ">=" )
+        mtlb_useful( d.vpnd2, previous_instructions, current_instruction, ">=" )
+        puts ")"}        
+    puts ")"
+  end
+  
+  def l1Hit_mtlbHit(previous_instructions, current_instruction)
+    puts "(or "
+     (1..3).each{|p| send("l1Hit_mtlbHit_#{p}", previous_instructions, current_instruction)}
+    puts ")"
+  end
+  
+  def l1Hit_mtlbMiss(previous_instructions, current_instruction)
+    puts "(and "
+      previous_instructions.collect{|i| i.vpnd2}.notisin(current_instruction.vpnd2)      
+    puts "(or "
+     (1..3).each{|p| send("l1Hit_mtlbMiss_#{p}", previous_instructions, current_instruction)}
+    puts "))"
+  end
+  
+  def l1Hit_mtlbMiss_part1(previous_instructions, current_instruction)
+    puts "(and "
+      previous_instructions.collect{|i| i.tagset}.isin( current_instruction.tagset )
+      puts "(or false "
+        @data_builder.V0.each{|v| puts"(and true";mtlb_useful( v, previous_instructions, current_instruction, ">=" );puts")" }
+        @data_builder.notV0.collect{|v| "bv#{v}[#{$VPNdiv2LEN}]"}.notisin( current_instruction.vpnd2 )
+      puts ")"
+    puts ")"
+  end
+  
+  def l1Hit_mtlbMiss_part2(previous_instructions, current_instruction)
+      puts "(or false "
+        @data_builder.L1interNotMTLB.each{|d|
+          puts "(and (= #{current_instruction.vpnd2} bv#{d.vpnd2}[#{$TLBASSOC}]) "
+            l1_useful( d.tagset, previous_instructions, current_instruction, ">=" )
+          puts ")" }
+      puts ")"
+  end
+  
+  def l1Hit_mtlbMiss_part3(previous_instructions, current_instruction)
+    puts "(or false "
+      @data_builder.L1interMTLB.each{|d|
+        puts "(and true"
+        l1_useful( d.tagset, previous_instructions, current_instruction, ">=" )
+        mtlb_useful( d.vpnd2, previous_instructions, current_instruction, "<" )
+        puts ")"}
+    puts ")"
+  end
+  
+  def l1Miss_mtlbHit(previous_instructions, current_instruction)
+    puts "(and "
+      previous_instructions.collect{|i| i.tagset}.notisin(current_instruction.tagset)      
+      puts "(or ";(1..3).each{|p| send("l1Miss_mtlbHit_#{p}", previous_instructions, current_instruction)};puts ")"
+    puts ")"
+  end
+  
+  def l1Miss_mtlbHit_part1(previous_instructions, current_instruction)
+    puts "(and "
+      @data_builder.L1interTLB.collect{|d| "bv#{d.vpnd2}[#{$VPNdiv2LEN}]"}.notisin( current_instruction.vpnd2 )
+      puts "(or false ";@data_builder.V0.each{|v| puts"(and true";mtlb_useful( v, previous_instructions, current_instruction, ">=" );puts")" };puts ")"
+    puts ")"
+  end
+  
+  def l1Miss_mtlbHit_part2(previous_instructions, current_instruction)
+    puts "(or false "
+      @data_builder.L1interMTLB.each{|d|
+        puts "(and true"
+        l1_useful( d.tagset, previous_instructions, current_instruction, "<" )
+        mtlb_useful( d.vpnd2, previous_instructions, current_instruction, ">=" )
+        puts ")"}
+    puts ")"
+  end
+  
+  def l1Miss_mtlbHit_part3(previous_instructions, current_instruction)
+      puts "(and true "
+        previous_instructions.collect{|i| i.vpnd2}.isin(current_instruction.vpnd2)
+        puts "(or false "
+          @data_builder.L1interTLB.each{|d|
+              puts "(and true ";l1_useful( d.tagset, previous_instructions, current_instruction, "<" );puts ")" }
+          @data_builder.L1interTLB.collect{|d| "bv#{d.tagset}[#{$TAGSETLEN}]"}.notisin(current_instruction.tagset)
+        puts ")"
+      puts ")"
+  end
+  
+  def l1Miss_mtlbMiss(previous_instructions, current_instruction)
+    puts "(and "
+      previous_instructions.collect{|i| i.tagset}.notisin(current_instruction.tagset)      
+      previous_instructions.collect{|i| i.vpnd2}.notisin(current_instruction.vpnd2)      
+      puts "(or ";(1..4).each{|p| send("l1Miss_mtlbMiss_#{p}", previous_instructions, current_instruction)};puts ")"
+    puts ")"
+  end
+  
+  def l1Miss_mtlbMiss_part1(previous_instructions, current_instruction)
+    puts "(and "
+      @data_builder.L1interNotMTLB.collect{|d| "bv#{d.tagset}[#{$TAGSET}]"}.notisin(current_instruction.tagset)
+      @data_builder.notV0.collect{|v| "bv#{v}[#{$VPNd2LEN}]"}.isin(current_instruction.vpnd2)
+    puts ")"
+  end
+  
+  def l1Miss_mtlbMiss_part2(previous_instructions, current_instruction)
+    puts "(or false "
+      @data_builder.L1interNotMTLB.each{|d|
+        puts"(and (= #{current_instruction.vpnd2} bv#{d.vpnd2}[#{$VPNd2LEN}]) "        
+          l1_useful( d.tagset, previous_instructions, current_instruction, "<" )
+        puts")" }
+    puts ")"
+  end
+  
+  def l1Miss_mtlbMiss_part3(previous_instructions, current_instruction)
+    puts "(and true "
+        @data_builder.L1interMTLB.collect{|d| "bv#{d.tagset}[#{$TAGSETLEN}]"}.notisin(current_instruction.tagset)
+        puts "(or false";@data_builder.V0.each{|v| puts "(and true ";mtlb_useful(v, previous_instructions, current_instruction, "<");puts ")" };puts ")"
+    puts ")"
+  end
+  
+  def l1Miss_mtlbMiss_part4(previous_instructions, current_instruction)
+    puts "(or false "
+      @data_builder.L1interMTLB.each{|d|
+          puts "(and true "
+          l1_useful( d.tagset, previous_instructions, current_instruction, "<" )
+          mtlb_useful( d.vpnd2, previous_instructions, current_instruction, "<" )
+          puts ")" }
+    puts ")"
+  end
+  
+
+  
+  def procedures_preparations doc
+    previous_objects = []
+  
+    @instruction_objects = Hash.new 
+    doc.elements.each('template/instruction/situation/memory'){ |memory|
+      cacheTestSituation = memory.elements['cache'].attributes['id']
+      microTLBSituation = memory.elements['microtlb'].attributes['id']
+        
+      # ввести переменную для этой тестовой ситуации и записать ее в SMT-LIB
+      tagset = "_ts#{@unique_counter += 1}"
+      vpnd2 = "_vpnd#{@unique_counter += 1}"
+      puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ) (#{vpnd2} #{$VPNd2TYPE}))"
+
+      instruction_object = Instruction.new
+      instruction_object.tagset = tagset
+      instruction_object.vpnd2 = vpnd2
+
+      # разных vpn'в не более количества строк TLB, но для маленьких экспериментов это всегда верно
+  
+      # сделать ограничения для cacheTS >< microTLBS и выдать их на out
+      puts ":assumption"
+      send("#{cacheTestSituation}_#{microTLBSituation}", previous_objects, instruction_object)
+      
+      @instruction_objects.merge!( {memory.parent.parent => instruction_object} )
+      previous_objects << instruction_object
+    }
+  end
+
+end
 
 class MIPS_MirrorSolver < MIPS_Solver
 
