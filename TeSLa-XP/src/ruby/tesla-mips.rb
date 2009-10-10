@@ -37,12 +37,12 @@ class DataBuilder
     dataxml.elements.each("data/cache/set"){ |set|
         set.elements.each_with_index{ |tag,delta|
               tagvalue = tag.attributes["value"]
-              @tagsets[tagvalue.to_i * 2**($TAGSETLEN - $PFNLEN) + set.attributes["value"].to_i ] = delta }
+              @tagsets[tagvalue.to_i * 2**$SETLEN + set.attributes["value"].to_i ] = delta }
     }
               
     @tagsets2 = dataxml.elements.collect("data/cache/set"){ |set|
         set.elements.collect{ |tag| 
-            tag.attributes["value"].to_i * 2**($TAGSETLEN - $PFNLEN) + set.attributes["value"].to_i }
+            tag.attributes["value"].to_i * 2**$SETLEN + set.attributes["value"].to_i }
     }
     
     @micropfns = dataxml.elements.collect("data/microtlb/line"){ |line|
@@ -124,11 +124,11 @@ class DataBuilder
   end
   
   def getL1Position(lambda)
-    @tagsets.select{|s| s.include?(lambda) }.first.index(lambda) + 1
+    @tagsets2.select{|s| s.include?(lambda) }.first.index(lambda) + 1
   end
   
   def getL1Tail(lambda)
-    s = @tagsets.select{|ss| ss.include?(lambda) }.first.reverse
+    s = @tagsets2.select{|ss| ss.include?(lambda) }.first.reverse
     s.first(s.index(lambda))
   end
   
@@ -154,7 +154,7 @@ class DataBuilder
 
   def intersection(tlblines)
       @tagsets2.flatten.collect{|ts|
-        tlblines.select{|l| [l.pfn0, l.pfn1].include?( ts/2**($TAGSETLEN - $PFNLEN) )}.
+        tlblines.select{|l| [l.pfn0, l.pfn1].include?( ts/2**$SETLEN )}.
             collect{|l| d = DomainElement.new; d.tagset = ts; d.vpnd2 = l.vpndiv2; d} }.flatten
   end
   
@@ -197,6 +197,8 @@ end
 
 $TAGSETLEN = 31
 $PFNLEN = 24
+$SETLEN = $TAGSETLEN - $PFNLEN
+$TAGLEN = $PFNLEN
 $TAGSETTYPE = "BitVec[#{$TAGSETLEN}]"
 $L1ASSOC = 4
 $TLBASSOC = 4
@@ -850,24 +852,28 @@ class MIPS_CombinedSolver < MIPS_Solver
   end
 
   def l1Hit_mtlbHit_part1(previous_instructions, current_instruction)
-    puts "(and "
-      previous_instructions.collect{|i| i.tagset}.isin( current_instruction.tagset )
-      puts "(or false "
-        previous_instructions.collect{|i| i.vpnd2}.isin( current_instruction.vpnd2 )
-        @data_builder.V0().
-        each{|v| puts "(and true "; mtlb_useful( v, previous_instructions, current_instruction, ">=" ); puts ")" }
+    if ! previous_instructions.empty?
+      puts "(and "
+        previous_instructions.collect{|i| i.tagset}.isin( current_instruction.tagset )
+        puts "(or false "
+          previous_instructions.collect{|i| i.vpnd2}.isin( current_instruction.vpnd2 )
+          @data_builder.V0().
+          each{|v| puts "(and true "; mtlb_useful( v, previous_instructions, current_instruction, ">=" ); puts ")" }
+        puts ")"
       puts ")"
-    puts ")"
+    end
   end
   
   def l1Hit_mtlbHit_part2(previous_instructions, current_instruction)
-    puts "(and "
-      previous_instructions.collect{|i| i.vpnd2}.isin( current_instruction.vpnd2 )
-      puts "(or false "
-        @data_builder.L1interTLB.each{|d|
-            puts "(and true";l1_useful( d.tagset, previous_instructions, current_instruction, ">=" );puts")" }
+    if ! previous_instructions.empty?
+      puts "(and "
+        previous_instructions.collect{|i| i.vpnd2}.isin( current_instruction.vpnd2 )
+        puts "(or false "
+          @data_builder.L1interTLB.each{|d|
+              puts "(and true";l1_useful( d.tagset, previous_instructions, current_instruction, ">=" );puts")" }
+        puts ")"
       puts ")"
-    puts ")"
+    end
   end
   
   def l1Hit_mtlbHit_part3(previous_instructions, current_instruction)
@@ -972,7 +978,7 @@ class MIPS_CombinedSolver < MIPS_Solver
   
   def l1Miss_mtlbMiss_part1(previous_instructions, current_instruction)
     puts "(and "
-      @data_builder.L1interNotMTLB.collect{|d| "bv#{d.tagset}[#{$TAGSET}]"}.notisin(current_instruction.tagset)
+      @data_builder.L1interNotMTLB.collect{|d| "bv#{d.tagset}[#{$TAGSETLEN}]"}.notisin(current_instruction.tagset)
       @data_builder.notV0.collect{|v| "bv#{v}[#{$VPNdiv2LEN}]"}.isin(current_instruction.vpnd2)
     puts ")"
   end
@@ -1251,7 +1257,7 @@ def mtlbMiss( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
     (init_vpnd2s + previous_vpnd2s).
       first(init_vpnd2s.length + previous_vpnd2s.length-$TLBASSOC+1).
         isin(current_vpnd2)
-    (init_vpnd2s + previous_vpnd2s).last($TLBASSOC-1).not_isin(current_vpnd2)
+    (init_vpnd2s + previous_vpnd2s).last($TLBASSOC-1).notisin(current_vpnd2)
   puts ")"
 end
 
