@@ -1257,15 +1257,15 @@ end
 class MIPS_FullMirrorSolver < MIPS_MirrorSolver
 
 def mtlbHit( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
-  (init_vpnd2s + previous_vpnd2s).last($TLBASSOC-1).isin(current_vpnd2)
+  (init_vpnd2s + previous_vpnd2s).last($TLBASSOC).isin(current_vpnd2)
 end
 
 def mtlbMiss( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
   puts "(and "
     (init_vpnd2s + previous_vpnd2s).
-      first(init_vpnd2s.length + previous_vpnd2s.length-$TLBASSOC+1).
+      first(init_vpnd2s.length + previous_vpnd2s.length-$TLBASSOC).
         isin(current_vpnd2)
-    previous_vpnd2s.last($TLBASSOC-1).notisin(current_vpnd2)
+    previous_vpnd2s.last($TLBASSOC).notisin(current_vpnd2)
   puts ")"
 end
 
