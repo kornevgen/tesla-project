@@ -1074,11 +1074,11 @@ end
 class MIPS_MirrorSolver < MIPS_Solver
 
 def l1Hit( init_tagsets, previous_tagsets, current_tagset )
-  mirror init_tagsets, previous_tagsets, current_tagset, ">="
+  mirror init_tagsets, previous_tagsets, current_tagset, ">"
 end
 
 def l1Miss( init_tagsets, previous_tagsets, current_tagset )
-  mirror init_tagsets, previous_tagsets, current_tagset, "<"
+  mirror init_tagsets, previous_tagsets, current_tagset, "<="
 end
 
 def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation )
