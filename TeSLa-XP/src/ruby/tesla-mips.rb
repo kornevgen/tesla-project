@@ -1087,9 +1087,17 @@ def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation )
     puts ")"
     
     puts "(#{mirrrelation} #{$L1ASSOC} (+ "
-          (init_tagsets + previous_tagsets).inject(init_tagsets + previous_tagsets){|xs,t|
+          init_tagsets.inject([]){|xs,t|
                 puts "(ite (and "
-                xs.each{|p| puts "(= bit0 (bvcomp #{current_tagset} #{p}))"}
+                xs.isin(current_tagset)
+                previous_tagsets.notisin(current_tagset)
+                puts "(= #{getRegion current_tagset} #{getRegion t})"
+                puts ") 1 0)"
+                xs.last(xs.length-1)
+          }
+          previous_tagsets.inject(previous_tagsets){|xs,t|
+                puts "(ite (and "
+                xs.notisin(current_tagset)
                 puts "(= #{getRegion current_tagset} #{getRegion t})"
                 puts ") 1 0)"
                 xs.last(xs.length-1)
