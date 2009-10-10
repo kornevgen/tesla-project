@@ -264,7 +264,7 @@ class Runner
     smt_file.close
     #File.open(smt_file.path).each{|s| puts s }
     output = `z3 /m #{smt_file.path} /T:60`
-    puts output
+    #puts output
     puts "out#{i}.smt: timeout" if output.include?("timeout")
     puts "out#{i}.smt: sat" if !output.include?("unsat") && !output.include?("timeout")
     puts "out#{i}.smt: unsat" if output.include?("unsat")
