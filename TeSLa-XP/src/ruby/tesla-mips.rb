@@ -1093,7 +1093,7 @@ def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation )
                 previous_tagsets.notisin(current_tagset)
                 puts "(= #{getRegion current_tagset} #{getRegion t})"
                 puts ") 1 0)"
-                xs.last(xs.length-1)
+                xs + [t]
           }
           previous_tagsets.inject(previous_tagsets){|xs,t|
                 puts "(ite (and "
