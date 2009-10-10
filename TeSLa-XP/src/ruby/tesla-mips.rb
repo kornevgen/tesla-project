@@ -13,6 +13,14 @@ class Instruction
   attr_accessor :tagset
   attr_accessor :virtual_address
   attr_accessor :vpnd2
+  
+  def pfn
+    "(extract[30:7] #{tagset})"
+  end
+  
+  def vpn
+  "(extract[#{$SEGBITS-1}:#{$PABITS-$PFNLEN}] #{virtual_address})"
+  end
 end
 
 class DomainElement
@@ -32,7 +40,7 @@ class DataBuilder
               @tagsets[tagvalue.to_i * 2**($TAGSETLEN - $PFNLEN) + set.attributes["value"].to_i ] = delta }
     }
               
-    @tagsets2 = dataxml.elements("data/cache/set").collect{ |set|
+    @tagsets2 = dataxml.elements.collect("data/cache/set"){ |set|
         set.elements.collect{ |tag| 
             tag.attributes["value"].to_i * 2**($TAGSETLEN - $PFNLEN) + set.attributes["value"].to_i }
     }
@@ -46,10 +54,10 @@ class DataBuilder
     @pfns = @micropfns + @nonmicropfns
     
     @microvpns = dataxml.elements.collect("data/microtlb/line"){ |line|
-            line.attributes["vpn"].to_i }
+            line.attributes["vpndiv2"].to_i }
     
     @nonmicrovpns = dataxml.elements.collect("data/tlb/line"){ |line|
-            line.attributes["vpn"].to_i }
+            line.attributes["vpndiv2"].to_i }
     
     @vpns = @microvpns + @nonmicrovpns
     
@@ -65,7 +73,7 @@ class DataBuilder
         tlbline
     }
     
-    @tlb = @microtlb + dataxml.elements.collect("data/tlb/line") {|line|
+    @nonmicrotlb = dataxml.elements.collect("data/tlb/line") {|line|
         tlbline = TLBLine.new
         tlbline.r = line.attributes["range"].to_i
         tlbline.vpndiv2 = line.attributes["vpndiv2"].to_i
@@ -76,6 +84,8 @@ class DataBuilder
         tlbline.CCA1 = line.attributes["CCA1"]
         tlbline
     }
+    
+    @tlb = @microtlb + @nonmicrotlb
   end
   
   def LinterPFN
@@ -130,6 +140,10 @@ class DataBuilder
     @microvpns.reverse.first(@microvpns.reverse.index(lambda))
   end
   
+  def V0f(previous_instructions)
+     @microvpns.select{|v| getMTLBPosition(v) > $TLBASSOC - previous_instructions.length  }.uniq
+  end
+  
   def V0
      @microvpns
   end
@@ -138,24 +152,30 @@ class DataBuilder
      @nonmicrovpns
   end
 
-  def intersection(vpnd2s)
-      @tagsets2.flatten.select{|ts| vpnd2s.include?(ts/2**($TAGSETLEN - $PFNLEN))}.collect{ |ts|
-      d = DomainElement.new
-      d.tagset = ts
-      d.vpnd2 = ts / 2**($TAGSETLEN - $PFNLEN)
-      d }
+  def intersection(tlblines)
+      @tagsets2.flatten.collect{|ts|
+        tlblines.select{|l| [l.pfn0, l.pfn1].include?( ts/2**($TAGSETLEN - $PFNLEN) )}.
+            collect{|l| d = DomainElement.new; d.tagset = ts; d.vpnd2 = l.vpndiv2; d} }.flatten
   end
   
-  def L1interTLB
-    intersection @pfns
+  def L1interMTLBf(previous_instructions)
+    (intersection @microtlb).select{|d| getMTLBPosition(d.vpnd2) > $TLBASSOC - previous_instructions.length  }.uniq
   end
-  
+
   def L1interMTLB
-    intersection @micropfns
+    (intersection @microtlb).uniq
   end
 
   def L1interNotMTLB  
-    intersection @nonmicropfns
+    (intersection @nonmicrotlb).uniq
+  end
+  
+  def L1interTLB
+    (L1interMTLB() + L1interNotMTLB()).uniq
+  end
+  
+  def L1interTLBf(previous_instructions)
+    (L1interMTLB(previous_instructions) + L1interNotMTLB()).uniq
   end
 end
 
@@ -183,7 +203,7 @@ $TLBASSOC = 4
 $SEGBITS = 40
 $PABITS = 36
 $MASK = 0
-$VPNdiv2LEN = $SEGBITS - $PABITS + $PFNLEN
+$VPNdiv2LEN = $SEGBITS - $PABITS + $PFNLEN - 1
 $VPNd2TYPE = "BitVec[#{$VPNdiv2LEN}]"
 
 class Array
@@ -193,13 +213,7 @@ class Array
   end
   
   def isin(t)
-    if self.empty?
-      puts " false "
-    elsif self.length == 1
-      puts "(= #{t} #{self.at(0)})"
-    else  
-      puts "(or false ";self.each{|t1| puts "(= #{t} #{t1})"};puts ")"
-    end
+    puts isin_s(t)
   end
   
   def isin_s(t)
@@ -208,18 +222,22 @@ class Array
     elsif self.length == 1
       "(= #{t} #{self.at(0)})"
     else  
-      "(or false " + self.collect{|t1| puts "(= #{t} #{t1})" }.join + ")"
+      "(or " + self.collect{|t1| "(= #{t} #{t1})" }.join + ")"
+    end
+  end
+  
+  def notisin_s(t)
+    if self.empty?
+      " "
+    elsif self.length == 1
+      "(= bit0 (bvcomp #{t} #{self.at(0)}))"
+    else  
+      "(and " + self.collect{|t1| "(= bit0 (bvcomp #{t} #{t1}))"}.join + ")"
     end
   end
   
   def notisin(t)
-    if self.empty?
-      puts " true "
-    elsif self.length == 1
-      puts "(= bit0 (bvcomp #{t} #{self.at(0)}))"
-    else  
-      puts "(and true ";self.each{|t1| puts "(= bit0 (bvcomp #{t} #{t1}))"};puts ")"
-    end
+    puts notisin_s(t)
   end
 end
 
@@ -437,7 +455,7 @@ class MIPS_Combined2Solver < MIPS_Solver
 def vpn_pfn(tagset, virtual_address)
     # соответствие некоторой строке TLB
   pfn_name = "_pfn#{@unique_counter += 1}"
-  vpndiv2_name = "_vpn#{@unique_counter += 1}"
+  vpn_name = "_vpn#{@unique_counter += 1}"
   puts ":assumption"
   puts "(let (#{pfn_name} #{getPfn( tagset )})"
   puts "(let (#{vpn_name} #{getVPN( virtual_address )}))"
@@ -770,6 +788,31 @@ end
 end
 
 class MIPS_CombinedSolver < MIPS_Solver
+  def vpn_pfn( instruction )
+    # соответствие некоторой строке TLB
+    pfn_name = "_pfn#{@unique_counter += 1}"
+    vpn_name = "_vpn#{@unique_counter += 1}"
+    puts ":assumption"
+    puts "(let (#{pfn_name} #{instruction.pfn})"
+    puts "(let (#{vpn_name} #{instruction.vpn})"
+    
+    puts "(or "
+    @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
+      if tlbline.CCA0 == "Cached"
+        puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
+            "(= #{instruction.vpnd2} bv#{tlbline.vpndiv2}[#{$VPNdiv2LEN}])" +
+            "(= #{vpn_name} bv#{tlbline.vpndiv2 * 2}[#{$VPNdiv2LEN + 1}]))"
+      end
+      if tlbline.CCA1 == "Cached"
+        puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
+            "(= #{instruction.vpnd2} bv#{tlbline.vpndiv2}[#{$VPNdiv2LEN}])" +
+            "(= #{vpn_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$VPNdiv2LEN + 1}]))"
+      end
+    }
+    puts")))"
+  end
+
+
   def l1_useful( lambda, previous_instructions, current_instruction, relation )
           puts "(= bv#{lambda}[#{$TAGSETLEN}] #{current_instruction.tagset}) "
           puts "(#{relation} #{$L1ASSOC - @data_builder.getL1Position(lambda)} (+ 0 "
@@ -777,7 +820,7 @@ class MIPS_CombinedSolver < MIPS_Solver
                   if @l1Hits.include?(i)
                     "(and " +
                       @data_builder.getL1Tail(lambda).collect{|t| "bv#{t}[#{$TAGSETLEN}]"}.isin_s(i.tagset) +
-                      previous_instructions.first(previous_instructions.index(i)).notisin_s(i.tagset) +
+                      previous_instructions.first(previous_instructions.index(i)).collect{|ii| ii.tagset}.notisin_s(i.tagset) +
                     ")"
                   else
                     "(= #{getRegion i.tagset} #{getRegion current_instruction.tagset})"
@@ -787,17 +830,23 @@ class MIPS_CombinedSolver < MIPS_Solver
   end
 
   def mtlb_useful( lambda, previous_instructions, current_instruction, relation )
-          puts "(= bv#{lambda}[#{$VPNdiv2LEN}] #{current_instruction.vpnd2}) "
+        puts "(= bv#{lambda}[#{$VPNdiv2LEN}] #{current_instruction.vpnd2}) "
+        if relation == ">=" && @data_builder.getMTLBPosition(lambda) > $TLBASSOC - previous_instructions.length + @mtlbHits.length \
+          || relation == "<" && @data_builder.getMTLBPosition(lambda) <= $TLBASSOC - previous_instructions.length
+          puts "false"
+        elsif relation == ">=" && @data_builder.getMTLBPosition(lambda) <= $TLBASSOC - previous_instructions.length \
+          || relation == "<" && @data_builder.getMTLBPosition(lambda) > $TLBASSOC - previous_instructions.length + @mtlbHits.length
+          #nothing
+        else
           puts "(#{relation} #{$TLBASSOC - @data_builder.getMTLBPosition(lambda) - previous_instructions.length + @mtlbHits.length} (+ 0 "
-              previous_instructions.collect{|i|
-                  if @mtlbHits.include?(i)
+              @mtlbHits.collect{|i|
                     "(and " +
                       @data_builder.getMTLBTail(lambda).collect{|t| "bv#{t}[#{$VPNdiv2LEN}]"}.isin_s(i.vpnd2) +
-                      previous_instructions.first(previous_instructions.index(i)).notisin_s(i.vpnd2) +
+                      previous_instructions.first(previous_instructions.index(i)).collect{|ii| ii.vpnd2}.notisin_s(i.vpnd2) +
                     ")"
-                  end
-              }.compact.each{|f| puts "(ite #{f} 1 0)"}
+              }.each{|f| puts "(ite #{f} 1 0)"}
           puts "))"
+        end
   end
 
   def l1Hit_mtlbHit_part1(previous_instructions, current_instruction)
@@ -805,7 +854,8 @@ class MIPS_CombinedSolver < MIPS_Solver
       previous_instructions.collect{|i| i.tagset}.isin( current_instruction.tagset )
       puts "(or false "
         previous_instructions.collect{|i| i.vpnd2}.isin( current_instruction.vpnd2 )
-        @data_builder.V0.each{|v| puts "(and true "; mtlb_useful( v, previous_instructions, current_instruction, ">=" ); puts ")" }
+        @data_builder.V0().
+        each{|v| puts "(and true "; mtlb_useful( v, previous_instructions, current_instruction, ">=" ); puts ")" }
       puts ")"
     puts ")"
   end
@@ -832,7 +882,7 @@ class MIPS_CombinedSolver < MIPS_Solver
   
   def l1Hit_mtlbHit(previous_instructions, current_instruction)
     puts "(or "
-     (1..3).each{|p| send("l1Hit_mtlbHit_#{p}", previous_instructions, current_instruction)}
+     (1..3).each{|p| send("l1Hit_mtlbHit_part#{p}", previous_instructions, current_instruction)}
     puts ")"
   end
   
@@ -840,24 +890,26 @@ class MIPS_CombinedSolver < MIPS_Solver
     puts "(and "
       previous_instructions.collect{|i| i.vpnd2}.notisin(current_instruction.vpnd2)      
     puts "(or "
-     (1..3).each{|p| send("l1Hit_mtlbMiss_#{p}", previous_instructions, current_instruction)}
+     (1..3).each{|p| send("l1Hit_mtlbMiss_part#{p}", previous_instructions, current_instruction)}
     puts "))"
   end
   
   def l1Hit_mtlbMiss_part1(previous_instructions, current_instruction)
-    puts "(and "
-      previous_instructions.collect{|i| i.tagset}.isin( current_instruction.tagset )
-      puts "(or false "
-        @data_builder.V0.each{|v| puts"(and true";mtlb_useful( v, previous_instructions, current_instruction, ">=" );puts")" }
-        @data_builder.notV0.collect{|v| "bv#{v}[#{$VPNdiv2LEN}]"}.notisin( current_instruction.vpnd2 )
+    if ! previous_instructions.empty?
+      puts "(and "
+        previous_instructions.collect{|i| i.tagset}.isin( current_instruction.tagset )
+        puts "(or false "
+          @data_builder.V0.each{|v| puts"(and true";mtlb_useful( v, previous_instructions, current_instruction, "<" );puts")" }
+          @data_builder.notV0.collect{|v| "bv#{v}[#{$VPNdiv2LEN}]"}.isin( current_instruction.vpnd2 )
+        puts ")"
       puts ")"
-    puts ")"
+    end
   end
   
   def l1Hit_mtlbMiss_part2(previous_instructions, current_instruction)
       puts "(or false "
         @data_builder.L1interNotMTLB.each{|d|
-          puts "(and (= #{current_instruction.vpnd2} bv#{d.vpnd2}[#{$TLBASSOC}]) "
+          puts "(and (= #{current_instruction.vpnd2} bv#{d.vpnd2}[#{$VPNdiv2LEN}]) "
             l1_useful( d.tagset, previous_instructions, current_instruction, ">=" )
           puts ")" }
       puts ")"
@@ -876,13 +928,13 @@ class MIPS_CombinedSolver < MIPS_Solver
   def l1Miss_mtlbHit(previous_instructions, current_instruction)
     puts "(and "
       previous_instructions.collect{|i| i.tagset}.notisin(current_instruction.tagset)      
-      puts "(or ";(1..3).each{|p| send("l1Miss_mtlbHit_#{p}", previous_instructions, current_instruction)};puts ")"
+      puts "(or ";(1..3).each{|p| send("l1Miss_mtlbHit_part#{p}", previous_instructions, current_instruction)};puts ")"
     puts ")"
   end
   
   def l1Miss_mtlbHit_part1(previous_instructions, current_instruction)
     puts "(and "
-      @data_builder.L1interTLB.collect{|d| "bv#{d.vpnd2}[#{$VPNdiv2LEN}]"}.notisin( current_instruction.vpnd2 )
+      @data_builder.L1interMTLB.collect{|d| "bv#{d.tagset}[#{$TAGSETLEN}]"}.notisin( current_instruction.tagset )
       puts "(or false ";@data_builder.V0.each{|v| puts"(and true";mtlb_useful( v, previous_instructions, current_instruction, ">=" );puts")" };puts ")"
     puts ")"
   end
@@ -898,7 +950,8 @@ class MIPS_CombinedSolver < MIPS_Solver
   end
   
   def l1Miss_mtlbHit_part3(previous_instructions, current_instruction)
-      puts "(and true "
+    if ! previous_instructions.empty?
+      puts "(and "
         previous_instructions.collect{|i| i.vpnd2}.isin(current_instruction.vpnd2)
         puts "(or false "
           @data_builder.L1interTLB.each{|d|
@@ -906,27 +959,28 @@ class MIPS_CombinedSolver < MIPS_Solver
           @data_builder.L1interTLB.collect{|d| "bv#{d.tagset}[#{$TAGSETLEN}]"}.notisin(current_instruction.tagset)
         puts ")"
       puts ")"
+    end
   end
   
   def l1Miss_mtlbMiss(previous_instructions, current_instruction)
     puts "(and "
       previous_instructions.collect{|i| i.tagset}.notisin(current_instruction.tagset)      
       previous_instructions.collect{|i| i.vpnd2}.notisin(current_instruction.vpnd2)      
-      puts "(or ";(1..4).each{|p| send("l1Miss_mtlbMiss_#{p}", previous_instructions, current_instruction)};puts ")"
+      puts "(or ";(1..4).each{|p| send("l1Miss_mtlbMiss_part#{p}", previous_instructions, current_instruction)};puts ")"
     puts ")"
   end
   
   def l1Miss_mtlbMiss_part1(previous_instructions, current_instruction)
     puts "(and "
       @data_builder.L1interNotMTLB.collect{|d| "bv#{d.tagset}[#{$TAGSET}]"}.notisin(current_instruction.tagset)
-      @data_builder.notV0.collect{|v| "bv#{v}[#{$VPNd2LEN}]"}.isin(current_instruction.vpnd2)
+      @data_builder.notV0.collect{|v| "bv#{v}[#{$VPNdiv2LEN}]"}.isin(current_instruction.vpnd2)
     puts ")"
   end
   
   def l1Miss_mtlbMiss_part2(previous_instructions, current_instruction)
     puts "(or false "
       @data_builder.L1interNotMTLB.each{|d|
-        puts"(and (= #{current_instruction.vpnd2} bv#{d.vpnd2}[#{$VPNd2LEN}]) "        
+        puts"(and (= #{current_instruction.vpnd2} bv#{d.vpnd2}[#{$VPNdiv2LEN}]) "        
           l1_useful( d.tagset, previous_instructions, current_instruction, "<" )
         puts")" }
     puts ")"
@@ -955,6 +1009,8 @@ class MIPS_CombinedSolver < MIPS_Solver
     previous_objects = []
   
     @instruction_objects = Hash.new 
+    @l1Hits = []
+    @mtlbHits = []
     doc.elements.each('template/instruction/situation/memory'){ |memory|
       cacheTestSituation = memory.elements['cache'].attributes['id']
       microTLBSituation = memory.elements['microtlb'].attributes['id']
@@ -962,17 +1018,43 @@ class MIPS_CombinedSolver < MIPS_Solver
       # ввести переменную для этой тестовой ситуации и записать ее в SMT-LIB
       tagset = "_ts#{@unique_counter += 1}"
       vpnd2 = "_vpnd#{@unique_counter += 1}"
-      puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ) (#{vpnd2} #{$VPNd2TYPE}))"
+      virtual_address = "_va#{@unique_counter += 1}"
+      
+      puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ) " + 
+                        " (#{vpnd2} #{$VPNd2TYPE}) " +
+                        " (#{virtual_address} BitVec[64]))"
 
       instruction_object = Instruction.new
       instruction_object.tagset = tagset
       instruction_object.vpnd2 = vpnd2
+      instruction_object.virtual_address = virtual_address
+      
+      # vpnd2 is bits of virtual_address
+      puts ":assumption"
+      puts "(= #{getVPNdiv2 virtual_address} #{vpnd2})"
+      
+      # разных vpn'в не более количества строк TLB, но для маленьких экспериментов это всегда верно
+  
+      #если совпадают vpn, то совпадают pfn
+      if microTLBSituation != "mtlbMiss"
+        previous_objects.each{|o|
+            puts ":assumption"
+            puts "(implies (and (= #{vpnd2} #{o.vpnd2}) " +
+            "(= #{getOddBit virtual_address} #{getOddBit o.virtual_address} )) "
+            puts "(= #{o.tagset} #{tagset}))"
+        }
+      end
 
       # разных vpn'в не более количества строк TLB, но для маленьких экспериментов это всегда верно
   
       # сделать ограничения для cacheTS >< microTLBS и выдать их на out
       puts ":assumption"
       send("#{cacheTestSituation}_#{microTLBSituation}", previous_objects, instruction_object)
+      
+      @l1Hits << instruction_object if cacheTestSituation == "l1Hit"
+      @mtlbHits << instruction_object if microTLBSituation == "mtlbHit"
+      
+      vpn_pfn instruction_object
       
       @instruction_objects.merge!( {memory.parent.parent => instruction_object} )
       previous_objects << instruction_object
