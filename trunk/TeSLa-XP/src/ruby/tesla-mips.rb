@@ -449,6 +449,44 @@ def constraintsfrom_StoreMemory( operator, full_context )
   
   @memory_accesses << ma
 end
+
+  def l1_useful( lambda, previous_instructions, current_instruction, relation )
+          puts "(= bv#{lambda}[#{$TAGSETLEN}] #{current_instruction.tagset}) "
+          puts "(#{relation} #{$L1ASSOC - @data_builder.getL1Position(lambda)} (+ 0 "
+              previous_instructions.collect{|i|
+                  if @l1Hits.include?(i)
+                    "(and " +
+                      @data_builder.getL1Tail(lambda).collect{|t| "bv#{t}[#{$TAGSETLEN}]"}.isin_s(i.tagset) +
+                      previous_instructions.first(previous_instructions.index(i)).collect{|ii| ii.tagset}.notisin_s(i.tagset) +
+                    ")"
+                  else
+                    "(= #{getRegion i.tagset} #{getRegion current_instruction.tagset})"
+                  end
+              }.each{|f| puts "(ite #{f} 1 0)"}
+          puts "))"
+  end
+
+  def mtlb_useful( lambda, previous_instructions, current_instruction, relation )
+        puts "(= bv#{lambda}[#{$VPNdiv2LEN}] #{current_instruction.vpnd2}) "
+        if relation == ">=" && @data_builder.getMTLBPosition(lambda) > $TLBASSOC - previous_instructions.length + @mtlbHits.length \
+          || relation == "<" && @data_builder.getMTLBPosition(lambda) <= $TLBASSOC - previous_instructions.length
+          puts "false"
+        elsif relation == ">=" && @data_builder.getMTLBPosition(lambda) <= $TLBASSOC - previous_instructions.length \
+          || relation == "<" && @data_builder.getMTLBPosition(lambda) > $TLBASSOC - previous_instructions.length + @mtlbHits.length
+          #nothing
+        else
+          puts "(#{relation} #{$TLBASSOC - @data_builder.getMTLBPosition(lambda) - previous_instructions.length + @mtlbHits.length} (+ 0 "
+              @mtlbHits.collect{|i|
+                    "(and " +
+                      @data_builder.getMTLBTail(lambda).collect{|t| "bv#{t}[#{$VPNdiv2LEN}]"}.isin_s(i.vpnd2) +
+                      previous_instructions.first(previous_instructions.index(i)).collect{|ii| ii.vpnd2}.notisin_s(i.vpnd2) +
+                    ")"
+              }.each{|f| puts "(ite #{f} 1 0)"}
+          puts "))"
+        end
+  end
+
+
 end
 
 
@@ -815,42 +853,6 @@ class MIPS_CombinedSolver < MIPS_Solver
   end
 
 
-  def l1_useful( lambda, previous_instructions, current_instruction, relation )
-          puts "(= bv#{lambda}[#{$TAGSETLEN}] #{current_instruction.tagset}) "
-          puts "(#{relation} #{$L1ASSOC - @data_builder.getL1Position(lambda)} (+ 0 "
-              previous_instructions.collect{|i|
-                  if @l1Hits.include?(i)
-                    "(and " +
-                      @data_builder.getL1Tail(lambda).collect{|t| "bv#{t}[#{$TAGSETLEN}]"}.isin_s(i.tagset) +
-                      previous_instructions.first(previous_instructions.index(i)).collect{|ii| ii.tagset}.notisin_s(i.tagset) +
-                    ")"
-                  else
-                    "(= #{getRegion i.tagset} #{getRegion current_instruction.tagset})"
-                  end
-              }.each{|f| puts "(ite #{f} 1 0)"}
-          puts "))"
-  end
-
-  def mtlb_useful( lambda, previous_instructions, current_instruction, relation )
-        puts "(= bv#{lambda}[#{$VPNdiv2LEN}] #{current_instruction.vpnd2}) "
-        if relation == ">=" && @data_builder.getMTLBPosition(lambda) > $TLBASSOC - previous_instructions.length + @mtlbHits.length \
-          || relation == "<" && @data_builder.getMTLBPosition(lambda) <= $TLBASSOC - previous_instructions.length
-          puts "false"
-        elsif relation == ">=" && @data_builder.getMTLBPosition(lambda) <= $TLBASSOC - previous_instructions.length \
-          || relation == "<" && @data_builder.getMTLBPosition(lambda) > $TLBASSOC - previous_instructions.length + @mtlbHits.length
-          #nothing
-        else
-          puts "(#{relation} #{$TLBASSOC - @data_builder.getMTLBPosition(lambda) - previous_instructions.length + @mtlbHits.length} (+ 0 "
-              @mtlbHits.collect{|i|
-                    "(and " +
-                      @data_builder.getMTLBTail(lambda).collect{|t| "bv#{t}[#{$VPNdiv2LEN}]"}.isin_s(i.vpnd2) +
-                      previous_instructions.first(previous_instructions.index(i)).collect{|ii| ii.vpnd2}.notisin_s(i.vpnd2) +
-                    ")"
-              }.each{|f| puts "(ite #{f} 1 0)"}
-          puts "))"
-        end
-  end
-
   def l1Hit_mtlbHit_part1(previous_instructions, current_instruction)
     if ! previous_instructions.empty?
       puts "(and "
@@ -1072,11 +1074,11 @@ end
 class MIPS_MirrorSolver < MIPS_Solver
 
 def l1Hit( init_tagsets, previous_tagsets, current_tagset )
-  mirror init_tagsets, previous_tagsets, current_tagset, ">"
+  mirror init_tagsets, previous_tagsets, current_tagset, ">="
 end
 
 def l1Miss( init_tagsets, previous_tagsets, current_tagset )
-  mirror init_tagsets, previous_tagsets, current_tagset, "<="
+  mirror init_tagsets, previous_tagsets, current_tagset, "<"
 end
 
 def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation )
@@ -1106,127 +1108,41 @@ def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation )
   puts ")"
 end
 
-def mtlbHit(previous_tagsets, current_tagset, virtual_address)  
-    "(or false " +
-          previous_tagsets.collect { |tagset|
-          " (= #{getPfn current_tagset} #{getPfn tagset}) " }.join +
-          
+def mtlbHit(previous_instructions, current_instruction)
+  puts "(or false "
+    previous_instructions.map{|i| i.vpnd2}.isin( current_instruction.vpnd2 )
 
-        
-    @data_builder.microtlb.
-    
-    
-    
-      pfn_name = "_pfn#{@unique_counter += 1}"
-  vpndiv2_name = "_vpn#{@unique_counter += 1}"
-  puts ":assumption"
-  puts "(let (#{pfn_name} #{getPfn( tagset )})"
-  puts "(let (#{vpn_name} #{getVPN( virtual_address )}))"
-  
-  puts "(or "
-  @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
-    if tlbline.CCA0 == "Cached"
-      puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
-          "(= #{vpn_name} bv#{tlbline.vpndiv2 * 2}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
-    end
-    if tlbline.CCA1 == "Cached"
-      puts "(and (= #{pfn_name} bv#{tlbline.pfn1}[#{$PFNLEN}])" +
-          "(= #{vpn_name} bv#{tlbline.vpndiv2 * 2 + 1}[#{$SEGBITS-$PABITS+$PFNLEN}]))"
-    end
-  }
-  puts")))"
-
-    
-      @data_builder.M.delete_if{|m|
-        delta_T = @data_builder.M.index(m) + 1
-        $TLBASSOC - delta_T - (previous_tagsets.length - @mtlbHits.length) <= 0
-      }.collect{|m|
-            "(and " +
-              "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) " +
-              "(= #{getVPNdiv2(virtual_address)} bv#{@data_builder.getVPNdiv2(m)}[#{$VPNdiv2LEN}] ) " +
-               tlb_pfn_is_not_displaced_yet(previous_tagsets, current_tagset, m) + ")"
-          }.join + 
-    
-      previous_tagsets.collect { |tagset|
-          " (= #{getPfn current_tagset} #{getPfn tagset}) " }.join + ")"
+    @data_builder.V0.each{|v|
+      puts "(and true ";mtlb_useful(v, previous_instructions, current_instruction, ">=");puts")"
+    }
+  puts")"
 end
 
-def mtlbMiss(previous_tagsets, current_tagset, virtual_address)  
-  "(and " +
-    "(or " +
-      @data_builder.PFNminusM.collect{|m|
-        "(and " +
-          "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) " +
-          "(= #{getVPNdiv2(virtual_address)} bv#{@data_builder.getVPNdiv2(m)}[#{$VPNdiv2LEN}] ) " +
-        ")"
-      }.join +
-      @data_builder.M.delete_if{|m|
-        delta_T = @data_builder.M.index(m) + 1
-        $TLBASSOC - delta_T - previous_tagsets.length >= 0
-      }.collect{|m|
-            "(and " +
-              "(= #{getPfn current_tagset} bv#{m}[#{$PFNLEN}]) " +
-              "(= #{getVPNdiv2(virtual_address)} bv#{@data_builder.getVPNdiv2(m)}[#{$VPNdiv2LEN}] ) " +
-               tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, m) + ")"
-          }.join + 
-    ")" +    
-     previous_tagsets.collect { |tagset|
-          " (= bit0 (bvcomp #{getPfn current_tagset} #{getPfn tagset})) " }.join + ")"
+def mtlbMiss(previous_instructions, current_instruction)
+  puts "(and true"
+    previous_instructions.map{|i| i.vpnd2}.notisin( current_instruction.vpnd2 )
+    puts "(or false "
+      @data_builder.notV0.map{|v| "bv#{v}[#{$VPNdiv2LEN}]"}.isin( current_instruction.vpnd2 )
+      
+      @data_builder.V0.each{|v|
+        puts "(and true ";mtlb_useful(v, previous_instructions, current_instruction, "<");puts")"
+      }      
+    puts ")"
+  puts ")"
 end
-
-def tlb_cardinality_constraint(delta_T, previous_tagsets, relation, sumlength)
-      "(#{relation} #{$TLBASSOC - delta_T - previous_tagsets.length + @mtlbHits.length} (+ 0 " +
-            (0..previous_tagsets.length-1).collect{|i| if @mtlbHits.include? previous_tagsets[i]
-            "(and " +
-                "(or " +
-                  @data_builder.M[delta_T..$TLBASSOC-1].collect{|mtail|
-                    "(= #{getPfn previous_tagsets[i]} bv#{mtail}[#{$PFNLEN}]) " }.join +
-                ")" +
-                
-                (0..i-1).collect{|i1|
-                "(= bit0 (bvcomp #{getPfn previous_tagsets[i]} #{getPfn previous_tagsets[i1]} )) " }.join +
-            ")"
-          end }.compact.collect{|f| " (ite #{f} 1 0)"}.join +                     
-      "))"  
-end
-
-def tlb_pfn_is_not_displaced_yet(previous_tagsets, current_tagset, m)
-  delta_T = @data_builder.M.index(m) + 1
-  
-  if $TLBASSOC - delta_T - previous_tagsets.length > 0
-    "" #(and X true) === (and X "")
-  elsif $TLBASSOC - delta_T - (previous_tagsets.length - @mtlbHits.length) <= 0
-    " false "
-  else
-    tlb_cardinality_constraint(delta_T, previous_tagsets, ">=",\
-      (Math.log(@mtlbHits.length + 1) / Math.log(2)).ceil )
-  end
-end
-
-def tlb_pfn_is_displaced_already(previous_tagsets, current_tagset, m)
-  delta_T = @data_builder.M.index(m) + 1
-  mtlbmissc = previous_tagsets.length - @mtlbHits.length
-  
-  if $TLBASSOC - delta_T - mtlbmissc <= -1
-    " "
-  elsif $TLBASSOC - delta_T - previous_tagsets.length >= 0
-    " false "
-  else
-    tlb_cardinality_constraint(delta_T, previous_tagsets, "<",\
-      (Math.log(@mtlbHits.length + 1) / Math.log(2)).ceil  )
-  end
-end
-
 
 def procedures_preparations doc
-  @mtlbHits = []
+  raise "Please define initlength" if $initlength.nil? || $initlength == 0
+  
+  previous_objects = []
   previous_tagsets = []
+  @mtlbHits = []
   
   init_tagsets = Array.new($initlength){"_its#{@unique_counter += 1}"}
-  init_tagsets.each{|t| puts ":extrafuns (( #{t} #{$TAGSETTYPE} ))" }
-#  puts ":assumption"
-#  puts "(distinct #{init_tagsets.join(' ')})"
-  init_tagsets.distinct
+  puts ":extrafuns(" + init_tagsets.map{|t| "( #{t} #{$TAGSETTYPE} )" }.join + ")"
+  puts ":assumption"
+  puts "(distinct #{init_tagsets.join(' ')})"
+#  init_tagsets.distinct
   
   @instruction_objects = Hash.new 
   doc.elements.each('template/instruction/situation/memory'){ |memory|
@@ -1235,20 +1151,46 @@ def procedures_preparations doc
       
     # ввести переменную для этой тестовой ситуации и записать ее в SMT-LIB
     tagset = "_ts#{@unique_counter += 1}"
+    vpnd2 = "_vpnd#{@unique_counter += 1}"
     virtual_address = "_va#{@unique_counter += 1}"
-    puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ) (#{virtual_address} BitVec[64]))"
-     
-    @mtlbHits << tagset if microTLBSituation == "mtlbHit"
+    puts ":extrafuns (( #{tagset} #{$TAGSETTYPE} ) " + 
+         "(#{virtual_address} BitVec[64])" +
+         "(#{vpnd2} #{$VPNd2TYPE}))"
+         
+    instruction_object = Instruction.new
+    instruction_object.tagset = tagset
+    instruction_object.vpnd2 = vpnd2
+    instruction_object.virtual_address = virtual_address
+
+    
+    # vpnd2 is bits of virtual_address
+    puts ":assumption"
+    puts "(= #{getVPNdiv2 virtual_address} #{vpnd2})"
+    
+    # разных vpn'в не более количества строк TLB, но для маленьких экспериментов это всегда верно
+
+    #каждый init_vpnd2 не может быть одновременно использован с разными oddbit
+    #если совпадают vpn, то совпадают pfn
+      if microTLBSituation != "mtlbMiss"
+        previous_objects.each{|o|
+            puts ":assumption"
+            puts "(implies (and (= #{vpnd2} #{o.vpnd2}) " +
+            "(= #{getOddBit virtual_address} #{getOddBit o.virtual_address} )) "
+            puts "(= #{o.tagset} #{tagset}))"
+        }
+      end
+    
+    # сделать ограничения для cacheTS >< microTLBS и выдать их на out
     puts ":assumption"
     send(cacheTestSituation, init_tagsets, previous_tagsets, tagset)
     puts ":assumption"
-    puts send(microTLBSituation, previous_tagsets, tagset, virtual_address)
+    send(microTLBSituation, previous_objects, instruction_object )
+    
+    @instruction_objects.merge!( {memory.parent.parent => instruction_object} )
+    previous_objects << instruction_object
     previous_tagsets << tagset
     
-    instruction_object = Instruction.new
-    instruction_object.tagset = tagset
-    instruction_object.virtual_address = virtual_address
-    @instruction_objects.merge!( {memory.parent.parent => instruction_object} )
+    @mtlbHits << instruction_object if microTLBSituation == "mtlbHit"
   }
 end
 
@@ -1314,12 +1256,14 @@ def procedures_preparations doc
 
     #каждый init_vpnd2 не может быть одновременно использован с разными oddbit
     #если совпадают vpn, то совпадают pfn
-    previous_objects.each{|o|
-        puts ":assumption"
-        puts "(implies (= #{vpnd2} #{o.vpnd2}) " +
-        "(and (= #{getOddBit virtual_address} #{getOddBit o.virtual_address} ) " +
-        "(= #{o.tagset} #{tagset})))" # упрощено для случая fullmirror
-    }
+    if microTLBSituation != "mtlbMiss"
+      previous_objects.each{|o|
+          puts ":assumption"
+          puts "(implies (= #{vpnd2} #{o.vpnd2}) " +
+          "(and (= #{getOddBit virtual_address} #{getOddBit o.virtual_address} ) " +
+          "(= #{o.tagset} #{tagset})))" # упрощено для случая fullmirror
+      }
+    end
     
     # сделать ограничения для cacheTS >< microTLBS и выдать их на out
     puts ":assumption"
