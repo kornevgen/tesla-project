@@ -1265,7 +1265,7 @@ def mtlbMiss( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
     (init_vpnd2s + previous_vpnd2s).
       first(init_vpnd2s.length + previous_vpnd2s.length-$TLBASSOC+1).
         isin(current_vpnd2)
-    (init_vpnd2s + previous_vpnd2s).last($TLBASSOC-1).notisin(current_vpnd2)
+    previous_vpnd2s.last($TLBASSOC-1).notisin(current_vpnd2)
   puts ")"
 end
 
@@ -1282,16 +1282,16 @@ def procedures_preparations doc
   previous_vpnd2s = []
   
   init_tagsets = Array.new($initlength){"_its#{@unique_counter += 1}"}
-  init_tagsets.each{|t| puts ":extrafuns (( #{t} #{$TAGSETTYPE} ))" }
-#  puts ":assumption"
-#  puts "(distinct #{init_tagsets.join(' ')})"
-  init_tagsets.distinct
+  puts ":extrafuns(" + init_tagsets.map{|t| "( #{t} #{$TAGSETTYPE} )" }.join + ")"
+  puts ":assumption"
+  puts "(distinct #{init_tagsets.join(' ')})"
+#  init_tagsets.distinct
   
   init_vpnd2s = Array.new($initlength_mtlb){"_ivpnd#{@unique_counter += 1}"}
-  init_vpnd2s.each{|t| puts ":extrafuns (( #{t} #{$VPNd2TYPE} ))" }
-#  puts ":assumption"
-#  puts "(distinct #{init_vpnd2s.join(' ')})"
-  init_vpnd2s.distinct
+  puts ":extrafuns(" + init_vpnd2s.map{|t| "( #{t} #{$VPNd2TYPE} )" }.join + ")"
+  puts ":assumption"
+  puts "(distinct #{init_vpnd2s.join(' ')})"
+#  init_vpnd2s.distinct
   
   @instruction_objects = Hash.new 
   doc.elements.each('template/instruction/situation/memory'){ |memory|
@@ -1317,10 +1317,8 @@ def procedures_preparations doc
     previous_objects.each{|o|
         puts ":assumption"
         puts "(implies (= #{vpnd2} #{o.vpnd2}) " +
-        "(ite (= #{getOddBit virtual_address} #{getOddBit o.virtual_address} ) "
-        puts "(= #{o.tagset} #{tagset}) " +
-          init_vpnd2s.inject("(and true "){|s, v| s+"(= bit0 (bvcomp #{v} #{vpnd2}))" } + " )" +
-        "))"
+        "(and (= #{getOddBit virtual_address} #{getOddBit o.virtual_address} ) " +
+        "(= #{o.tagset} #{tagset})))" # упрощено для случая fullmirror
     }
     
     # сделать ограничения для cacheTS >< microTLBS и выдать их на out
