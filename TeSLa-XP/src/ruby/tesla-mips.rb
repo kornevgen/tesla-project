@@ -243,6 +243,31 @@ class Array
   end
 end
 
+class String
+  def isin(t)
+    t.isin self
+  end
+  
+  def isin_s(t)
+    t.isin_s self
+  end
+  
+  def notisin_s(t)
+    t.notisin_s self
+  end
+  
+  def notisin(t)
+    t.notisin self
+  end
+  
+  def pfn
+    "(extract[30:7] #{self})"
+  end
+
+  def region
+    "(extract[6:0] #{self})"
+  end
+end
 
 =begin
   класс содержит процедуры для MIPS, но не содержит способа генерации ограничений
@@ -256,11 +281,11 @@ def solve2 template_file, data_file
 end
 
 def getPfn(tagset)
-  "(extract[30:7] #{tagset})"
+  tagset.pfn
 end
 
 def getRegion(tagset)
-  "(extract[6:0] #{tagset})"
+  tagset.region
 end
 
 def getVPNdiv2(virtual_address)
@@ -1081,28 +1106,34 @@ def l1Miss( init_tagsets, previous_tagsets, current_tagset )
   mirror init_tagsets, previous_tagsets, current_tagset, "<="
 end
 
-def mirror( init_tagsets, previous_tagsets, current_tagset, mirrrelation )
+# x is current tag
+# _T is a list of initial tags
+def mirror( _T, previous_tagsets, x, mirrrelation )
   puts "(and "
-    puts "(or "
-          (init_tagsets + previous_tagsets).each{|t|
-              puts "(= #{t} #{current_tagset})"  }
-    puts ")"
+    x.isin _T
     
     puts "(#{mirrrelation} #{$L1ASSOC} (+ "
-          init_tagsets.inject([]){|xs,t|
+          _T.inject([]){|xs,t|
                 puts "(ite (and "
-                xs.isin(current_tagset)
-                previous_tagsets.notisin(current_tagset)
-                puts "(= #{getRegion current_tagset} #{getRegion t})"
+                x.isin xs # это упрощение x ~isin {t_i,...,t_m,x_1,...,x_n} 
+                x.notisin previous_tagsets
+                puts "(= #{x.region} #{t.region})"
                 puts ") 1 0)"
                 xs + [t]
           }
-          previous_tagsets.inject(previous_tagsets){|xs,t|
+          t1 = _T
+          t2 = previous_tagsets
+          previous_tagsets.each{|x_i|
                 puts "(ite (and "
-                xs.notisin(current_tagset)
-                puts "(= #{getRegion current_tagset} #{getRegion t})"
+                x.notisin t2
+                puts "(= #{x.region} #{x_i.region})"
+                t1.reverse.each{|t_i|
+                  puts "(and (= bit0 (bvcomp #{x_i} #{t_i})) (or (= #{x} #{t_i}) "                
+                }
+                puts "false" + ")" * (2*t1.length)
                 puts ") 1 0)"
-                xs.last(xs.length-1)
+                t1 = t1 + [t2[0]] if t2.length > 0
+                t2 = t2[1..t2.length-1] if t2.length > 0
           }
     puts "))"
   puts ")"
@@ -1198,16 +1229,55 @@ end
 
 class MIPS_FullMirrorSolver < MIPS_MirrorSolver
 
+#def mtlbHit( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
+#  (init_vpnd2s + previous_vpnd2s).last($TLBASSOC).isin(current_vpnd2)
+#end
+#
+#def mtlbMiss( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
+#  puts "(and "
+#    (init_vpnd2s + previous_vpnd2s).
+#      first(init_vpnd2s.length + previous_vpnd2s.length-$TLBASSOC).
+#        isin(current_vpnd2)
+#    previous_vpnd2s.last($TLBASSOC).notisin(current_vpnd2)
+#  puts ")"
+#end
+
 def mtlbHit( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
-  (init_vpnd2s + previous_vpnd2s).last($TLBASSOC).isin(current_vpnd2)
+  tmirror init_vpnd2s, previous_vpnd2s, current_vpnd2, ">"
 end
 
 def mtlbMiss( init_vpnd2s, previous_vpnd2s, current_vpnd2 )
+  tmirror init_vpnd2s, previous_vpnd2s, current_vpnd2, "<="
+end
+
+# x is current tag
+# _T is a list of initial tags
+def tmirror( _T, previous_tagsets, x, mirrrelation )
   puts "(and "
-    (init_vpnd2s + previous_vpnd2s).
-      first(init_vpnd2s.length + previous_vpnd2s.length-$TLBASSOC).
-        isin(current_vpnd2)
-    previous_vpnd2s.last($TLBASSOC).notisin(current_vpnd2)
+    x.isin _T
+    
+    puts "(#{mirrrelation} #{$TLBASSOC} (+ "
+          _T.inject([]){|xs,t|
+                puts "(ite (and "
+                x.isin xs # это упрощение x ~isin {t_i,...,t_m,x_1,...,x_n} 
+                x.notisin previous_tagsets
+                puts ") 1 0)"
+                xs + [t]
+          }
+          t1 = _T
+          t2 = previous_tagsets
+          previous_tagsets.each{|x_i|
+                puts "(ite (and "
+                x.notisin t2
+                t1.reverse.each{|t_i|
+                  puts "(and (= bit0 (bvcomp #{x_i} #{t_i})) (or (= #{x} #{t_i}) "                
+                }
+                puts "false" + ")" * (2*t1.length)
+                puts ") 1 0)"
+                t1 = t1 + [t2[0]] if t2.length > 0
+                t2 = t2[1..t2.length-1] if t2.length > 0
+          }
+    puts "))"
   puts ")"
 end
 
