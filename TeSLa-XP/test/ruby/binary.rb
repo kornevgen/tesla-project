@@ -1,5 +1,3 @@
-N = (ARGV[0]||"4").to_i
-
 require "rexml/document"
 
 $LOAD_PATH << "C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
@@ -8,6 +6,10 @@ require "tesla.rb"
 require "tesla-mips.rb"
 
 mirror_solver = MIPS_MirrorSolver.new
+
+[4, 8].each{|l1assoc| $L1ASSOC = l1assoc
+(2..$L1ASSOC).each{|N|
+
 i = 0
 ALL = Array.new(2*N){|aLL_index| "x#{aLL_index}" }
 Ins1 = Array.new(N){ ["LW", "SB"] }.flatten
@@ -18,7 +20,7 @@ histogram = Hash.new
   histogram.merge!({t => 0})
 }
 
-10000.times{
+1500.times{
 
 xs = Array.new(ALL.length){ ALL[rand(ALL.length)]}
 
@@ -70,28 +72,9 @@ File.new(data_file, "w")
 File.open(data_file, "w"){|f|
   f.puts "<data>"
   
-  f.puts "<cache level='1' mode='DATA'>"
-  (0..2**7-1).each{|set|
-    f.puts "<set value='#{set}'>"
-    tags = Array.new
-      (1..4).each{|tagn|
-          begin
-            tag = rand(2**24)
-          end until ! tags.include? tag
-          tags << tag
-          f.puts "<tag value='#{tag}' />"
-      }
-    f.puts "</set>"
-  }
-  f.puts "</cache>"
-  
   f.puts "<tlb>"
-  # content
-  f.puts "<content>"
   vpns = []
-  lines0 = []
-  lines1 = []
-  48.times{
+  44.times{
     begin
       vpn = rand(2**18)
     end while vpns.include?(vpn)    
@@ -100,37 +83,47 @@ File.open(data_file, "w"){|f|
     f.puts "<line range='0' vpndiv2='#{vpn}' mask='0'" +
            " pfn0='#{(p0 = rand(2**$PFNLEN))}' CCA0='Cached'" + 
            " pfn1='#{(p1 = rand(2**$PFNLEN))}' CCA1='Cached' />"
-           
-    lines0 << p0 if lines0.length < 4
-    lines1 << p1 if lines1.length < 4
   }
-  f.puts "</content>"
+  f.puts "</tlb>"
   
   # microtlb
   f.puts "<microtlb>"
-  (lines0 + lines1).each{|iii| f.puts "<pfn value='#{iii}' />" }
+  $TLBASSOC.times{
+    begin
+      vpn = rand(2**18)
+    end while vpns.include?(vpn)    
+    vpns << vpn
+    
+    f.puts "<line range='0' vpndiv2='#{vpn}' mask='0'" +
+           " pfn0='#{(p0 = rand(2**$PFNLEN))}' CCA0='Cached'" + 
+           " pfn1='#{(p1 = rand(2**$PFNLEN))}' CCA1='Cached' />"
+  }
   f.puts "</microtlb>"
-  
-  f.puts "</tlb>"
   
   f.puts "</data>"
 }
 
 # пробуем максимальное значение $initlength
-$initlength = ALL.length/2 * $L1ASSOC + ins2.select{|ii| ii == "l1Hit"}.length
+$initlength = N * $L1ASSOC + ins2.select{|ii| ii == "l1Miss"}.length
 f1 = Runner.new.run( mirror_solver, i, template_file, data_file )
-next if f1.include?("unsat") || f1.include?("timeout")
+raise "Full Timeout" if f1.include?("timeout")
+next if f1.include?("unsat")
 
 # начинаем искать минимальный initlength
 max = $initlength
-min = 1
+if ins2.select{|ii| ii == "l1Miss"}.length == 0
+	min = 1
+else
+	min = 1 + $L1ASSOC
+end
 puts "initlength : #{min} .. #{max}"
 
 while max >= min
   $initlength = (max + min)/2
   puts "initlength = #{$initlength}:"
   f1 = Runner.new.run( mirror_solver, i, template_file, data_file )
-  if f1.include?("unsat") || f1.include?("timeout")
+  raise "Full Timeout" if f1.include?("timeout")
+  if f1.include?("unsat")
     min = $initlength + 1
   else
     max = $initlength - 1
@@ -142,4 +135,9 @@ histogram.merge!({min => histogram[min]+1})
 histogram.each{|length, count| puts "#{length} => #{count} раз" } if i % 3 == 0
 
 }
-histogram.each{|length, count| puts "#{length} => #{count} раз" }
+
+File.new("D:/histogrammN#{N}W#{$L1ASSOC}.txt", "w")
+File.open("D:/histogrammN#{N}W#{$L1ASSOC}.txt", "w"){|f|
+histogram.each{|length, count| f.puts "#{length} => #{count} раз" } }
+
+}}
