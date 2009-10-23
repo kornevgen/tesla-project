@@ -1223,6 +1223,13 @@ def procedures_preparations doc
     
     @mtlbHits << instruction_object if microTLBSituation == "mtlbHit"
   }
+  
+  @pairs.each{|p| puts ":assumption";puts "(= bit0 (bvcomp #{previous_tagsets[p[0]].region} #{previous_tagsets[p[1]].region}))" }
+end
+
+def solve3(template_file, data_file, pairs )
+  @pairs = pairs || []
+  solve2(template_file, data_file)
 end
 
 end
