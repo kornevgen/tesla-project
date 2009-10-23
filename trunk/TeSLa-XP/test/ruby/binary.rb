@@ -1,19 +1,21 @@
 require "rexml/document"
 
-$LOAD_PATH << "C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
+$LOAD_PATH << "C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\TeSLa-XP\\src\\ruby"
 
 require "tesla.rb"
 require "tesla-mips.rb"
 
 mirror_solver = MIPS_MirrorSolver.new
 
-[4, 8].each{|l1assoc| $L1ASSOC = l1assoc
-(2..$L1ASSOC).each{|N|
+[4,8].each{|l1assoc|
+$L1ASSOC = l1assoc
+$TLBASSOC = l1assoc
+(2..$L1ASSOC).each{|n|
 
 i = 0
-ALL = Array.new(2*N){|aLL_index| "x#{aLL_index}" }
-Ins1 = Array.new(N){ ["LW", "SB"] }.flatten
-Ins4 = Array.new(N) { ["load", "store"] }.flatten
+ALL = Array.new(2*n){|aLL_index| "x#{aLL_index}" }
+Ins1 = Array.new(n){ ["LW", "SB"] }.flatten
+Ins4 = Array.new(n) { ["load", "store"] }.flatten
 
 histogram = Hash.new
 (1 .. ALL.length * ($L1ASSOC + 1)/2 ).each{|t|
@@ -24,8 +26,8 @@ histogram = Hash.new
 
 xs = Array.new(ALL.length){ ALL[rand(ALL.length)]}
 
-ins2 = Array.new(N){ ["l1Hit", "l1Miss"][rand(2)] }
-ins3 = Array.new(N){ ["mtlbHit", "mtlbMiss"][rand(2)] }
+ins2 = Array.new(n){ ["l1Hit", "l1Miss"][rand(2)] }
+ins3 = Array.new(n){ ["mtlbHit", "mtlbMiss"][rand(2)] }
 
 i += 1
 
@@ -48,7 +50,7 @@ f.puts('<constant id="c" length="16" />')
 #  </instruction>
 
 
-(0..N-1).each{|ins|
+(0..n-1).each{|ins|
   f.puts("<instruction name='#{Ins1[ins]}'>")
   f.puts("<argument>#{xs[2*ins]}</argument>")
   f.puts("<argument>#{xs[2*ins+1]}</argument>")
@@ -104,9 +106,16 @@ File.open(data_file, "w"){|f|
 }
 
 # пробуем максимальное значение $initlength
-$initlength = N * $L1ASSOC + ins2.select{|ii| ii == "l1Miss"}.length
-f1 = Runner.new.run( mirror_solver, i, template_file, data_file )
-raise "Full Timeout" if f1.include?("timeout")
+$initlength = n * $L1ASSOC + ins2.select{|ii| ii == "l1Miss"}.length
+pairs = []
+(0..n-2).each{|f|
+    (f+1..n-1).each{|s|
+        pairs << [f,s] if rand(4) == 0
+    }
+}
+f1 = Runner.new.run( mirror_solver, i, template_file, data_file, pairs )
+#raise "Full Timeout" if f1.include?("timeout")
+next if f1.include?("timeout")
 next if f1.include?("unsat")
 
 # начинаем искать минимальный initlength
@@ -121,8 +130,9 @@ puts "initlength : #{min} .. #{max}"
 while max >= min
   $initlength = (max + min)/2
   puts "initlength = #{$initlength}:"
-  f1 = Runner.new.run( mirror_solver, i, template_file, data_file )
-  raise "Full Timeout" if f1.include?("timeout")
+  f1 = Runner.new.run( mirror_solver, i, template_file, data_file, pairs )
+  next if f1.include?("timeout")
+  #raise "Full Timeout" if f1.include?("timeout")
   if f1.include?("unsat")
     min = $initlength + 1
   else
@@ -132,12 +142,12 @@ end
 histogram.merge!({min => histogram[min]+1})
 
 
-histogram.each{|length, count| puts "#{length} => #{count} раз" } if i % 3 == 0
+histogram.each{|length, count| puts "#{length} => #{count} раз" if count > 0 } if i % 3 == 0
 
 }
 
-File.new("D:/histogrammN#{N}W#{$L1ASSOC}.txt", "w")
-File.open("D:/histogrammN#{N}W#{$L1ASSOC}.txt", "w"){|f|
-histogram.each{|length, count| f.puts "#{length} => #{count} раз" } }
+File.new("E:/histogrammN#{n}W#{$L1ASSOC}.txt", "w")
+File.open("E:/histogrammN#{n}W#{$L1ASSOC}.txt", "w"){|f|
+histogram.each{|length, count| f.puts "#{length} => #{count} раз" if count > 0 } }
 
 }}
