@@ -1,6 +1,8 @@
 package com.unitesk.testfusion.core.tesla;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import javax.script.ScriptContext;
@@ -18,9 +20,6 @@ import com.unitesk.testfusion.core.model.Instruction;
 import com.unitesk.testfusion.core.model.Operand;
 import com.unitesk.testfusion.core.model.Program;
 import com.unitesk.testfusion.core.model.register.Register;
-import com.unitesk.testfusion.core.model.register.Register32;
-import com.unitesk.testfusion.core.model.register.Register64;
-import com.unitesk.testfusion.core.type.OffsetType;
 
 
 public class Runner
@@ -119,7 +118,8 @@ public class Runner
 //		c.useRegister( k.getGPR(2) );
 		
 		new Runner(
-				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
+//				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
+					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
 				, 	"C:\\Program Files\\jruby-1.4.0"
 				,	"B:/"
 			).run(p, k, c);
@@ -131,13 +131,17 @@ public class Runner
 		StringBuffer xml = new StringBuffer("<template>");
 		
 		Set<Register> viewedRegs = new HashSet<Register>();
+		Map<Operand, String> names = new HashMap<Operand, String>();
 		
 		//TODO имена придумать самому!
 		
 		//TODO инструкции и допущения
+		int number = 0;
 		for( int i = 0; i < template.countInstruction(); i++ )
 		{
 			Instruction instr = template.getInstruction(i);
+			StringBuffer args = new StringBuffer();
+			
 			// добавить новые аргументы
 			for( int j = 0; j < instr.countOperand(); j++ )
 			{
@@ -148,33 +152,42 @@ public class Runner
 						throw new IllegalArgumentException("only GPR is supported");
 					
 					GPR r = (GPR)arg.getRegister();
-					int length;
-					if (arg.getRegister() instanceof Register32)
-						length = 32;
-					else if ( arg.getRegister() instanceof Register64 )
-						length = 64;
-					else
-						throw new IllegalArgumentException("only 32-bits or 64-bits registers are supported");
-					
 					if ( ! viewedRegs.contains(r) )
 					{
-						xml.append("<register name='reg" + r.getNumber() + "' length='" + length + "'/>");
+						String name = "reg" + r.getNumber();
+						int length = arg.getContentType().getWidth();
+						xml.append("<register name='" + name + "' length='" + length + "'/>");
 						viewedRegs.add(r);
-					}					
+						names.put(arg, name);
+						args.append("<argument name='" + name + "'/>");
+					}
+					else
+					{
+						names.put(arg, names.get(r));
+						args.append("<argument name='" + names.get(r) + "'/>");
+					}
 				}
 				else if ( arg.isImmediate() )
 				{
-					int length; //TODO = ???
-					if ( ! viewedImms.contains(arg) )
-					{
-						xml.append("<constant name='" + arg + "' length='" + length + "'/>");
-						viewedRegs.add(r);
-					}
+					String name = "of" + (number++);
+					int length = arg.getContentType().getWidth(); 
+					xml.append("<constant name='" + name + "' length='" + length + "'/>");
+					names.put(arg, name);
+					args.append("<argument name='" + name + "'/>");
 				}
 				else
-					throw new IllegalArgumentException();
-				
+					throw new IllegalArgumentException();				
 			}
+			
+			//TODO translate instruction
+			xml.append("<instruction name='" + instr.getName() + "'>" ).append(args);
+			xml.append("<situation><branch name='" + instr.getSituation().getName() + "'/>");
+			xml.append("<access>");
+			xml.append("<cache level='1' type='DATA' id='" + instr.getSituation().??? + "' />");
+			//TODO 1. как вытащить тестовую ситуацию на кэш?
+			//TODO 2. почему-то регистр reg0 стал 32х-разрядным...
+			
+			//TODO translate dependencies
 		}
 		
 		return xml.append("</template>").toString();
