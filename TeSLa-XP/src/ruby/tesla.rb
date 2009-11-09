@@ -86,7 +86,7 @@ def process_instruction(instruction)
   @instruction = instruction
   
   #TODO ввести поддержку композиции ветвей
-  path = instruction.attributes['name'] +
+  path = $instructionsPath + instruction.attributes['name'] +
   "/" + instruction.elements['situation'].elements['branch'].attributes['name'] + ".xml"
   test_situation = REXML::Document.new File.new(path)  
 
@@ -207,10 +207,10 @@ def length_BYTE
   8
 end
 
-def solve template_file
-  template = File.new template_file
+def solve template
+#  template = File.new template_file
   
-  raise "file not found: #{template_file}" if template.nil?
+  raise "file not found: #{template}" if template.nil?
   
   @unique_counter = 0
   @memory_accesses = []

@@ -31,9 +31,9 @@ end
 
 class DataBuilder
   
-  def initialize(data_file)
+  def initialize(data)
     @tagsets = Hash.new
-    dataxml = REXML::Document.new File.new(data_file)
+    dataxml = REXML::Document.new data #File.new(data_file)
     dataxml.elements.each("data/cache/set"){ |set|
         set.elements.each_with_index{ |tag,delta|
               tagvalue = tag.attributes["value"]
@@ -195,16 +195,19 @@ class MemoryAccess
   attr_accessor :data
 end
 
-$TAGSETLEN = 31
-$PFNLEN = 24
+params = [$TAGSETLEN, $PFNLEN, $TAGLEN, $L1ASSOC, $TLBASSOC, $SEGBITS, $PABITS, $MASK]
+raise "Not all parameters are assigned (#{params.compact.length} #{params.length} )" if params.compact.length != params.length
+
+#$TAGSETLEN = 31
+#$PFNLEN = 24
+#$TAGLEN = $PFNLEN
+#$L1ASSOC = 4
+#$TLBASSOC = 4
+#$SEGBITS = 40
+#$PABITS = 36
+#$MASK = 0
 $SETLEN = $TAGSETLEN - $PFNLEN
-$TAGLEN = $PFNLEN
 $TAGSETTYPE = "BitVec[#{$TAGSETLEN}]"
-$L1ASSOC = 4
-$TLBASSOC = 4
-$SEGBITS = 40
-$PABITS = 36
-$MASK = 0
 $VPNdiv2LEN = $SEGBITS - $PABITS + $PFNLEN - 1
 $VPNd2TYPE = "BitVec[#{$VPNdiv2LEN}]"
 
@@ -275,9 +278,9 @@ end
 =end
 class MIPS_Solver < Solver
   
-def solve2 template_file, data_file
-    @data_builder = DataBuilder.new data_file
-    solve template_file
+def solve2 template, data
+    @data_builder = DataBuilder.new data
+    solve template
 end
 
 def getPfn(tagset)
@@ -1227,9 +1230,9 @@ def procedures_preparations doc
   @pairs.each{|p| puts ":assumption";puts "(= bit0 (bvcomp #{previous_tagsets[p[0]].region} #{previous_tagsets[p[1]].region}))" }
 end
 
-def solve3(template_file, data_file, pairs )
+def solve3(template, data, pairs )
   @pairs = pairs || []
-  solve2(template_file, data_file)
+  solve2(template, data)
 end
 
 end
