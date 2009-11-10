@@ -379,6 +379,7 @@ end
 
 def constraintsfrom_AddressTranslation( operator, full_context )
   ins_object = @instruction_objects[@instruction]
+  raise "!!! (#{@instruction}) [[#{@instruction_objects.keys.join('+++')}]])" if ins_object == nil
   tagset = ins_object.tagset
   
   virtual_address = def_localvar(operator, full_context, "virtual", 64)
@@ -831,7 +832,7 @@ def procedures_preparations doc
   @instruction_objects = Hash.new
   
   #совместная генерация не дает возможности разделить этот цикл на части по процедурам
-  doc.elements.each('template/instruction/situation/memory'){ |memory|
+  doc.elements.each('template/instruction/situation/access'){ |memory|
     cacheTestSituation = memory.elements['cache'].attributes['id']
     microTLBSituation = memory.elements['microtlb'].attributes['id']
       
@@ -1047,7 +1048,7 @@ class MIPS_CombinedSolver < MIPS_Solver
     @instruction_objects = Hash.new 
     @l1Hits = []
     @mtlbHits = []
-    doc.elements.each('template/instruction/situation/memory'){ |memory|
+    doc.elements.each('template/instruction/situation/access'){ |memory|
       cacheTestSituation = memory.elements['cache'].attributes['id']
       microTLBSituation = memory.elements['microtlb'].attributes['id']
         
@@ -1179,7 +1180,7 @@ def procedures_preparations doc
 #  init_tagsets.distinct
   
   @instruction_objects = Hash.new 
-  doc.elements.each('template/instruction/situation/memory'){ |memory|
+  doc.elements.each('template/instruction/situation/access'){ |memory|
     cacheTestSituation = memory.elements['cache'].attributes['id']
     microTLBSituation = memory.elements['microtlb'].attributes['id']
       
@@ -1316,7 +1317,7 @@ def procedures_preparations doc
 #  init_vpnd2s.distinct
   
   @instruction_objects = Hash.new 
-  doc.elements.each('template/instruction/situation/memory'){ |memory|
+  doc.elements.each('template/instruction/situation/access'){ |memory|
     cacheTestSituation = memory.elements['cache'].attributes['id']
     microTLBSituation = memory.elements['microtlb'].attributes['id']
       
