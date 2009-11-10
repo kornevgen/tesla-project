@@ -12,14 +12,19 @@ import javax.script.ScriptException;
 
 import com.unitesk.kmd64.model.GPR;
 import com.unitesk.kmd64.model.KMD64;
+import com.unitesk.kmd64.model.L1Cache;
 import com.unitesk.kmd64.model.TLB;
-import com.unitesk.kmd64.model.isa.memory.LWInstruction;
 import com.unitesk.kmd64.model.isa.memory.SBInstruction;
-import com.unitesk.testfusion.core.context.GeneratorContext;
+import com.unitesk.kmd64.model.isa.memory.situation.LWSituation;
+import com.unitesk.kmd64.model.isa.memory.situation.MemorySituation;
+import com.unitesk.kmd64.model.isa.memory.situation.SBSituation;
 import com.unitesk.testfusion.core.model.Instruction;
 import com.unitesk.testfusion.core.model.Operand;
 import com.unitesk.testfusion.core.model.Program;
 import com.unitesk.testfusion.core.model.register.Register;
+import com.unitesk.testfusion.core.model.register.Register32;
+import com.unitesk.testfusion.core.model.register.Register64;
+import com.unitesk.testfusion.demo.model.isa.memory.LWInstruction;
 
 
 public class Runner
@@ -41,7 +46,7 @@ public class Runner
 	}
 	
 	//TODO возвращать программу инициализации
-	public void run( Program template, KMD64 state, GeneratorContext genContext )
+	public void run( Program template, KMD64 state )
 	{
 		// TODO подготовить входные параметры для ruby-скрипта
 		
@@ -67,23 +72,35 @@ public class Runner
 			rubyEngine.eval("require 'tesla-mips'" , context);
 
 			rubyEngine.eval( "$instructionsPath = '" + instructions_path + "'", context );
-
-			//TODO set $initlength and $initlength_mtlb
-			rubyEngine.eval( "$initlength = 20", context );
-			rubyEngine.eval( "$initlength_mtlb = 20", context );
 			
+			//TODO идеальный вариант:
+			//	1. попробовать сгенерировать без инициализации; если получилось, ок
+			//	2. попробовать сгенерировать с максимальной инициализацией; если не получилось, ок
+			//	3. посчитать количество RowEqual и от него плясать при предложении минимальной initlength, а далее дихотомией искать вариант с минимальной инициализацией
+			// реальный вариант:
+			//	1. попробовать сгенерировать без инициализации; если получилось, ок
+			//	2. попробовать сгенерировать с максимальной инициализацией
+
 			//TODO translate to XML
 //			final String t = "<template />";
 			
 			//TODO translate to XML
-			final String d = "<data />";
+//			final String d = "<data />";
 			
 			System.out.println("template:");
 			System.out.println(getXML(template));
 			
+			//TODO set $initlength and $initlength_mtlb
+//			rubyEngine.eval( "$initlength = 20", context );
+//			rubyEngine.eval( "$initlength_mtlb = 20", context );			
+//			rubyEngine.eval(
+//					"Runner.new.run( MIPS_FullMirrorSolver.new, 0, \"" + 
+//						getXML(template) + "\", \"" + d + "\")", context );
+			
+			//TODO set $initlength and $initlength_mtlb
 			rubyEngine.eval(
-					"Runner.new.run( MIPS_FullMirrorSolver.new, 0, \"" + 
-						getXML(template) + "\", \"" + d + "\")", context );
+					"Runner.new.run( MIPS_CombinedSolver.new, 0, \"" + 
+						getXML(template) + "\", \"" + getXML(state) + "\")", context );
 			
 		} catch (ScriptException e) {
 			e.printStackTrace();
@@ -102,27 +119,23 @@ public class Runner
 		LWInstruction i1 = new LWInstruction();
 		i1.getOperand("rt").setRegister(k.getGPR(0));
 		i1.getOperand("base").setRegister(k.getGPR(1));
+		i1.setSituation(new LWSituation());
 		p.append( i1 );
 		
 		SBInstruction i2 = new SBInstruction();
 		i2.getOperand("rt").setRegister(k.getGPR(2));
 		i2.getOperand("base").setRegister(k.getGPR(0));
+		i2.setSituation(new SBSituation());
 		p.append( i2 );
 		
 //		i1.getOperand("offset").setr
 		
-		GeneratorContext c = new GeneratorContext();
-//		c.initOperandType(KMD64OperandType.GPR_REGISTER, new RegisterSet() );
-//		c.useRegister( k.getGPR(0) );
-//		c.useRegister( k.getGPR(1) );
-//		c.useRegister( k.getGPR(2) );
-		
 		new Runner(
-//				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
-					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
+				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
+//					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
 				, 	"C:\\Program Files\\jruby-1.4.0"
 				,	"B:/"
-			).run(p, k, c);
+			).run(p, k);
 		
 	}
 	
@@ -133,9 +146,7 @@ public class Runner
 		Set<Register> viewedRegs = new HashSet<Register>();
 		Map<Operand, String> names = new HashMap<Operand, String>();
 		
-		//TODO имена придумать самому!
-		
-		//TODO инструкции и допущения
+		//инструкции и допущения
 		int number = 0;
 		for( int i = 0; i < template.countInstruction(); i++ )
 		{
@@ -155,7 +166,14 @@ public class Runner
 					if ( ! viewedRegs.contains(r) )
 					{
 						String name = "reg" + r.getNumber();
-						int length = arg.getContentType().getWidth();
+						int length;// = arg.getContentType().getWidth();						
+						if ( arg.getRegister() instanceof Register32 )
+							length = 32;
+						else if ( arg.getRegister() instanceof Register64 )
+							length = 64;
+						else
+							throw new IllegalArgumentException("only 32- and 64- bits registers are supported");
+						
 						xml.append("<register name='" + name + "' length='" + length + "'/>");
 						viewedRegs.add(r);
 						names.put(arg, name);
@@ -163,8 +181,16 @@ public class Runner
 					}
 					else
 					{
-						names.put(arg, names.get(r));
-						args.append("<argument name='" + names.get(r) + "'/>");
+						String name = null;
+						for( Operand o : names.keySet() )
+						{
+							if (o.getRegister() == r)
+								name = names.get(o);
+						}
+						if ( name == null )
+							throw new IllegalStateException();
+						names.put(arg, name);
+						args.append("<argument name='" + name + "'/>");
 					}
 				}
 				else if ( arg.isImmediate() )
@@ -179,18 +205,45 @@ public class Runner
 					throw new IllegalArgumentException();				
 			}
 			
-			//TODO translate instruction
+			//translate instruction
 			xml.append("<instruction name='" + instr.getName() + "'>" ).append(args);
 			xml.append("<situation><branch name='" + instr.getSituation().getName() + "'/>");
-			xml.append("<access>");
-			xml.append("<cache level='1' type='DATA' id='" + instr.getSituation().??? + "' />");
-			//TODO 1. как вытащить тестовую ситуацию на кэш?
-			//TODO 2. почему-то регистр reg0 стал 32х-разрядным...
+			if ( instr.getSituation() instanceof MemorySituation )
+			{
+				MemorySituation situation = (MemorySituation)instr.getSituation();
+				xml.append("<access>");
+				xml.append("<cache level='1' type='DATA' id='" + (situation.l1Hit ? "l1Hit" : "l1Miss") + "' />");
+				xml.append("<microtlb type='DATA' id='" + (situation.mtlbHit ? "mtlbHit" : "mtlbMiss") + "' />");
+				xml.append("</access>");
+			}
+			xml.append("</situation></instruction>");
 			
-			//TODO translate dependencies
+			//TODO translate dependencies and assumes
 		}
 		
 		return xml.append("</template>").toString();
+	}
+
+	private String getXML( KMD64 state )
+	{
+		StringBuffer xml = new StringBuffer("<data>");
+
+		xml.append("<cache level='1' mode='DATA'>");
+		L1Cache cache = state.getL1DCache();
+		for( int row = 0; row < cache.getRowNumber(); row++ )
+		{
+			xml.append("<set value='" + row + "'>");
+			for( int s = 0; s < cache.getSectionNumber(); s++ )
+			{
+				xml.append("<tag value='" + cache.getTag(s, row) + "'/>");
+			}
+			xml.append("</set>");
+		}
+		xml.append("</data>");
+		
+		//TODO tlb
+		
+		return xml.append("</data>").toString();
 	}
 }
 

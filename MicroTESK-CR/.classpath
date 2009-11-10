@@ -2,8 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="tools/kmd64model-1.0.jar"/>
 	<classpathentry kind="lib" path="tools/microtesk-1.0.jar"/>
 	<classpathentry kind="lib" path="C:/Program Files/jruby-1.4.0/lib/jruby.jar"/>
+	<classpathentry kind="lib" path="tools/kmd64-model-1.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
