@@ -94,15 +94,16 @@ def process_instruction(instruction)
       zip(instruction.get_elements('argument')).flatten]
       
   test_situation.elements.each('//[@state="result"]'){|arg|
-       new_name = "#{@synonyms[reverse_synonyms[arg].text]}_X"
+       new_name = "#{@synonyms[reverse_synonyms[arg].attributes['name']]}_X"
        puts ":extrafuns (( #{new_name} BitVec[#{arg.attributes['length']}] ))"
   }
 
   full_context = Hash.new
   @lengths_context = Hash.new
   reverse_synonyms.each{|tsarg, insarg|
-      full_context[tsarg.attributes['name']] = @synonyms[insarg.text] +(tsarg.attributes["state"] == "result" ? "_X" : "" )
-      @lengths_context[tsarg.attributes['name']] = @varlengths[insarg.text]
+      full_context[tsarg.attributes['name']] = @synonyms[insarg.attributes['name']] +
+                        (tsarg.attributes["state"] == "result" ? "_X" : "" )
+      @lengths_context[tsarg.attributes['name']] = @varlengths[insarg.attributes['name']]
   }
   full_context.merge! @synonyms
   @lengths_context.merge! @varlengths
@@ -226,9 +227,9 @@ def solve template
   @varlengths = Hash.new
   # ввести определения регистров и констант
   doc.elements.each('template/register | template/constant') { |reg|
-      puts ":extrafuns (( #{reg.attributes['id']}_X BitVec[#{reg.attributes['length']}] ))"  
-      @synonyms[reg.attributes['id']] = "#{reg.attributes['id']}_X"
-      @varlengths[reg.attributes['id']] = reg.attributes['length'].to_i
+      puts ":extrafuns (( #{reg.attributes['name']}_X BitVec[#{reg.attributes['length']}] ))"  
+      @synonyms[reg.attributes['name']] = "#{reg.attributes['name']}_X"
+      @varlengths[reg.attributes['name']] = reg.attributes['length'].to_i
   }
   
   #TODO сделать поддержку идентификаторов инструкций
