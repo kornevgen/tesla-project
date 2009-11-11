@@ -3,6 +3,7 @@ package com.unitesk.testfusion.core.tesla;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import javax.script.ScriptContext;
@@ -14,6 +15,9 @@ import com.unitesk.kmd64.model.GPR;
 import com.unitesk.kmd64.model.KMD64;
 import com.unitesk.kmd64.model.L1Cache;
 import com.unitesk.kmd64.model.TLB;
+import com.unitesk.kmd64.model.TLB48;
+import com.unitesk.kmd64.model.TLB.Entry;
+import com.unitesk.kmd64.model.config.KMD64Generator;
 import com.unitesk.kmd64.model.isa.memory.SBInstruction;
 import com.unitesk.kmd64.model.isa.memory.situation.LWSituation;
 import com.unitesk.kmd64.model.isa.memory.situation.MemorySituation;
@@ -48,9 +52,7 @@ public class Runner
 	//TODO возвращать программу инициализации
 	public void run( Program template, KMD64 state )
 	{
-		// TODO подготовить входные параметры для ruby-скрипта
-		
-		// TODO вызвать ruby-скрипт (он вызывает Z3)
+		// вызвать ruby-скрипт (он вызывает Z3)
 		ScriptEngineManager m = new ScriptEngineManager();
 		ScriptEngine rubyEngine = m.getEngineByName("jruby");
 		System.setProperty("org.jruby.embed.class.path", jrubyHome);
@@ -81,14 +83,16 @@ public class Runner
 			//	1. попробовать сгенерировать без инициализации; если получилось, ок
 			//	2. попробовать сгенерировать с максимальной инициализацией
 
-			//TODO translate to XML
-//			final String t = "<template />";
-			
-			//TODO translate to XML
-//			final String d = "<data />";
+			// проверить, что есть только Cached><Mapped -> тогда можно использовать CombinedSolver
 			
 			System.out.println("template:");
 			System.out.println(getXML(template));
+			System.out.println();
+			
+			System.out.println("data:");
+			System.out.println(getXML(state));
+			System.out.println();
+			
 			
 			//TODO set $initlength and $initlength_mtlb
 //			rubyEngine.eval( "$initlength = 20", context );
@@ -114,19 +118,44 @@ public class Runner
 	public static void main(String[] args )
 	{
 		KMD64 k = new KMD64();
-		Program p = new Program();
+		for( int s = 0; s < k.getL1DCache().getSectionNumber(); s++ )
+		{
+			for( int r = 0; r < k.getL1DCache().getRowNumber(); r++ )
+			{
+				k.getL1DCache().setTag(s, r, new Random().nextInt(2^24));				
+			}
+		}
+		for( int ln = 0; ln < TLB48.JTLB_SIZE; ln++ )
+		{
+			k.getTLB().writeEntry(new Entry(
+					new Random().nextInt(2^27), false, 
+					true, true, 3, new Random().nextInt(2^24), 
+					true, true, 3, new Random().nextInt(2^24)), ln);
+		}
+		for( int i = 0; i < TLB48.DTLB_SIZE; i++ )
+		{
+			((TLB48)k.getTLB()).setDTLBIndex(i, i);
+		}
+		
+		KMD64Generator generator = new KMD64Generator(1, 2, "test");
+		generator.setTestSize(2);
+		generator.getTemplate().init();
 
 		LWInstruction i1 = new LWInstruction();
 		i1.getOperand("rt").setRegister(k.getGPR(0));
 		i1.getOperand("base").setRegister(k.getGPR(1));
 		i1.setSituation(new LWSituation());
-		p.append( i1 );
+		generator.getTemplate().registerInstruction(0, i1, new LWSituation());
+		//TODO нужна инициализация...
 		
-		SBInstruction i2 = new SBInstruction();
-		i2.getOperand("rt").setRegister(k.getGPR(2));
-		i2.getOperand("base").setRegister(k.getGPR(0));
-		i2.setSituation(new SBSituation());
-		p.append( i2 );
+		Program p = generator.getTemplate().value();
+
+//		p.append( i1 );
+//		SBInstruction i2 = new SBInstruction();
+//		i2.getOperand("rt").setRegister(k.getGPR(2));
+//		i2.getOperand("base").setRegister(k.getGPR(0));
+//		i2.setSituation(new SBSituation());
+//		p.append( i2 );
 		
 //		i1.getOperand("offset").setr
 		
@@ -219,6 +248,13 @@ public class Runner
 			xml.append("</situation></instruction>");
 			
 			//TODO translate dependencies and assumes
+			/**виды зависимостей:
+			 * 1) по виртуальным адресам
+			 * 2) по физическим адресам
+			 * 3) на сам адрес (на строку кэша или TLB)
+			 * 4) произвольные ограничения на параметры инструкций и строки
+			 */
+			//dependencies: template.getDependencies() -> VADependency|PADependency
 		}
 		
 		return xml.append("</template>").toString();
@@ -239,11 +275,58 @@ public class Runner
 			}
 			xml.append("</set>");
 		}
-		xml.append("</data>");
+		xml.append("</cache>");
 		
-		//TODO tlb
+		xml.append("<microtlb>");
+		TLB48 tlb = (TLB48)state.getTLB();
+		Set<Entry> microtlb = new HashSet<Entry>();
+		for( int ln = 0; ln < TLB48.DTLB_SIZE; ln++ )
+		{
+			Entry entry = tlb.getDTLBEntry(ln);
+			if (entry == null ) continue;
+			xml.append("<line range='" + entry.hi.getR() + 
+					"' vpndiv2='" + entry.hi.getVPN2() + 
+					"' mask='" + 0 +
+					//ASID is not processed yet
+					"' pfn0='" + entry.lo0.getPFN() +
+					"' CCA0='" + getCCA(entry.lo0.getC()) +
+					"' pfn1='" + entry.lo1.getPFN() +
+					"' CCA1='" + getCCA(entry.lo1.getC()) + "'/>" );
+			microtlb.add(entry);
+		}
+		xml.append("</microtlb>");
+		
+		xml.append("<tlb>");
+		for( int ln = 0; ln < TLB48.JTLB_SIZE; ln++ )
+		{
+			Entry entry = tlb.getEntry(ln);
+			if ( entry == null ) continue;
+			if ( microtlb.contains(entry) ) continue;
+			xml.append("<line range='" + entry.hi.getR() + 
+					"' vpndiv2='" + entry.hi.getVPN2() + 
+					"' mask='" + 0 + 
+					//ASID is not processed yet
+					"' pfn0='" + entry.lo0.getPFN() +
+					"' CCA0='" + getCCA(entry.lo0.getC()) +
+					"' pfn1='" + entry.lo1.getPFN() +
+					"' CCA1='" + getCCA(entry.lo1.getC()) + "'/>" );
+		}
+		xml.append("</tlb>");
 		
 		return xml.append("</data>").toString();
+	}
+	
+	private String getCCA( int attribute )
+	{
+		switch(attribute)
+		{
+		case 2:
+			return "Uncached";
+		case 3:
+			return "Cached";
+		default:
+			throw new IllegalArgumentException("unknown CCA attribute '" + attribute + "'");
+		}
 	}
 }
 
