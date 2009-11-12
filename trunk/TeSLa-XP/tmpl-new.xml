@@ -43,7 +43,8 @@
 			 при тестировании инструкций переходов BRANCH) -->
 		<argument name="x" />  <!-- аргумент допущения -->
 		<argument name="y" />
-		<argument name="z" />		<or>
+		<argument name="z" />		
+		<or>
 			<and>
 				<branch name="ff1" />
 				<branch name="ff2" />

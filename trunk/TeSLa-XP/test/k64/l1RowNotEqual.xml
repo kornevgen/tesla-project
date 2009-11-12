@@ -1,0 +1,9 @@
+<situation>
+	<argument name="p1" length="64" state="readonly" />
+	<argument name="p2" length="64" state="readonly" />
+	
+	<noteq>
+		<bits end="11" start="5"><var>p1</var></bits>
+		<bits end="11" start="5"><var>p2</var></bits>
+	</noteq>
+</situation>

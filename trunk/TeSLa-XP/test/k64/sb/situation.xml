@@ -1,0 +1,62 @@
+﻿<!--
+последовательность действий:
+1) подготовить физический адрес данных
+2) подготовить двойное слово на основе исходных данных
+	(в данном случае, из 1 байта сделать 8 байт)
+3) сохранить в памяти в нужном месте подготовленные 8 байт
+-->
+<situation>
+	<argument name="rt" state="readonly" length="64" />
+	<argument name="base" state="readonly" length="64" />
+	<argument name="offset" state="readonly" length="16" />
+	
+	<let name="ttt">
+			<sign_extend size="64"><var>offset</var></sign_extend>
+	</let>
+	
+	<let name="vAddr" id="virtual">
+		<sum>
+			<var>ttt</var>
+			<var>base</var>
+		</sum>
+	</let>
+	
+	<assume>
+		<eq>
+			<bits end="1" start="0"><var>vAddr</var></bits>
+			<constant length="2">0</constant>
+		</eq>
+	</assume>
+	
+	<procedure name="AddressTranslation">
+			<argument id="physical"><new length="36">pAddr</new></argument>
+			<argument id="virtual"><var>vAddr</var></argument>
+			<argument id="points_to">DATA</argument>
+			<argument id="points_for">STORE</argument>
+	</procedure>
+	
+	<let id="physical">
+		<var>pAddr</var>
+	</let>
+	
+	<let name="dwByteOffset">
+		<bits end="2" start="0"><var>vAddr</var></bits>
+	</let>
+	
+	<!-- dwByteOffset can be changed according to BigEndian/LittleEndian -->
+	
+	<procedure name="BytesExpand">
+		<argument id="type">BYTE</argument>
+		<argument id="expanded"><new length="64">datadoubleword</new></argument>
+		<argument id="content"><var>rt</var></argument>
+		<argument id="index"><var>dwByteOffset</var></argument>
+	</procedure>
+	
+	<procedure name="StoreMemory">
+		<argument id="data"><var>datadoubleword</var></argument>
+		<argument id="type">BYTE</argument>
+		<argument id="physical"><var>pAddr</var></argument>
+		<argument id="virtual"><var>vAddr</var></argument>
+		<argument id="points_to">DATA</argument>
+	</procedure>
+</situation>

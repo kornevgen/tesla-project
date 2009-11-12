@@ -43,6 +43,10 @@ def constraintsfrom_eq( operator, full_context )
   binary_constraint('=', operator, full_context)
 end
 
+def constraintsfrom_uless( operator, full_context )
+  binary_constraint('bvult', operator, full_context )
+end
+
 def constraintsfrom_bit( operator, full_context )
   "(extract[#{operator.attributes['index']}:#{operator.attributes['index']}] " +
       send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + ")"
@@ -84,7 +88,9 @@ end
 
 def process_instruction(instruction)
   @instruction = instruction
-  
+
+  raise "please define $instructionsPath" if $instructionsPath == nil
+ 
   #TODO ввести поддержку композиции ветвей
   path = $instructionsPath + instruction.attributes['name'] +
   "/" + instruction.elements['situation'].elements['branch'].attributes['name'] + ".xml"
@@ -105,28 +111,84 @@ def process_instruction(instruction)
                         (tsarg.attributes["state"] == "result" ? "_X" : "" )
       @lengths_context[tsarg.attributes['name']] = @varlengths[insarg.attributes['name']]
   }
-  full_context.merge! @synonyms
-  @lengths_context.merge! @varlengths
+#  full_context.merge! @synonyms #TODO зачем это?! ведь имена шаблона недоступны внутри ситуации!
+#  @lengths_context.merge! @varlengths #TODO ---//---
   
+  @current_externals = Hash.new
+  @current_externals_length = Hash.new
   # traverse operators
   test_situation.elements.each('situation/*[not(starts-with(name(),"argument"))]'){|operator|
       send( "constraintsfrom_#{operator.name}", operator, full_context )
   }
+  instruction.elements.each('external'){|external|
+      id = external.attributes['id']
+      raise "undefined external id '#{id}' in situation #{instruction.attributes['name']}::#{instruction.elements['situation'].elements['branch'].attributes['name']}" if ! @current_externals.has_key?(id)
+      raise "redefined name '#{external.attributes['name']}'" if @synonyms.has_key? external.attributes['name']
+      @synonyms.merge!({external.attributes['name'] => @current_externals[id]})
+      @varlengths.merge!({external.attributes['name'] => @current_externals_length[id]})
+  }
   
   #TODO поддержка идентификаторов инструкций
-  
-  #TODO поддержка внешних переменных
   
   test_situation.elements.each('//[@state="result"]'){|arg|
        @synonyms[reverse_synonyms[arg].text] = "#{@synonyms[reverse_synonyms[arg].text]}_X"
   }
 end
 
+def process_assume(assume)
+  @instruction = assume
+  
+  raise "please define $instructionsPath" if $instructionsPath == nil
+  
+  #TODO ввести поддержку композиции ветвей
+  path = $instructionsPath + assume.attributes['name'] + ".xml"
+  test_situation = REXML::Document.new File.new(path)
+
+  reverse_synonyms = Hash[*test_situation.get_elements('situation/argument').  ## перевести в текст??
+      zip(assume.get_elements('argument')).flatten]
+
+  raise "assume mustn't have result arguments" if test_situation.get_elements('//[@state="result"]').length > 0
+
+  full_context = Hash.new
+  @lengths_context = Hash.new
+  reverse_synonyms.each{|tsarg, insarg|
+      full_context[tsarg.attributes['name']] = @synonyms[insarg.attributes['name']]
+      @lengths_context[tsarg.attributes['name']] = @varlengths[insarg.attributes['name']]
+  }
+#  full_context.merge! @synonyms #TODO зачем это?! ведь имена шаблона недоступны внутри ситуации!
+#  @lengths_context.merge! @varlengths #TODO ---//---
+
+#raise "full_context: #{full_context.to_a.collect{|a| '['+a[0]+'=>'+a[1]+']'}}"
+
+  # traverse operators
+  @current_externals = Hash.new
+  test_situation.elements.each('situation/*[not(starts-with(name(),"argument"))]'){|operator|
+      send( "constraintsfrom_#{operator.name}", operator, full_context )
+  }
+  assume.elements.each('external'){|external|
+      id = external.attributes['id']
+      raise "undefined external id '#{id}' in situation #{assume.attributes['name']}::#{instruction.elements['situation'].elements['branch'].attributes['name']}" if ! @current_externals.has_key?(id)
+      raise "redefined name '#{external.attributes['name']}'" if @synonyms.has_key? external.attributes['name']
+      @synonyms.merge!({external.attributes['name'] => @current_externals[id]})
+      @varlengths.merge!({external.attributes['name'] => @current_externals_length[id]})
+  }
+  
+  #TODO поддержка идентификаторов инструкций
+end
+
 def constraintsfrom_let( operator, full_context )
+  raise "let: name or id must be specified" if operator.attributes['name'] == nil && operator.attributes['id'] == nil
+  
   bitlen = send("length_#{operator.elements[1].name}", operator.elements[1] )
   new_name = "_localvar_#{@unique_counter += 1}"
-  full_context.merge!( {operator.attributes['name'] => new_name } )
-  @lengths_context[operator.attributes['name']] = bitlen
+  full_context.merge!( {operator.attributes['name'] => new_name } ) if operator.attributes['name'] != nil
+  @lengths_context[operator.attributes['name']] = bitlen if operator.attributes['name'] != nil
+  
+  if operator.attributes['id'] != nil
+    raise "id '#{operator.attributes['id']}' is already used" if @current_externals.has_key?(operator.attributes['id'])
+    @current_externals.merge!({operator.attributes['id'] => new_name})
+    @current_externals_length.merge!({operator.attributes['id'] => bitlen})
+  end
   
   puts ":extrafuns (( #{new_name} BitVec[#{bitlen}] ))"
   puts ":assumption"
@@ -208,6 +270,10 @@ def length_BYTE
   8
 end
 
+def solve1 template
+  solve template
+end
+
 def solve template
 #  template = File.new template_file
   
@@ -240,13 +306,16 @@ def solve template
           process_instruction instruction
       }
   }
+
+  # странслировать допущения
+  doc.elements.each('template/assume') {|assume|
+          process_assume assume
+  }
   
-  #TODO сделать поддержку допущений (assume) шаблонов
- 
   puts ")"
 end
 
-def procedures_preparations
+def procedures_preparations document
 end
 
 end
@@ -265,7 +334,7 @@ class Runner
     smt_file.close
     #File.open(smt_file.path).each{|s| puts s }
     output = `z3 /m #{smt_file.path} /T:60`
-    #puts output
+    puts output
     puts "out#{i}.smt: timeout" if output.include?("timeout")
     puts "out#{i}.smt: sat" if !output.include?("unsat") && !output.include?("timeout")
     puts "out#{i}.smt: unsat" if output.include?("unsat")
