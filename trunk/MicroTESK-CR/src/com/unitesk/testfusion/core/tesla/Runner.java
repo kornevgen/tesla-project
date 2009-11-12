@@ -1,5 +1,6 @@
 package com.unitesk.testfusion.core.tesla;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -17,18 +18,21 @@ import com.unitesk.kmd64.model.L1Cache;
 import com.unitesk.kmd64.model.TLB;
 import com.unitesk.kmd64.model.TLB48;
 import com.unitesk.kmd64.model.TLB.Entry;
-import com.unitesk.kmd64.model.config.KMD64Generator;
+import com.unitesk.kmd64.model.deps.PADependency;
+import com.unitesk.kmd64.model.deps.VADependency;
+import com.unitesk.kmd64.model.isa.memory.LWInstruction;
 import com.unitesk.kmd64.model.isa.memory.SBInstruction;
 import com.unitesk.kmd64.model.isa.memory.situation.LWSituation;
 import com.unitesk.kmd64.model.isa.memory.situation.MemorySituation;
 import com.unitesk.kmd64.model.isa.memory.situation.SBSituation;
+import com.unitesk.testfusion.core.dependency.Dependencies;
+import com.unitesk.testfusion.core.dependency.Dependency;
 import com.unitesk.testfusion.core.model.Instruction;
 import com.unitesk.testfusion.core.model.Operand;
 import com.unitesk.testfusion.core.model.Program;
 import com.unitesk.testfusion.core.model.register.Register;
 import com.unitesk.testfusion.core.model.register.Register32;
 import com.unitesk.testfusion.core.model.register.Register64;
-import com.unitesk.testfusion.demo.model.isa.memory.LWInstruction;
 
 
 public class Runner
@@ -52,6 +56,13 @@ public class Runner
 	//TODO возвращать программу инициализации
 	public void run( Program template, KMD64 state )
 	{
+		// проверить, что все ситуации isConstraint()
+		for( int i = 0; i < template.countInstruction(); i++ )
+		{
+			if ( template.getInstruction(i).getSituation().isConstructed() )
+				return;
+		}
+			
 		// вызвать ruby-скрипт (он вызывает Z3)
 		ScriptEngineManager m = new ScriptEngineManager();
 		ScriptEngine rubyEngine = m.getEngineByName("jruby");
@@ -71,7 +82,7 @@ public class Runner
 			rubyEngine.eval( "$PABITS = 36", context );
 			rubyEngine.eval( "$MASK = 0", context ); // поле $MASK задает часть тегсета, соответствующая размеру страницы памяти (выбирается ОС)
 
-			rubyEngine.eval("require 'tesla-mips'" , context);
+			rubyEngine.eval( "require 'tesla-mips'" , context );
 
 			rubyEngine.eval( "$instructionsPath = '" + instructions_path + "'", context );
 			
@@ -110,8 +121,6 @@ public class Runner
 			e.printStackTrace();
 		}
 		
-		// http://www.docjar.com/docs/api/org/jruby/Ruby.html
-		
 		// TODO прочитать результат работы скрипта и составить программу инициализации
 	}
 	
@@ -137,33 +146,28 @@ public class Runner
 			((TLB48)k.getTLB()).setDTLBIndex(i, i);
 		}
 		
-		KMD64Generator generator = new KMD64Generator(1, 2, "test");
-		generator.setTestSize(2);
-		generator.getTemplate().init();
-
+		Program p = new Program();
+		
 		LWInstruction i1 = new LWInstruction();
 		i1.getOperand("rt").setRegister(k.getGPR(0));
 		i1.getOperand("base").setRegister(k.getGPR(1));
 		i1.setSituation(new LWSituation());
-		generator.getTemplate().registerInstruction(0, i1, new LWSituation());
-		//TODO нужна инициализация...
+		p.append( i1 );
 		
-		Program p = generator.getTemplate().value();
-
-//		p.append( i1 );
-//		SBInstruction i2 = new SBInstruction();
-//		i2.getOperand("rt").setRegister(k.getGPR(2));
-//		i2.getOperand("base").setRegister(k.getGPR(0));
-//		i2.setSituation(new SBSituation());
-//		p.append( i2 );
-		
-//		i1.getOperand("offset").setr
+		SBInstruction i2 = new SBInstruction();
+		i2.getOperand("rt").setRegister(k.getGPR(2));
+		i2.getOperand("base").setRegister(k.getGPR(0));
+		i2.setSituation(new SBSituation());
+		PADependency d = new PADependency(k, i1.getOperand("base"));
+		d.init();
+		i2.getOperand("base").registerBackwardDependency(d);
+		p.append( i2 );
 		
 		new Runner(
 				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
 //					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
 				, 	"C:\\Program Files\\jruby-1.4.0"
-				,	"B:/"
+				,	"C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa-XP/test/k64/"
 			).run(p, k);
 		
 	}
@@ -174,6 +178,8 @@ public class Runner
 		
 		Set<Register> viewedRegs = new HashSet<Register>();
 		Map<Operand, String> names = new HashMap<Operand, String>();
+		Map<Operand, String> virtuals = new HashMap<Operand, String>();
+		Map<Operand, String> physicals = new HashMap<Operand, String>();
 		
 		//инструкции и допущения
 		int number = 0;
@@ -245,16 +251,60 @@ public class Runner
 				xml.append("<microtlb type='DATA' id='" + (situation.mtlbHit ? "mtlbHit" : "mtlbMiss") + "' />");
 				xml.append("</access>");
 			}
-			xml.append("</situation></instruction>");
+			xml.append("</situation>");
+			if ( instr.getSituation() instanceof MemorySituation )
+			{			
+				String virtual = "virt" + (number++);
+				String physical = "phys" + (number++);
+				virtuals.put(instr.getOperand("base"), virtual);
+				physicals.put(instr.getOperand("base"), physical);
+				xml.append("<external name='" + virtual + "' id='virtual'/>");
+				xml.append("<external name='" + physical + "' id='physical'/>");
+			}
+			xml.append("</instruction>");
 			
-			//TODO translate dependencies and assumes
+			// translate dependencies as assumes
 			/**виды зависимостей:
 			 * 1) по виртуальным адресам
 			 * 2) по физическим адресам
 			 * 3) на сам адрес (на строку кэша или TLB)
 			 * 4) произвольные ограничения на параметры инструкций и строки
 			 */
-			//dependencies: template.getDependencies() -> VADependency|PADependency
+			//dependencies: у операндов
+			if ( instr.getOperand("base") != null )
+			{
+				Dependencies deps = instr.getOperand("base").getBackwardDependencies();
+				for( Dependency dep : deps )
+				{
+					if ( dep instanceof PADependency )
+					{
+						PADependency padep = (PADependency)dep;
+						for (String depName : Arrays.asList(
+								(padep.l1RowEqual?"l1RowEqual":"l1RowNotEqual"),
+								(padep.l1TagEqual?"l1TagEqual":"l1TagNotEqual")
+							) )
+						{
+							xml.append("<assume name='" + depName + "'>");
+							xml.append("<argument name='" + physicals.get(instr.getOperand("base")) + "'/>");
+							xml.append("<argument name='" + physicals.get(padep.getDeterminantOperand()) + "'/>");
+							xml.append("</assume>");
+						}
+					}
+					else if ( dep instanceof VADependency )
+					{
+						VADependency vadep = (VADependency)dep;
+						for (String depName : Arrays.asList(
+								(vadep.tlbEntryEqual?"tlbEntryEqual":"l1EntryNotEqual")
+							) )
+						{
+							xml.append("<assume name='" + depName + "'>");
+							xml.append("<argument name='" + virtuals.get(instr.getOperand("base")) + "'/>");
+							xml.append("<argument name='" + virtuals.get(vadep.getDeterminantOperand()) + "'/>");
+							xml.append("</assume>");
+						}
+					}
+				}
+			}
 		}
 		
 		return xml.append("</template>").toString();
