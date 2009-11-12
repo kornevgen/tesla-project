@@ -113,9 +113,14 @@ public class Runner
 //						getXML(template) + "\", \"" + d + "\")", context );
 			
 			//TODO set $initlength and $initlength_mtlb
-			rubyEngine.eval(
+			Object o = rubyEngine.eval(
 					"Runner.new.run( MIPS_CombinedSolver.new, 0, \"" + 
 						getXML(template) + "\", \"" + getXML(state) + "\")", context );
+			if ( o instanceof String )
+			{
+				//TODO обработать unsat и timeout
+			}
+			System.out.println(o);
 			
 		} catch (ScriptException e) {
 			e.printStackTrace();
@@ -164,10 +169,11 @@ public class Runner
 		p.append( i2 );
 		
 		new Runner(
-				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
-//					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
+//				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
+					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
 				, 	"C:\\Program Files\\jruby-1.4.0"
-				,	"C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa-XP/test/k64/"
+//				,	"C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa-XP/test/k64/"
+				,	"C:/Documents and Settings/kornevgen2/My Documents/dissertation/implementation/TeSLa-XP/test/k64/"
 			).run(p, k);
 		
 	}
