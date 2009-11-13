@@ -338,11 +338,8 @@ class Runner
     (puts "out#{i}.smt: unsat"; return "unsat") if output.include?("unsat")
     puts "out#{i}.smt: sat" if !output.include?("unsat") && !output.include?("timeout")
     #smt_file.unlink
-    names = output[0..-5].scan(/(.+) -> bv\d+\[\d+\]/)
-    values = output[0..-5].scan(/.+ -> bv(\d+)\[\d+\]/)
-    #TODO убрать _X_X
-    #TODO разделить по группам
-    puts ">>>#{values.join('|||')}"
-    output
+    hash = Hash[*(output[0..-5].scan(/(.+) -> bv(\d+)\[\d+\]/)).flatten]
+    #puts ">>>#{hash.to_a.collect{|a| '['+a[0]+'=>'+a[1]+']'}}"
+    hash
   end
 end
