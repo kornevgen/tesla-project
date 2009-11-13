@@ -12,6 +12,8 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
+import org.jruby.RubyHash;
+
 import com.unitesk.kmd64.model.GPR;
 import com.unitesk.kmd64.model.KMD64;
 import com.unitesk.kmd64.model.L1Cache;
@@ -20,11 +22,14 @@ import com.unitesk.kmd64.model.TLB48;
 import com.unitesk.kmd64.model.TLB.Entry;
 import com.unitesk.kmd64.model.deps.PADependency;
 import com.unitesk.kmd64.model.deps.VADependency;
+import com.unitesk.kmd64.model.isa.memory.LDInstruction;
 import com.unitesk.kmd64.model.isa.memory.LWInstruction;
 import com.unitesk.kmd64.model.isa.memory.SBInstruction;
 import com.unitesk.kmd64.model.isa.memory.situation.LWSituation;
 import com.unitesk.kmd64.model.isa.memory.situation.MemorySituation;
 import com.unitesk.kmd64.model.isa.memory.situation.SBSituation;
+import com.unitesk.kmd64.model.lib.LoadImmediate64Program;
+import com.unitesk.kmd64.model.lib.SetKSeg0CachePolicyProgram;
 import com.unitesk.testfusion.core.dependency.Dependencies;
 import com.unitesk.testfusion.core.dependency.Dependency;
 import com.unitesk.testfusion.core.model.Instruction;
@@ -40,6 +45,7 @@ public class Runner
 	private final String jrubyHome;
 	private final String load_path;
 	private final String instructions_path;
+	private Map<String, Operand> namesForOperands = new HashMap<String, Operand>();
 	
 	public Runner( String load_path, String jrubyHome, String instructions_path )
 	{
@@ -53,14 +59,23 @@ public class Runner
         System.setProperty("jruby.script", "jruby.bat");
 	}
 	
-	//TODO возвращать программу инициализации
-	public void run( Program template, KMD64 state )
+	/**
+	 * Процедура получения значений операндов и инициализации
+	 * с использованием разрешения ограничений
+	 * 
+	 * @param template	тестовый шаблон 
+	 * @param state		начальное состояние модели микропропроцессора (только Комдив64!)
+	 * @throws Unsat	данный тестовый шаблон является несовместным
+	 * @throws Timeout	превышен допустимый на разрешение ограничений интервал времени
+	 * @return программа инициализации MMU (без регистров!)
+	 */
+	public Program run( Program template, KMD64 state ) throws Unsat, Timeout
 	{
 		// проверить, что все ситуации isConstraint()
 		for( int i = 0; i < template.countInstruction(); i++ )
 		{
 			if ( template.getInstruction(i).getSituation().isConstructed() )
-				return;
+				return null;
 		}
 			
 		// вызвать ruby-скрипт (он вызывает Z3)
@@ -94,7 +109,7 @@ public class Runner
 			//	1. попробовать сгенерировать без инициализации; если получилось, ок
 			//	2. попробовать сгенерировать с максимальной инициализацией
 
-			// проверить, что есть только Cached><Mapped -> тогда можно использовать CombinedSolver
+			//!!! проверить, что есть только Cached><Mapped -> тогда можно использовать CombinedSolver
 			
 			System.out.println("template:");
 			System.out.println(getXML(template));
@@ -112,21 +127,65 @@ public class Runner
 //					"Runner.new.run( MIPS_FullMirrorSolver.new, 0, \"" + 
 //						getXML(template) + "\", \"" + d + "\")", context );
 			
-			//TODO set $initlength and $initlength_mtlb
+			int initlength = 0;
+			int initlength_mtlb = 0;
 			Object o = rubyEngine.eval(
 					"Runner.new.run( MIPS_CombinedSolver.new, 0, \"" + 
 						getXML(template) + "\", \"" + getXML(state) + "\")", context );
+			
 			if ( o instanceof String )
 			{
-				//TODO обработать unsat и timeout
+				if ( o == "unsat" )
+					throw new Unsat();
+				else if ( o == "timeout" )
+					throw new Timeout();
+				else
+					throw new IllegalArgumentException("unknown result '" + o + "'");
 			}
-			System.out.println(o);
+			if ( o instanceof RubyHash )
+			{
+				RubyHash hash = (RubyHash)o;
+				for( String name : namesForOperands.keySet() )
+				{
+					namesForOperands.get(name).setNumber(  Integer.parseInt( (String)hash.get( name + "_X" ) ) );
+				}
+				
+				//составить программу инициализации
+				Program init = new Program();
+				if ( initlength > 0 )
+				{
+					//1. перевести микропроцессор в нужное состояние флагов
+					init.append( new SetKSeg0CachePolicyProgram(state, state.getGPR(0), state.getGPR(1), 3) );
+				}
+				//кэш-память L1
+				for( int i = 0; i < initlength; i++ )
+				{
+					if ( ! hash.containsKey("_its" + i) )
+						throw new IllegalStateException("unknown key '_its" + i + "'");
+					
+					int tagset = Integer.parseInt( (String)hash.get("_its" + i) );
+					//2. сформировать подходящий виртуальный адрес
+					long vAddr = 19*2^59 + tagset*2^5;
+					//3. обратиться по виртуальному адресу (Load в некоторый неиспользуемый регистр)
+					init.append(new LoadImmediate64Program(state, state.getGPR(0), vAddr) );
+					init.append(new LDInstruction(state.getGPR(0), (short)0, state.getGPR(0)) );
+				}
+				//TODO инициализация microTLB
+				for( int i = 0; i < initlength_mtlb; i++ )
+				{
+					
+				}
+				//TODO как-то еще понять, какие значения загрузить в основную память... 
+				
+				return init;
+			}
+			else
+				throw new IllegalArgumentException("unrecognized return from ruby");
 			
 		} catch (ScriptException e) {
 			e.printStackTrace();
+			return null;
 		}
-		
-		// TODO прочитать результат работы скрипта и составить программу инициализации
 	}
 	
 	public static void main(String[] args )
@@ -168,18 +227,23 @@ public class Runner
 		i2.getOperand("base").registerBackwardDependency(d);
 		p.append( i2 );
 		
+		try
+		{
 		new Runner(
-//				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
-					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
+				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
+//					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
 				, 	"C:\\Program Files\\jruby-1.4.0"
-//				,	"C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa-XP/test/k64/"
-				,	"C:/Documents and Settings/kornevgen2/My Documents/dissertation/implementation/TeSLa-XP/test/k64/"
+				,	"C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa-XP/test/k64/"
+//				,	"C:/Documents and Settings/kornevgen2/My Documents/dissertation/implementation/TeSLa-XP/test/k64/"
 			).run(p, k);
-		
+		}
+		catch( Unsat e ) {} catch( Timeout e ) {}
 	}
 	
 	private String getXML( Program template )
 	{
+		namesForOperands.clear();
+		
 		StringBuffer xml = new StringBuffer("<template>");
 		
 		Set<Register> viewedRegs = new HashSet<Register>();
@@ -219,6 +283,7 @@ public class Runner
 						viewedRegs.add(r);
 						names.put(arg, name);
 						args.append("<argument name='" + name + "'/>");
+						namesForOperands.put(name, arg);
 					}
 					else
 					{
@@ -232,6 +297,7 @@ public class Runner
 							throw new IllegalStateException();
 						names.put(arg, name);
 						args.append("<argument name='" + name + "'/>");
+						namesForOperands.put(name, arg);
 					}
 				}
 				else if ( arg.isImmediate() )
@@ -241,6 +307,7 @@ public class Runner
 					xml.append("<constant name='" + name + "' length='" + length + "'/>");
 					names.put(arg, name);
 					args.append("<argument name='" + name + "'/>");
+					namesForOperands.put(name, arg);
 				}
 				else
 					throw new IllegalArgumentException();				
