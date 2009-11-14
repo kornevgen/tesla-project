@@ -2,6 +2,8 @@ require "rexml/document"
 
 class Solver
 
+attr_accessor :synonyms
+
 def constraintsfrom_assume( operator, full_context )
   puts ":assumption"
   puts send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) 
@@ -111,8 +113,6 @@ def process_instruction(instruction)
                         (tsarg.attributes["state"] == "result" ? "_X" : "" )
       @lengths_context[tsarg.attributes['name']] = @varlengths[insarg.attributes['name']]
   }
-#  full_context.merge! @synonyms #TODO зачем это?! ведь имена шаблона недоступны внутри ситуации!
-#  @lengths_context.merge! @varlengths #TODO ---//---
   
   @current_externals = Hash.new
   @current_externals_length = Hash.new
@@ -194,9 +194,6 @@ def constraintsfrom_let( operator, full_context )
   puts ":assumption"
   puts "(= #{new_name} " + 
       send("constraintsfrom_#{operator.elements[1].name}", operator.elements[1], full_context) + ")"
-      
-  #TODO сделать поддержку опциональности имени
-  #TODO сделать поддержку идентификаторов (в том числе опциональных)
 end
 
 def constraintsfrom_procedure( operator, full_context )
@@ -339,7 +336,17 @@ class Runner
     puts "out#{i}.smt: sat" if !output.include?("unsat") && !output.include?("timeout")
     #smt_file.unlink
     hash = Hash[*(output[0..-5].scan(/(.+) -> bv(\d+)\[\d+\]/)).flatten]
+    # using solver.synonyms, replace corresponding names in hash (localvar -> id)
+    solver.synonyms.each_pair{|k,v| puts "%%% #{k} +> #{v}"}
+    
+    solver.synonyms.each_pair{|k,v|
+      #raise "??? (#{k} +> #{v})" if hash[v] == nil
+      hash[k] = hash[v] if k != nil
+      #TODO разобраться, откуда берется ключ nil и с ним значение "_X"
+    }
+
     #puts ">>>#{hash.to_a.collect{|a| '['+a[0]+'=>'+a[1]+']'}}"
+    hash.each_pair{|k,v| puts ">>> #{k} +> #{v}"}
     hash
   end
 end
