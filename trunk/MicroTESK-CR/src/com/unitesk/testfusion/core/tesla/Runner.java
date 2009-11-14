@@ -1,8 +1,10 @@
 package com.unitesk.testfusion.core.tesla;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -24,12 +26,15 @@ import com.unitesk.kmd64.model.deps.PADependency;
 import com.unitesk.kmd64.model.deps.VADependency;
 import com.unitesk.kmd64.model.isa.memory.LDInstruction;
 import com.unitesk.kmd64.model.isa.memory.LWInstruction;
+import com.unitesk.kmd64.model.isa.memory.MemoryInstruction;
 import com.unitesk.kmd64.model.isa.memory.SBInstruction;
+import com.unitesk.kmd64.model.isa.memory.SDInstruction;
 import com.unitesk.kmd64.model.isa.memory.situation.LWSituation;
 import com.unitesk.kmd64.model.isa.memory.situation.MemorySituation;
 import com.unitesk.kmd64.model.isa.memory.situation.SBSituation;
 import com.unitesk.kmd64.model.lib.LoadImmediate64Program;
 import com.unitesk.kmd64.model.lib.SetKSeg0CachePolicyProgram;
+import com.unitesk.kmd64.model.lib.WriteTLBEntryProgram;
 import com.unitesk.testfusion.core.dependency.Dependencies;
 import com.unitesk.testfusion.core.dependency.Dependency;
 import com.unitesk.testfusion.core.model.Instruction;
@@ -46,6 +51,10 @@ public class Runner
 	private final String load_path;
 	private final String instructions_path;
 	private Map<String, Operand> namesForOperands = new HashMap<String, Operand>();
+	private Map<Operand, String> virtuals = new HashMap<Operand, String>();
+	private Map<Operand, String> prephysicals = new HashMap<Operand, String>();
+	private Map<Operand, String> physicals = new HashMap<Operand, String>();
+
 	
 	public Runner( String load_path, String jrubyHome, String instructions_path )
 	{
@@ -77,6 +86,10 @@ public class Runner
 			if ( template.getInstruction(i).getSituation().isConstructed() )
 				return null;
 		}
+		
+		//TODO проверить, что это короткий шаблон
+		
+		//TODO в xml-описании ситуаций обязательно сейчас должны быть описаны id'ы virtual, physical и prephysical
 			
 		// вызвать ruby-скрипт (он вызывает Z3)
 		ScriptEngineManager m = new ScriptEngineManager();
@@ -120,7 +133,8 @@ public class Runner
 			System.out.println();
 			
 			
-			//TODO set $initlength and $initlength_mtlb
+			//TODO set $initlength 
+			//TODO set $initlength_mtlb = (M > 0 ? w+1 : n)
 //			rubyEngine.eval( "$initlength = 20", context );
 //			rubyEngine.eval( "$initlength_mtlb = 20", context );			
 //			rubyEngine.eval(
@@ -165,17 +179,113 @@ public class Runner
 					
 					int tagset = Integer.parseInt( (String)hash.get("_its" + i) );
 					//2. сформировать подходящий виртуальный адрес
-					long vAddr = 19*2^59 + tagset*2^5;
+					long vAddr = 19<<59 + tagset<<5;
 					//3. обратиться по виртуальному адресу (Load в некоторый неиспользуемый регистр)
 					init.append(new LoadImmediate64Program(state, state.getGPR(0), vAddr) );
 					init.append(new LDInstruction(state.getGPR(0), (short)0, state.getGPR(0)) );
 				}
-				//TODO инициализация microTLB
+				//инициализация TLB
+				//TODO некоторые строки могут быть задействованы только в инициализации... - их тоже надо тут определить
+				List<TLBline> lines = new ArrayList<TLBline>();
+				for( int i = 0; i < template.countInstruction(); i++ )
+				{
+					Instruction instr = template.getInstruction(i);
+					if ( !(instr instanceof MemoryInstruction) ) continue;
+					MemoryInstruction minstr = (MemoryInstruction)instr;
+					Operand arg = minstr.getOperand("base");
+					String phys = prephysicals.get(arg); //TODO есть только для Cached-инструкций
+					String virt = virtuals.get(arg);	//TODO есть только для Mapped-инструкций
+					if (! hash.containsKey(phys) )
+						throw new IllegalStateException(phys);
+					if (! hash.containsKey(virt) )
+						throw new IllegalStateException(virt);
+					long pAddr = Long.parseLong((String)hash.get(phys));
+					long vAddr = Long.parseLong((String)hash.get(virt));
+					
+					int r = (int)(vAddr >> 62); //TODO эти константы жестко завязаны на конкретное расположение полей в виртуальном адресе
+					long vpnd2 = (vAddr >> 13) % (2^27);
+					byte oddbit = (byte)((vAddr >> 12) % 2);
+					long pfn = pAddr >> 12;
+					
+					TLBline l = TLBline.lookup(lines, r, vpnd2);
+					if (l == null)
+					{
+						l = new TLBline();
+						l.r = r;
+						l.vpnd2 = vpnd2;
+						switch(oddbit)
+						{
+							case 0: l.pfn0 = pfn; break;
+							case 1: l.pfn1 = pfn; break;
+							default: throw new IllegalArgumentException("oddbit must be 0 or 1");
+						}
+						lines.add(l);
+					}
+					else
+					{
+						switch(oddbit)
+						{
+							case 0: l.pfn0 = pfn; break;
+							case 1: l.pfn1 = pfn; break;
+							default: throw new IllegalArgumentException("oddbit must be 0 or 1");
+						}						
+					}
+				}
+				int linenumber = 0;
+				for( TLBline line : lines )
+				{
+					Entry entry = new Entry(); //TODO fill `entry'
+					init.append( new WriteTLBEntryProgram(state, entry, (linenumber++), state.getGPR(0)) );
+				}
+				//инициализация microTLB
 				for( int i = 0; i < initlength_mtlb; i++ )
 				{
+					if ( ! hash.containsKey("_ivpnd" + i) )
+						throw new IllegalStateException("unknown key '_ivpnd" + i + "'");
+					if ( ! hash.containsKey("_ir" + i) )
+						throw new IllegalStateException("unknown key '_ir" + i + "'");
+					//TODO добавить _ir в tesla-mips
 					
+					int vpnd2 = Integer.parseInt( (String)hash.get("_ivpnd" + i) );
+					int r = Integer.parseInt((String)hash.get("_ir" + i) );
+					//2. сформировать подходящий виртуальный адрес
+					long vAddr = r<<62 + vpnd2 << 13;
+					//3. обратиться по виртуальному адресу (Load в некоторый неиспользуемый регистр)
+					init.append(new LoadImmediate64Program(state, state.getGPR(0), vAddr) );
+					init.append(new LDInstruction(state.getGPR(0), (short)0, state.getGPR(0)) );
 				}
-				//TODO как-то еще понять, какие значения загрузить в основную память... 
+				// инициализируем основную память
+				Map<Long, Long> memory_cells = new HashMap<Long, Long>();
+				for( int i = 0; i < template.countInstruction(); i++ )
+				{
+					Instruction instr = template.getInstruction(i);
+					if ( ! (instr instanceof MemoryInstruction) ) continue;
+					MemoryInstruction minstr = (MemoryInstruction)instr;
+					if ( ! minstr.isLoad() ) continue;
+					
+					if ( ! physicals.containsKey( minstr.getOperand("base") ) )
+						throw new IllegalStateException();
+					if ( ! hash.containsKey( physicals.get(minstr.getOperand("base")) ))
+						throw new IllegalStateException( physicals.get(minstr.getOperand("base")) );
+					Long pAddr = Long.parseLong(((String)hash.get(physicals.get(minstr.getOperand("base")))));
+					
+					if ( ! memory_cells.containsKey(pAddr) )
+					{
+						memory_cells.put(pAddr,  0l ); //TODO значение регистра rt данной инструкции (в данный момент!)
+					}
+				}
+				//1. перевести микропроцессор в нужное состояние флагов: Unmapped
+				init.append( new SetKSeg0CachePolicyProgram(state, state.getGPR(0), state.getGPR(1), 2) );
+				for( long pAddr : memory_cells.keySet() )
+				{
+					//2. сформировать подходящий виртуальный адрес
+					long vAddr = 18<<59 + pAddr;
+					//3. загрузить значение в нужный регистр
+					init.append(new LoadImmediate64Program(state, state.getGPR(1), memory_cells.get(pAddr)) );
+					//4. обратиться по виртуальному адресу
+					init.append(new LoadImmediate64Program(state, state.getGPR(0), vAddr) );
+					init.append(new SDInstruction(state.getGPR(1), (short)0, state.getGPR(0)) );					
+				}
 				
 				return init;
 			}
@@ -230,11 +340,14 @@ public class Runner
 		try
 		{
 		new Runner(
-				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
+//				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
 //					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
-				, 	"C:\\Program Files\\jruby-1.4.0"
-				,	"C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa-XP/test/k64/"
+					"/home/kornevgen/workspace/TeSLa-XP/src/ruby"				
+//				, 	"C:\\Program Files\\jruby-1.4.0"
+				,	"/usr/lib/jruby1.2"
+//				,	"C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa-XP/test/k64/"
 //				,	"C:/Documents and Settings/kornevgen2/My Documents/dissertation/implementation/TeSLa-XP/test/k64/"
+				, 	"/home/kornevgen/workspace/TeSLa-XP/test/k64/"
 			).run(p, k);
 		}
 		catch( Unsat e ) {} catch( Timeout e ) {}
@@ -248,8 +361,6 @@ public class Runner
 		
 		Set<Register> viewedRegs = new HashSet<Register>();
 		Map<Operand, String> names = new HashMap<Operand, String>();
-		Map<Operand, String> virtuals = new HashMap<Operand, String>();
-		Map<Operand, String> physicals = new HashMap<Operand, String>();
 		
 		//инструкции и допущения
 		int number = 0;
@@ -328,10 +439,13 @@ public class Runner
 			if ( instr.getSituation() instanceof MemorySituation )
 			{			
 				String virtual = "virt" + (number++);
+				String prephysical = "prephys" + (number++);
 				String physical = "phys" + (number++);
 				virtuals.put(instr.getOperand("base"), virtual);
+				prephysicals.put(instr.getOperand("base"), prephysical);
 				physicals.put(instr.getOperand("base"), physical);
 				xml.append("<external name='" + virtual + "' id='virtual'/>");
+				xml.append("<external name='" + prephysical + "' id='prephysical'/>");
 				xml.append("<external name='" + physical + "' id='physical'/>");
 			}
 			xml.append("</instruction>");
@@ -453,4 +567,20 @@ public class Runner
 	}
 }
 
-
+class TLBline
+{
+	int r;
+	long vpnd2;
+	long pfn0 = 0;
+	long pfn1 = 0;
+	
+	public static TLBline lookup( List<TLBline> lines, int r, long vpnd2 )
+	{
+		for( TLBline line : lines )
+		{
+			if (line.r == r && line.vpnd2 == vpnd2)
+				return line;
+		}
+		return null;
+	}
+}
