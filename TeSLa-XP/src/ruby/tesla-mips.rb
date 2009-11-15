@@ -270,6 +270,10 @@ class String
   def region
     "(extract[6:0] #{self})"
   end
+  
+  def r
+    "(extract[63:62] #{self})"
+  end
 end
 
 =begin
@@ -1214,6 +1218,8 @@ def procedures_preparations doc
             puts "(= #{o.tagset} #{tagset}))"
         }
       end
+ 
+    #TODO virtual space
     
     # сделать ограничения для cacheTS >< microTLBS и выдать их на out
     puts ":assumption"
@@ -1334,6 +1340,8 @@ def procedures_preparations doc
     puts "(= #{getVPNdiv2 virtual_address} #{vpnd2})"
     
     # разных vpn'в не более количества строк TLB, но для маленьких экспериментов это всегда верно
+
+    #из рассматриваемого сегмента виртуальной памяти следует, что поле `r' = 0
 
     #каждый init_vpnd2 не может быть одновременно использован с разными oddbit
     #если совпадают vpn, то совпадают pfn
