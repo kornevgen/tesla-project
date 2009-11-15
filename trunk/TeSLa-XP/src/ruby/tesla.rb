@@ -3,6 +3,7 @@ require "rexml/document"
 class Solver
 
 attr_accessor :synonyms
+attr_accessor :memcells
 
 def constraintsfrom_assume( operator, full_context )
   puts ":assumption"
@@ -92,6 +93,13 @@ def process_instruction(instruction)
   @instruction = instruction
 
   raise "please define $instructionsPath" if $instructionsPath == nil
+  
+  #если есть access, но нет external c id = 'virtual', 'physical', 'prephysical', выдать ошибку
+  if instruction.has_elements('situation/access')
+    ["virtual", "physical", "prephysical"].each{|id|
+      raise "external name with id '#{id}' must be defined" if ! instruction.has_elements("external/[@id=\"#{id}\"")
+    }
+  end
  
   #TODO ввести поддержку композиции ветвей
   path = $instructionsPath + instruction.attributes['name'] +
@@ -126,6 +134,11 @@ def process_instruction(instruction)
       raise "redefined name '#{external.attributes['name']}'" if @synonyms.has_key? external.attributes['name']
       @synonyms.merge!({external.attributes['name'] => @current_externals[id]})
       @varlengths.merge!({external.attributes['name'] => @current_externals_length[id]})
+
+    #эта добавка для LOAD-инструкций
+      if (id == "physical")
+        @memcells.merge!({ @current_externals[id] => @synonyms[instruction.get_elements('argument')[0].attributes['name']] })
+      end
   }
   
   #TODO поддержка идентификаторов инструкций
@@ -133,6 +146,7 @@ def process_instruction(instruction)
   test_situation.elements.each('//[@state="result"]'){|arg|
        @synonyms[reverse_synonyms[arg].text] = "#{@synonyms[reverse_synonyms[arg].text]}_X"
   }
+  
 end
 
 def process_assume(assume)
@@ -288,6 +302,7 @@ def solve template
 
   @synonyms = Hash.new
   @varlengths = Hash.new
+  @memcells = Hash.new
   # ввести определения регистров и констант
   doc.elements.each('template/register | template/constant') { |reg|
       puts ":extrafuns (( #{reg.attributes['name']}_X BitVec[#{reg.attributes['length']}] ))"  
@@ -345,8 +360,15 @@ class Runner
       #TODO разобраться, откуда берется ключ nil и с ним значение "_X"
     }
 
+    #solver.memcells.each_pair{|k,v| puts "&&& #{k} +> #{v}"}
+    solver.memcells.each_pair{|k,v|
+      hash["valueof-#{k}"] = hash[v]
+    }
+
     #puts ">>>#{hash.to_a.collect{|a| '['+a[0]+'=>'+a[1]+']'}}"
-    hash.each_pair{|k,v| puts ">>> #{k} +> #{v}"}
+    #hash.each_pair{|k,v| puts ">>> #{k} +> #{v}"}
+    
+    
     hash
   end
 end
