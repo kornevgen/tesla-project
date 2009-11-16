@@ -1,5 +1,7 @@
 package com.unitesk.testfusion.core.tesla;
 
+import java.io.File;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,6 +20,8 @@ import org.jruby.RubyHash;
 
 import com.unitesk.kmd64.model.GPR;
 import com.unitesk.kmd64.model.KMD64;
+import com.unitesk.kmd64.model.KMD64Context;
+import com.unitesk.kmd64.model.KMD64OperandType;
 import com.unitesk.kmd64.model.L1Cache;
 import com.unitesk.kmd64.model.TLB;
 import com.unitesk.kmd64.model.TLB48;
@@ -38,6 +42,7 @@ import com.unitesk.kmd64.model.lib.SetKSeg0CachePolicyProgram;
 import com.unitesk.kmd64.model.lib.WriteTLBEntryProgram;
 import com.unitesk.testfusion.core.dependency.Dependencies;
 import com.unitesk.testfusion.core.dependency.Dependency;
+import com.unitesk.testfusion.core.model.ContentType;
 import com.unitesk.testfusion.core.model.Instruction;
 import com.unitesk.testfusion.core.model.Operand;
 import com.unitesk.testfusion.core.model.Program;
@@ -60,6 +65,12 @@ public class Runner
 	
 	public Runner( String load_path, String jrubyHome, String instructions_path )
 	{
+		for( String path : Arrays.asList(load_path, jrubyHome, instructions_path) )
+		{
+			if (! new File(path).exists() )
+				throw new IllegalArgumentException("Path '" + path + "' doesn't exist");
+		}
+		
 		this.load_path = load_path;
 		this.jrubyHome = jrubyHome;
 		this.instructions_path = instructions_path;
@@ -78,15 +89,23 @@ public class Runner
 	 * @param state		начальное состояние модели микропропроцессора (только Комдив64!)
 	 * @throws Unsat	данный тестовый шаблон является несовместным
 	 * @throws Timeout	превышен допустимый на разрешение ограничений интервал времени
-	 * @return программа инициализации MMU (без регистров!)
+	 * @return программа инициализации MMU (без регистров!) и null, если построение невозможно
 	 */
-	public Program run( Program template, KMD64 state ) throws Unsat, Timeout
+	public Program run( Program template, KMD64 state, KMD64Context kcontext ) throws Unsat, Timeout
 	{
 		// проверить, что все ситуации isConstraint()
 		for( int i = 0; i < template.countInstruction(); i++ )
 		{
-			if ( template.getInstruction(i).getSituation().isConstructed() )
+			Instruction instr = template.getInstruction(i);
+			if ( instr.getSituation().isConstructed() )
 				return null;
+//			for( int j = 0; j < instr.countOperand(); j++)
+//			{
+//				for( Dependency dep : instr.getOperand(j).getForwardDependencies() )
+//				{
+//					if ( dep //TODO где тут isConstructed ?
+//				}
+//			}
 		}
 		
 		// проверить, что это короткий шаблон
@@ -146,13 +165,28 @@ public class Runner
 					if ( ms.addressError || !ms.isMapped || !ms.isCached )
 						break Combined;
 				}
+				
+				// проверить отсутствие invalid-тегов
+				for( int s = 0; s < L1Cache.SECTION_NUMBER; s++ )
+				for( int r = 0; r < L1Cache.ROW_NUMBER; r++ )
+				{
+					if ( state.getL1DCache().getTag(s, r) == L1Cache.INVALID_TAG )
+						break Combined;
+				}
+				for( int i = 0; i < TLB.DTLB_SIZE; i++ )
+				{
+					if ( state.getTLB().getEntry(i).lo0.getV() == 0 ||
+							state.getTLB().getEntry(i).lo1.getV() == 0 )
+						break Combined;
+				}
+
 				Object o = rubyEngine.eval(
 						"Runner.new.run( MIPS_CombinedSolver.new, 0, \"" + 
 							template_xml + "\", \"" + state_xml + "\")", context );
 				
 				if ( o instanceof RubyHash )
 				{
-					return buildInitialization(template, state, 0, 0, (RubyHash)o);
+					return buildInitialization(template, state, 0, 0, (RubyHash)o, kcontext);
 				}
 			}
 			
@@ -187,7 +221,7 @@ public class Runner
 			  {
 			    max = initlength - 1;
 			    init = buildInitialization(template, state, initlength,
-						initlength_mtlb, (RubyHash)o);
+						initlength_mtlb, (RubyHash)o, kcontext);
 			  }
 			}
 			
@@ -282,115 +316,154 @@ public class Runner
 		return N;
 	}
 
-	private Program buildInitialization(Program template, KMD64 state,
-			int initlength, int initlength_mtlb, RubyHash hash) {
+	private Program buildInitialization(
+			Program template, KMD64 state,
+			int initlength, int initlength_mtlb,
+			RubyHash hash, KMD64Context context)
+	{
 		for( String name : namesForOperands.keySet() )
 		{
-			namesForOperands.get(name).setNumber(  Integer.parseInt( (String)hash.get( name + "_X" ) ) );
+			ContentType type = namesForOperands.get(name).getContentType();
+			String value = (String)hash.get( name + "_X" );
+			if ( type == ContentType.WORD )
+			{
+				namesForOperands.get(name).setIntegerValue( (int)parseUnsignedLong(value, 32));
+			}
+			else if ( type == ContentType.DOUBLE_WORD || type == ContentType.DATA_ADDRESS )
+			{
+				namesForOperands.get(name).setLongValue( parseUnsignedLong(value, 64) );
+			}
+			else if ( type == ContentType.OFFSET )
+			{
+				//value представляет собой беззнаковую строку, а short в Java знаковый...
+				namesForOperands.get(name).setShortValue( (short)parseUnsignedLong(value, 16));
+			}
+			else if ( type == ContentType.BYTE )
+			{
+				namesForOperands.get(name).setByteValue( (byte)parseUnsignedLong(value, 8));
+			}
+			else
+				throw new IllegalArgumentException("unexpected content type");
 		}
+		
+		// взять неиспользуемые регистры
+		GPR temp1 = (GPR)context.getRegister( KMD64OperandType.GPR_REGISTER );
+		GPR temp2 = (GPR)context.getRegister( KMD64OperandType.GPR_REGISTER );
 		
 		//составить программу инициализации
 		Program init = new Program();
 		if ( initlength > 0 )
 		{
 			//1. перевести микропроцессор в нужное состояние флагов
-			init.append( new SetKSeg0CachePolicyProgram(state, state.getGPR(0), state.getGPR(1), 3) );
-		}
-		//кэш-память L1
-		for( int i = 0; i < initlength; i++ )
-		{
-			if ( ! hash.containsKey("_its" + i) )
-				throw new IllegalStateException("unknown key '_its" + i + "'");
-			
-			int tagset = Integer.parseInt( (String)hash.get("_its" + i) );
-			//2. сформировать подходящий виртуальный адрес
-			long vAddr = 19<<59 + tagset<<5;
-			//3. обратиться по виртуальному адресу (Load в некоторый неиспользуемый регистр)
-			init.append(new LoadImmediate64Program(state, state.getGPR(0), vAddr) );
-			init.append(new LDInstruction(state.getGPR(0), (short)0, state.getGPR(0)) );
+			init.append( new SetKSeg0CachePolicyProgram(state, temp1, temp2, 3) );
+			//кэш-память L1
+			for( int i = 1; i <= initlength; i++ )
+			{
+				if ( ! hash.containsKey("_its" + i) )
+					throw new IllegalStateException("unknown key '_its" + i + "'");
+				
+				int tagset = Integer.parseInt( (String)hash.get("_its" + i) );
+				//2. сформировать подходящий виртуальный адрес
+				long vAddr = 19<<59 + tagset<<5;
+				//3. обратиться по виртуальному адресу (Load в некоторый неиспользуемый регистр)
+				init.append(new LoadImmediate64Program(state, temp1, vAddr) );
+				init.append(new LDInstruction(temp1, (short)0, temp1) );
+			}
+			//TODO восстановить KSeg0 (или не восстанавливать, если он потом понадобится! но в мультипроцессном режиме кто-то может KSeg0 изменить, а мы об этом не узнаем)
 		}
 		//инициализация TLB
-		List<TLBline> lines = new ArrayList<TLBline>();
-		for( int i = 0; i < template.countInstruction(); i++ )
+		if ( initlength_mtlb > 0 )
 		{
-			Instruction instr = template.getInstruction(i);
-			if ( !(instr instanceof MemoryInstruction) ) continue;
-			MemoryInstruction minstr = (MemoryInstruction)instr;
-			Operand arg = minstr.getOperand("base");
-			String phys = prephysicals.get(arg); 
-			String virt = virtuals.get(arg);	
-			if (! hash.containsKey(phys) )
-				throw new IllegalStateException(phys);
-			if (! hash.containsKey(virt) )
-				throw new IllegalStateException(virt);
-			long pAddr = Long.parseLong((String)hash.get(phys));
-			long vAddr = Long.parseLong((String)hash.get(virt));
-			
-			int r = (int)(vAddr >> 62);
-			long vpnd2 = (vAddr >> 13) % (2^27);
-			byte oddbit = (byte)((vAddr >> 12) % 2);
-			long pfn = pAddr >> 12;
-			
-			TLBline l = TLBline.lookup(lines, r, vpnd2);
-			if (l == null)
+			//TODO ошибка: если убрать if (initlength_mtlb > 0), то при
+			// initlength_mtlb == 0 этот код будет исполняться
+			// и даже даст некую инициализацию, хотя не должен бы!
+			List<TLBline> lines = new ArrayList<TLBline>();
+			for( int i = 0; i < template.countInstruction(); i++ )
 			{
-				l = new TLBline();
-				l.r = r;
-				l.vpnd2 = vpnd2;
-				switch(oddbit)
+				Instruction instr = template.getInstruction(i);
+				if ( !(instr instanceof MemoryInstruction) ) continue;
+				MemoryInstruction minstr = (MemoryInstruction)instr;
+				Operand arg = minstr.getOperand("base");
+				String phys = prephysicals.get(arg); 
+				String virt = virtuals.get(arg);	
+				if (! hash.containsKey(phys) )
+					throw new IllegalStateException(phys);
+				if (! hash.containsKey(virt) )
+					throw new IllegalStateException(virt);
+				long pAddr = Long.parseLong((String)hash.get(phys));
+				long vAddr = Long.parseLong((String)hash.get(virt));
+				
+				int r = (int)(vAddr >> 62);
+				long vpnd2 = (vAddr >> 13) % (2^27);
+				byte oddbit = (byte)((vAddr >> 12) % 2);
+				long pfn = pAddr >> 12;
+				
+				TLBline l = TLBline.lookup(lines, r, vpnd2);
+				if (l == null)
 				{
-					case 0: l.pfn0 = pfn; break;
-					case 1: l.pfn1 = pfn; break;
-					default: throw new IllegalArgumentException("oddbit must be 0 or 1");
+					l = new TLBline();
+					l.r = r;
+					l.vpnd2 = vpnd2;
+					switch(oddbit)
+					{
+						case 0: l.pfn0 = pfn; break;
+						case 1: l.pfn1 = pfn; break;
+						default: throw new IllegalArgumentException("oddbit must be 0 or 1");
+					}
+					lines.add(l);
 				}
-				lines.add(l);
-			}
-			else
-			{
-				switch(oddbit)
+				else
 				{
-					case 0: l.pfn0 = pfn; break;
-					case 1: l.pfn1 = pfn; break;
-					default: throw new IllegalArgumentException("oddbit must be 0 or 1");
-				}						
+					switch(oddbit)
+					{
+						case 0: l.pfn0 = pfn; break;
+						case 1: l.pfn1 = pfn; break;
+						default: throw new IllegalArgumentException("oddbit must be 0 or 1");
+					}						
+				}
 			}
-		}
-		//некоторые строки могут быть задействованы только в инициализации... - их тоже надо тут определить
-		for( int i = 0; i < initlength_mtlb; i++ )
-		{
-			if ( ! hash.containsKey("_ivpnd" + i) )
-				throw new IllegalStateException("unknown key '_ivpnd" + i + "'");
-			
-			int vpnd2 = Integer.parseInt( (String)hash.get("_ivpnd" + i) );
-			
-			if (TLBline.lookup(lines, 0, vpnd2) == null)
+			//некоторые строки могут быть задействованы только в инициализации... - их тоже надо тут определить
+			for( int i = initlength+1; i <= initlength_mtlb+initlength; i++ )
 			{
-				TLBline l = new TLBline();
-				l.r = 0;
-				l.vpnd2 = vpnd2;
-				lines.add(l);
+				if ( ! hash.containsKey("_ivpnd" + i) )
+					throw new IllegalStateException("unknown key '_ivpnd" + i + "'");
+				
+				int vpnd2 = Integer.parseInt( (String)hash.get("_ivpnd" + i) );
+				
+				if (TLBline.lookup(lines, 0, vpnd2) == null)
+				{
+					TLBline l = new TLBline();
+					l.r = 0;
+					l.vpnd2 = vpnd2;
+					lines.add(l);
+				}
 			}
-		}
-		
-		int linenumber = 0;
-		for( TLBline line : lines )
-		{
-			Entry entry = new Entry(); //TODO fill `entry'
-			init.append( new WriteTLBEntryProgram(state, entry, (linenumber++), state.getGPR(0)) );
-		}
-		//инициализация microTLB
-		for( int i = 0; i < initlength_mtlb; i++ )
-		{
-			if ( ! hash.containsKey("_ivpnd" + i) )
-				throw new IllegalStateException("unknown key '_ivpnd" + i + "'");
 			
-			int vpnd2 = Integer.parseInt( (String)hash.get("_ivpnd" + i) );
-			int r = 0;
-			//2. сформировать подходящий виртуальный адрес
-			long vAddr = r<<62 + vpnd2 << 13;
-			//3. обратиться по виртуальному адресу (Load в некоторый неиспользуемый регистр)
-			init.append(new LoadImmediate64Program(state, state.getGPR(0), vAddr) );
-			init.append(new LDInstruction(state.getGPR(0), (short)0, state.getGPR(0)) );
+			int linenumber = 0;
+			for( TLBline line : lines )
+			{
+				Entry entry = new Entry(
+						(int)line.vpnd2, // vpn/2
+						false, // g
+			            true, true, 3, (int)line.pfn0,// v0, d0, c0, pfn0,
+			            true, true, 3, (int)line.pfn1 // v1, d1, c1, pfn1
+					);
+				init.append( new WriteTLBEntryProgram(state, entry, (linenumber++), temp1) );
+			}
+			//инициализация microTLB
+			for( int i = initlength+1; i < initlength+initlength_mtlb; i++ )
+			{
+				if ( ! hash.containsKey("_ivpnd" + i) )
+					throw new IllegalStateException("unknown key '_ivpnd" + i + "'");
+				
+				int vpnd2 = Integer.parseInt( (String)hash.get("_ivpnd" + i) );
+				int r = 0;
+				//2. сформировать подходящий виртуальный адрес
+				long vAddr = r<<62 + vpnd2 << 13;
+				//3. обратиться по виртуальному адресу (Load в некоторый неиспользуемый регистр)
+				init.append(new LoadImmediate64Program(state, temp1, vAddr) );
+				init.append(new LDInstruction(temp1, (short)0, temp1) );
+			}
 		}
 		// инициализируем основную память
 		Map<Long, Long> memory_cells = new HashMap<Long, Long>();
@@ -407,28 +480,47 @@ public class Runner
 				throw new IllegalStateException( physicals.get(minstr.getOperand("base")) );
 			Long pAddr = Long.parseLong(((String)hash.get(physicals.get(minstr.getOperand("base")))));
 			
+			if (! hash.containsKey("valueof-"+physicals.get(minstr.getOperand("base"))) )
+				throw new IllegalStateException( "valueof-"+physicals.get(minstr.getOperand("base")) );
+			
 			if ( ! memory_cells.containsKey(pAddr) )
 			{
 				//значение регистра rt данной инструкции (в данный момент!)
-				memory_cells.put(pAddr, Long.parseLong((String)hash.get("valueof-"+physicals.get(minstr.getOperand("base")))));
+				memory_cells.put(pAddr, parseUnsignedLong((String)hash.get("valueof-"+physicals.get(minstr.getOperand("base"))), 64));
 			}
 		}
 		//1. перевести микропроцессор в нужное состояние флагов: Unmapped
-		init.append( new SetKSeg0CachePolicyProgram(state, state.getGPR(0), state.getGPR(1), 2) );
-		for( long pAddr : memory_cells.keySet() )
+		if ( ! memory_cells.isEmpty() )
 		{
-			//2. сформировать подходящий виртуальный адрес
-			long vAddr = 18<<59 + pAddr;
-			//3. загрузить значение в нужный регистр
-			init.append(new LoadImmediate64Program(state, state.getGPR(1), memory_cells.get(pAddr)) );
-			//4. обратиться по виртуальному адресу
-			init.append(new LoadImmediate64Program(state, state.getGPR(0), vAddr) );
-			init.append(new SDInstruction(state.getGPR(1), (short)0, state.getGPR(0)) );					
+			init.append( new SetKSeg0CachePolicyProgram(state, temp1, temp2, 2) );
+			for( long pAddr : memory_cells.keySet() )
+			{
+				//2. сформировать подходящий виртуальный адрес
+				long vAddr = 18<<59 + pAddr;
+				//3. загрузить значение в нужный регистр
+				init.append(new LoadImmediate64Program(state, temp1, memory_cells.get(pAddr)) );
+				//4. обратиться по виртуальному адресу
+				init.append(new LoadImmediate64Program(state, temp2, vAddr) );
+				init.append(new SDInstruction(temp1, (short)0, temp2) );					
+			}
+			//TODO восстановить значение KSeg0
 		}
 		
 		return init;
 	}
 	
+	private long parseUnsignedLong(String value, int width)
+	{
+		BigInteger bint = new BigInteger(value);
+		if ( width < 64 && bint.compareTo(new BigInteger("2").pow(width)) >= 0 )
+			throw new NumberFormatException();
+		
+		if ( bint.compareTo(new BigInteger("2").pow(width-1)) < 0 )
+			return bint.longValue();
+		else
+			return bint.subtract(new BigInteger("2").pow(width)).longValue();
+	}
+
 	public static void main(String[] args )
 	{
 		KMD64 k = new KMD64();
@@ -456,30 +548,48 @@ public class Runner
 		LWInstruction i1 = new LWInstruction();
 		i1.getOperand("rt").setRegister(k.getGPR(0));
 		i1.getOperand("base").setRegister(k.getGPR(1));
-		i1.setSituation(new LWSituation());
+		MemorySituation ms1 = new LWSituation();
+		ms1.addressError = false;
+		ms1.isMapped = true;
+		ms1.isCached = true;
+		i1.setSituation(ms1);
 		p.append( i1 );
 		
 		SBInstruction i2 = new SBInstruction();
 		i2.getOperand("rt").setRegister(k.getGPR(2));
 		i2.getOperand("base").setRegister(k.getGPR(0));
-		i2.setSituation(new SBSituation());
 		PADependency d = new PADependency(k, i1.getOperand("base"));
 		d.init();
 		i2.getOperand("base").registerBackwardDependency(d);
+		MemorySituation ms2 = new SBSituation();
+		ms2.addressError = false;
+		ms2.isMapped = true;
+		ms2.isCached = true;
+		i2.setSituation(ms2);
 		p.append( i2 );
+		
+//		SBInstruction i3 = new SBInstruction();
+//		i3.getOperand("rt").setRegister(k.getGPR(2));
+//		i3.getOperand("base").setRegister(k.getGPR(0));
+//		i3.setSituation(new SBSituation());
+//		p.append( i3 );
+		
+		KMD64Context c = new KMD64Context(k);
+		c.reset();
 		
 		try
 		{
-		new Runner(
-//				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
+			Program init = new Runner(
+				 	"C:\\Documents and Settings\\kornevgen\\Desktop\\tesla.2008.09.24\\TeSLa-XP\\src\\ruby"
 //					"C:\\Documents and Settings\\kornevgen2\\My Documents\\dissertation\\implementation\\TeSLa-XP\\src\\ruby"
-					"/home/kornevgen/workspace/TeSLa-XP/src/ruby"				
-//				, 	"C:\\Program Files\\jruby-1.4.0"
-				,	"/usr/lib/jruby1.2"
-//				,	"C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa-XP/test/k64/"
+//					"/home/kornevgen/workspace/TeSLa-XP/src/ruby"				
+				, 	"C:\\Program Files\\jruby-1.4.0"
+//				,	"/usr/lib/jruby1.2"
+				,	"C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa-XP/test/k64/"
 //				,	"C:/Documents and Settings/kornevgen2/My Documents/dissertation/implementation/TeSLa-XP/test/k64/"
-				, 	"/home/kornevgen/workspace/TeSLa-XP/test/k64/"
-			).run(p, k);
+//				, 	"/home/kornevgen/workspace/TeSLa-XP/test/k64/"
+			).run(p, k, c );
+			System.out.println( init.toString() );
 		}
 		catch( Unsat e ) {} catch( Timeout e ) {}
 	}
