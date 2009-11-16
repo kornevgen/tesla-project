@@ -95,9 +95,9 @@ def process_instruction(instruction)
   raise "please define $instructionsPath" if $instructionsPath == nil
   
   #если есть access, но нет external c id = 'virtual', 'physical', 'prephysical', выдать ошибку
-  if instruction.has_elements('situation/access')
+  if instruction.get_elements('situation/access').length > 0
     ["virtual", "physical", "prephysical"].each{|id|
-      raise "external name with id '#{id}' must be defined" if ! instruction.has_elements("external/[@id=\"#{id}\"")
+      raise "external name with id '#{id}' must be defined" if instruction.get_elements("external[@id='#{id}']").length == 0
     }
   end
  
@@ -137,7 +137,7 @@ def process_instruction(instruction)
 
     #эта добавка для LOAD-инструкций
       if (id == "physical")
-        @memcells.merge!({ @current_externals[id] => @synonyms[instruction.get_elements('argument')[0].attributes['name']] })
+        @memcells.merge!({ external.attributes['name'] => @synonyms[instruction.get_elements('argument')[0].attributes['name']] })
       end
   }
   
@@ -345,14 +345,16 @@ class Runner
     smt_file.close
     #File.open(smt_file.path).each{|s| puts s }
     output = `z3 /m #{smt_file.path} /T:60`
-    puts output
-    (puts "out#{i}.smt: timeout";return "timeout") if output.include?("timeout")
-    (puts "out#{i}.smt: unsat"; return "unsat") if output.include?("unsat")
-    puts "out#{i}.smt: sat" if !output.include?("unsat") && !output.include?("timeout")
+    #puts output
+    (#puts "out#{i}.smt: timeout";
+      return "timeout") if output.include?("timeout")
+    (#puts "out#{i}.smt: unsat"; 
+      return "unsat") if output.include?("unsat")
+    #puts "out#{i}.smt: sat" if !output.include?("unsat") && !output.include?("timeout")
     #smt_file.unlink
     hash = Hash[*(output[0..-5].scan(/(.+) -> bv(\d+)\[\d+\]/)).flatten]
     # using solver.synonyms, replace corresponding names in hash (localvar -> id)
-    solver.synonyms.each_pair{|k,v| puts "%%% #{k} +> #{v}"}
+    #solver.synonyms.each_pair{|k,v| puts "%%% #{k} +> #{v}"}
     
     solver.synonyms.each_pair{|k,v|
       #raise "??? (#{k} +> #{v})" if hash[v] == nil
