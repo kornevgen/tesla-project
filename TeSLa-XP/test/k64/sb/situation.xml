@@ -35,6 +35,10 @@
 			<argument id="points_for">STORE</argument>
 	</procedure>
 	
+	<let id="prephysical">
+		<var>pAddr</var>
+	</let>
+	
 	<let id="physical">
 		<var>pAddr</var>
 	</let>
