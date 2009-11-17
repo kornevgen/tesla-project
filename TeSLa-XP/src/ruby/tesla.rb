@@ -136,15 +136,15 @@ def process_instruction(instruction)
       @varlengths.merge!({external.attributes['name'] => @current_externals_length[id]})
 
     #эта добавка для LOAD-инструкций
-      if (id == "physical")
-        @memcells.merge!({ external.attributes['name'] => @synonyms[instruction.get_elements('argument')[0].attributes['name']] })
+      if (id == "physical" && @load_instructions.include?(instruction))
+        @memcells.merge!({ external.attributes['name'] => @synonyms[instruction.get_elements('argument')[0].attributes['name']] + "_X"})
       end
   }
   
   #TODO поддержка идентификаторов инструкций
   
   test_situation.elements.each('//[@state="result"]'){|arg|
-       @synonyms[reverse_synonyms[arg].text] = "#{@synonyms[reverse_synonyms[arg].text]}_X"
+       @synonyms[reverse_synonyms[arg].attributes['name']] = "#{@synonyms[reverse_synonyms[arg].attributes['name']]}_X"
   }
   
 end
@@ -218,6 +218,8 @@ def constraintsfrom_procedure( operator, full_context )
       @lengths_context[n.text] = n.attributes['length'].to_i
       puts ":extrafuns((#{new_name} BitVec[#{n.attributes['length']}]))"
   }
+  
+  @load_instructions << @instruction if operator.attributes['name'] == "LoadMemory"
   
   send("constraintsfrom_#{operator.attributes['name']}", operator, full_context)
 end
@@ -303,9 +305,10 @@ def solve template
   @synonyms = Hash.new
   @varlengths = Hash.new
   @memcells = Hash.new
+  @load_instructions = []
   # ввести определения регистров и констант
   doc.elements.each('template/register | template/constant') { |reg|
-      puts ":extrafuns (( #{reg.attributes['name']}_X BitVec[#{reg.attributes['length']}] ))"  
+      puts ":extrafuns (( #{reg.attributes['name']}_X BitVec[#{reg.attributes['length']}] ))"
       @synonyms[reg.attributes['name']] = "#{reg.attributes['name']}_X"
       @varlengths[reg.attributes['name']] = reg.attributes['length'].to_i
   }
@@ -358,8 +361,7 @@ class Runner
     
     solver.synonyms.each_pair{|k,v|
       #raise "??? (#{k} +> #{v})" if hash[v] == nil
-      hash[k] = hash[v] if k != nil
-      #TODO разобраться, откуда берется ключ nil и с ним значение "_X"
+      hash[k] = hash[v]
     }
 
     #solver.memcells.each_pair{|k,v| puts "&&& #{k} +> #{v}"}
