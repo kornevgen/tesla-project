@@ -1,0 +1,50 @@
+277 Patch Control
+
+0
+0
+1
+thesis.tex
+7
+5
+1
+
+
+
+
+
+
+thesis.tex
+TeX:UTF-8
+152055803 0 -1 2687 -1 2741 0 0 506 382 0 294 272 -1 -1 0 0 21 -1 -1 21 1 0 2741 -1   0
+appendix\tables.tex
+TeX:UTF-8
+286273531 0 -1 11417 -1 12618 88 88 854 664 0 22 629 -1 -1 0 0 -1 -1 -1 -1 1 0 12618 -1   0
+appendix\proofs.tex
+TeX:UTF-8
+17838075 0 -1 65656 -1 65656 132 132 942 598 0 22 170 -1 -1 0 0 21 -1 -1 21 1 0 65656 -1   0
+theorems.tex
+TeX:UTF-8
+17838075 0 -1 5967 -1 5967 88 88 898 554 0 22 816 -1 -1 0 0 2480 -1 -1 2480 1 0 5967 -1   0
+2.theor\theor.tex
+TeX:UTF-8
+17838075 0 -1 90409 -1 90875 44 44 810 620 0 758 646 -1 -1 0 0 21 -1 -1 21 1 0 90875 -1   0
+0.intro\intro.tex
+TeX:UTF-8
+286273531 0 -1 88 -1 88 22 22 788 598 0 22 68 -1 -1 0 0 21 -1 -1 21 1 0 88 -1   0
+C:\Documents and Settings\kornevgen\Desktop\tesla.2008.09.24\papers\OSP2009\osp09.tex
+TeX
+269496315 1 72 60 72 74 0 0 513 352 0 606 732 -1 -1 0 0 -1 -1 -1 -1 1 0 74 72   0
+
+*thesis.tex
+>
+*theorems
+*0.intro/intro
+*1.review/review
+*2.theor/theor
+*3.impl/impl
+*4.analysis/analysis
+*epilogue
+*appendix/tables
+*appendix/proofs
+*thesis.bib
+<
