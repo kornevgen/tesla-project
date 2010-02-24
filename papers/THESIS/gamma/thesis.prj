@@ -15,7 +15,7 @@ thesis.tex
 
 thesis.tex
 TeX:UTF-8:UNIX
-420589563 1 -1 4190 -1 4255 0 0 506 382 0 692 665 -1 -1 0 0 21 -1 -1 21 1 0 4255 -1   0
+420589563 0 -1 32626 -1 32790 0 0 506 382 0 212 456 -1 -1 0 0 21 -1 -1 21 1 0 32790 -1   0
 0.intro\intro.tex
 TeX:UTF-8
 17838075 0 -1 86 -1 86 22 22 788 598 0 22 57 -1 -1 0 0 21 -1 -1 21 1 0 86 -1   0
@@ -44,11 +44,6 @@ TeX
 *thesis.tex
 >
 *theorems
-*0.intro/intro
-*1.review/review
-*2.theor/theor
-*3.impl/impl
-*4.analysis/analysis
 *epilogue
 *appendix/tables
 *appendix/proofs
