@@ -151,13 +151,73 @@
 
 %Ж) формулирование цели работы - исследование нацеленного построения программ на память
 
-\chapter{Обзор, постановка задачи}
+\chapter{Известные методы построения нацеленных тестов}
 
-%А) тестовые шаблоны
+%А) всякие разные методы (в том числе G-Pro, RAVEN, MicroTESK)
+%1.
 
-%Б) G-Pro, RAVEN, MicroTESK
+статья (1996)
+I’m Done Simulating;Now What? Verification Coverage Analysis and CorrectnessChecking of the DECchip 21164 Alpha microprocessor.
+описывает основные виды функциональной верификации:
+* assertions в RTL
+* самопроверяющиеся тесты
+* сравнение с эталоном
 
-%В) выводы: 1) 2-3 инструкции, 2) эфф-е повторение рез-тов G-Pro и RAVEN без включения мозгов невозможно
+В ней указываются методы псевдослучайно генерации тестов:
+
+W. Anderson, "Logical Verification of the NVAX CPU Chip
+Design," Digital Technical Journal, vol. 4, no. 3 (Summer 1992):
+38-46.
+-------------
+SEGUE - инженеры составляют набор шаблонов программ, которые вызывают разные события. В этих шаблонах вместо инструкций могут указываться лишь типы инструкций, вместо аргументов некий "произвольный аргумент".
+Шаблон верхнего уровня указывает, с какими вероятностями должны встречаться шаблоны нижнего уровня (которые писали для возникновения событий).
+Демоны моделируют псевдослучайное поведение среды, в которой работает микропроцессор.
+-------------
+
+4. A. Ahi, G. Burroughs, A. Gore, S. LaMar, C-Y. Lin, and A.
+Wiemann, "Design Verification of the HP 9000 Series 700 PARISC
+Workstations," Hewlett-Packard Journal (August 1992):
+34-42.
+-----
+похожее, но в HP
+-----
+
+5. D. Wood, G. Gibson, and R. Katz, "Verifying a Multiprocessor Cache Controller Using Random Test Generation," IEEE Design and Test of Computers (August 1990): 13-25.
+------------
+"модель" -- all multiprocessor interaction cases
+архитектура SPUR
+-----------
+
+тесты из одной инструкции (1982!):
+D. Bhandarkar, "Architecture Management for Ensuring Software Compatibility in the VAX Family of Computers," IEEE Computer (February 1982): 87-93.
+
+random test generation for check pipeline interlocks and arithmetic algorithms
+[TBD!] Maurer, Design Verification of the WE32106 Math Accelerator Unit
+[TBD!] Shalem Carmon, Testing the Design of the NS32532 Microprocessor
+
+S. Taylor et al. “Functional verification of a multiple-issue, out-of-order, superscalar Alpha processor - the DEC Alpha 21264 microprocessor.” In Proc. DAC, 1998, pp. 638–643.
+----
+SEGUE - но на следующем микропропессоре
+------
+
+2009:Yingpan Wu, Lixin Yu, Wei Zhuang, Jianyong Wang, "A Coverage-Driven Constraint Random-Based Functional Verification Method of Pipeline Unit," icis, pp.1049-1054, 2009 Eigth IEEE/ACIS International Conference on Computer and Information Science (icis 2009), 2009
+
+
+Mishra, Dutt:
+Generation of effective test programs for the self-test of a processor has been studied by several researchers ([2] [18] [20] [21]).
+
+Ur and Yadin [23] presented a method for generation of assembler test programs that systematically probe the micro-architecture of a PowerPC processor.
+
+Iwashita et al. [3] use a FSM based processor modeling to automatically generate test programs.
+
+================
+Alpha 21164 (21264): I’m Done Simulating;Now What? Verification Coverage Analysis and CorrectnessChecking of the DECchip 21164 Alpha microprocessor.
+NVAX: W. Anderson, "Logical Verification of the NVAX CPU Chip Design," Digital Technical Journal, vol. 4, no. 3 (Summer 1992):38-46.
+HP 9000 Series 700 PARISC:  4. A. Ahi, G. Burroughs, A. Gore, S. LaMar, C-Y. Lin, and A. Wiemann, "Design Verification of the HP 9000 Series 700 PARISC Workstations," Hewlett-Packard Journal (August 1992): 34-42.
+PowerPC, VLIW: что-то Genesys 2005
+Intel использует тесты: http://www.cs.rice.edu/~vardi/comp607/bentley.pdf
+
+%Б) выводы: 1) 2-3 инструкции, 2) эфф-е повторение рез-тов G-Pro и RAVEN без включения мозгов невозможно
 
 %Г) ? уточненная постановка задач (а надо ли?) с формализацией терминов
 % цель задается в конкретном виде: в виде текста, спецификации последовательности инструкций - тестовых шаблонов
