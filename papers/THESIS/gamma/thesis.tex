@@ -1,5 +1,6 @@
 % !Mode:: "TeX:UTF-8"
 \documentclass[14pt]{extreport}
+\usepackage{cmap}
 
 \usepackage{fix-cm}
 %\usepackage[cp1251]{inputenc}
@@ -41,7 +42,6 @@
 \newtheorem{utv}{Утверждение}
 \newtheorem*{sld}{Следствие}
 
-% добавил ненужный комментарий
 
 \newcommand{\LRU}{\textsf{LRU}\xspace}
 \newcommand{\FIFO}{\textsf{FIFO}\xspace}
@@ -59,6 +59,29 @@
 \newcommand{\theoremtextwname}[3]{
 \noindent\textbf{Теорема~{#1}}~(#2). \textit{#3}
 }
+
+%
+% Подправим команду \appendix : нумерация русскими буквами,
+% а не латинскими.
+\makeatletter
+\renewcommand\appendix{\par
+  \setcounter{chapter}{0}%
+  \setcounter{section}{0}%
+  \def\@chapapp{\appendixname}%
+  \def\thechapter{\@Asbuk\c@chapter}}
+\makeatother
+
+% Теперь "русифицируем" окружение enumerate:
+\makeatletter
+\def\labelenumi{\theenumi)}      % чтобы после номера шла скобка;
+\def\theenumii{\@asbuk\c@enumii}   % чтобы на втором уровне шли русские,
+\def\labelenumii{\theenumii)}    % а не латинские буквы
+\def\p@enumii{\theenumi}         % а это для \ref
+\def\labelenumiii{{\bf--}}       % а на третьем уровне пусть будут лишь тире,
+\let\theenumiii\relax            % и отдельных ссылок на него не будет
+\def\p@enumiii{\theenumi\theenumii}
+\makeatother
+
 
 \begin{document}
 
@@ -123,22 +146,18 @@
 
 %%! определиться "последовательность инициализирующих" или "инициализирующая посл-ть"
 
-%%! написать, В чем недостаток применения методов типа Монте-Карло для получения
-%%  тестовых программ -- ведь их закодировать проще (не поддаются архитектуры, такие вот они вычурные?)
-%% (тестовый шаблон может задавать очень маленькую область решений в многомерном
-%% пространстве -> мала вероятность в него попасть)
-
 %% там, где в формулах разъехался "w-1", заменить на "w{-}1"
 
 %%%%! не ВЕРШИНЫ АВТОМАТА, а СОСТОЯНИЯ ! не ДУГИ АВТОМАТА, а ПЕРЕХОДЫ !
 
-%%! где-то сослаться на препринт
+%%? НУЖНЫ ЛИ ТОЧКИ ПОСЛЕ ЦИФР-НОМЕРОВ РАЗДЕЛОВ ?
+%% http://fuzzy-plates.googlecode.com/svn-history/r68/trunk/docs/sty/russcorr.sty
 
 \include{theorems}
 
 \include{intro1}
 
-\include{review}
+\include{review1}
 
 \include{theor}
 
@@ -151,6 +170,8 @@
 \appendix
 % \include{appendix/tables}
 \include{appendix/proofs}
+
+\include{appendix/xml}
 
 \pagebreak
 %%%%\bibliographystyle{plain}
