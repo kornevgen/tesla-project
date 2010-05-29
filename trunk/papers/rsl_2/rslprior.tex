@@ -1,0 +1,46 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{Приоритет операций в RSL}\label{sec:priority}
+
+Операции с большим приоритет обрабатываются первее.
+
+%\begin{table}[h]
+%\caption{
+Приоритет операций в типовых выражениях
+%}
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline приоритет & операторы & ассоциативность\\
+\hline  1 & , & правая\\
+\hline  2 & $\Map \NonDeterMap$ & правая\\
+\hline  3 & $\DP$ & \\
+\hline  4 & ${\ }\Set {\ }\Infset {\ }\List {\ }\Inflist$ & \\
+\hline
+\end{tabular}
+\end{center}
+%\end{table}
+
+%\begin{table}[h]
+%\caption{
+Приоритет операций в выражениях со значением
+%}
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline приоритет & операторы & ассоциативность\\
+\hline 1 & $\All \Exists \ExistsOne$ & правая \\
+\hline 2 & $\Iden$ & \\
+\hline 3 & $\Exc \Nd || \Ilock$ & правая \\
+\hline 4 & ; & правая \\
+\hline 5 & := & \\
+\hline 6 & $\Impl$ & правая \\
+\hline 7 & $\Or$ & правая \\
+\hline 8 & $\And$ & правая \\
+\hline 9 & $= \neq > < \geqslant\leqslant \SetL \SetG \SetLE \SetGE
+\Isin \NotIsin$ &  \\
+\hline 10 & $+ - \Minus \Concat \Union \Upd$ & левая \\
+\hline 11 & $* / \Superp \Inter$ & левая \\
+\hline 12 & $\Power$ & \\
+\hline 13 & $\Not$ префиксы суффиксы& \\
+\hline
+\end{tabular}
+\end{center}
+%\end{table} 
