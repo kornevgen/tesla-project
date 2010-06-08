@@ -4,8 +4,8 @@
 0
 1
 autoref.tex
-5
-1
+9
+3
 0
 
 
@@ -15,7 +15,19 @@ autoref.tex
 
 autoref.tex
 TeX:UTF-8:UNIX
-420589563 0 -1 10386 -1 10434 0 0 825 560 0 702 646 -1 -1 0 0 21 -1 -1 21 1 0 10434 -1   0
+420589563 0 -1 21063 -1 22316 0 0 825 560 0 292 798 -1 -1 0 0 21 -1 -1 21 1 0 22316 -1   0
+C:\Documents and Settings\kornevgen\Desktop\tesla.2008.09.24\papers\THESIS\delta\intro11.tex
+TeX:UTF-8
+17838075 0 -1 3491 -1 17728 176 200 1001 760 0 32 551 -1 -1 0 0 23 -1 -1 23 1 0 17728 -1   0
+C:\Documents and Settings\kornevgen\Desktop\tesla.2008.09.24\papers\THESIS\delta\thesis.tex
+TeX:UTF-8:UNIX
+17936379 1 -1 4522 -1 4530 198 225 1023 785 0 102 380 -1 -1 0 0 -1 -1 -1 -1 1 0 4530 -1   0
+C:\Documents and Settings\kornevgen\Desktop\tesla.2008.09.24\papers\THESIS\delta\epilogue.tex
+TeX:UTF-8
+286273531 1 -1 1109 -1 220 242 275 1067 835 0 22 133 -1 -1 0 0 -1 -1 -1 -1 1 0 220 -1   0
+C:\Documents and Settings\kornevgen\Desktop\tesla.2008.09.24\papers\THESIS\delta\theor.tex
+TeX:UTF-8
+286273531 0 -1 62172 -1 62328 154 175 979 735 0 152 -24774 -1 -1 0 0 -1 -1 -1 -1 1 0 62328 -1   0
 C:\Documents and Settings\kornevgen\Desktop\tesla.2008.09.24\papers\THESIS\gamma\intro11.tex
 TeX:UTF-8
 286273531 0 -1 15986 -1 17916 242 275 1067 835 0 292 741 -1 -1 0 0 21 -1 -1 21 1 0 17916 -1   0
@@ -32,5 +44,6 @@ DATA
 *autoref.tex
 >
 *common
+*../gamma/theorems
 *../gamma/intro11
 <
