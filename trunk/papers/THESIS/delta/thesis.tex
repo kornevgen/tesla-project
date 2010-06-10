@@ -10,7 +10,19 @@
 %\usepackage[T1]{fontenc} %cm-super
 %\usepackage{type1cm}
 \usepackage{indentfirst}
+
+\usepackage{ifpdf}
+
+\ifpdf
+% we are running pdflatex, so convert .eps files to .pdf
+\usepackage[pdftex]{graphicx}
+\usepackage{epstopdf}
+\else
+% we are running LaTeX, not pdflatex
 \usepackage{graphicx}
+\fi
+
+
 \usepackage{amsthm}
 \usepackage{amssymb}
 \usepackage{amsmath}
@@ -20,18 +32,20 @@
 \usepackage{multirow}
 \usepackage{hhline}
 \usepackage{xspace}
+\usepackage{ifthen}
 \usepackage[numbers,compress,sort]{natbib}
 \usepackage{setspace} % интервалы межстрочные
 \pagestyle{plain} \onehalfspacing
 
-%\usepackage[left=3cm,right=2cm,
-%top=2cm,bottom=0.5cm,bindingoffset=0cm,  a4paper]{geometry} % поля
+\usepackage[left=3cm,right=1.2cm,
+top=1.8cm,bottom=2.5cm,bindingoffset=0cm,  %a4paper
+]{geometry} % поля
 
-\textheight 25.7cm % 29.7-2-2
-\textwidth 16.7cm % 21-2.5-1.5
-\hoffset 0.46cm %2.5-2.54 слева 3 см
-\voffset -0.54cm %2-2.54 сверху 2 см
-\oddsidemargin 0cm \headheight 0cm \headsep 0cm \topmargin 0cm
+%\textheight 25.7cm % 29.7-2-2
+%\textwidth 16.7cm % 21-2.5-1.5
+%\hoffset 0.46cm %2.5-2.54 слева 3 см
+%\voffset -0.54cm %2-2.54 сверху 2 см
+%\oddsidemargin 0cm \headheight 0cm \headsep 0cm \topmargin 0cm
 
 \usepackage{ccaption} % заменяем для рисунков ':' после номера рисунка на другой символ
 \captiondelim{. } % разделитель точка и пробел
@@ -173,6 +187,9 @@
 
 \section*{Апробация работы и публикации}
 \Pub
+
+\section*{Структура работы}
+Первая глава посвящена обзору существующих методов построения тестовых программ и подсистем управления памяти, их анализу и уточнению задач исследования. Вторая глава посвящена решению задач, сформулированных в конце первой задачи. Третья глава посвящена оценке границ применимости, описанию реализации и проводившихся экспериментов.
 
 \include{review}
 
