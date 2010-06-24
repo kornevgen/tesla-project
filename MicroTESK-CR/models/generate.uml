@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uml:Package xmi:version="2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1" xmlns:uml="http://www.eclipse.org/uml2/3.0.0/UML" xmi:id="_kFhroH-WEd-_ivf0aBZOoA">
+  <packagedElement xmi:type="uml:Interaction" xmi:id="_lzfpUH-WEd-_ivf0aBZOoA" name="generate">
+    <lifeline xmi:id="__M6vsH-WEd-_ivf0aBZOoA" name="generator"/>
+  </packagedElement>
+</uml:Package>
