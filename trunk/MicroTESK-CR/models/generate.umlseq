@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<notation:Diagram xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:notation="http://www.eclipse.org/gmf/runtime/1.0.2/notation" xmlns:uml="http://www.eclipse.org/uml2/3.0.0/UML" xmlns:uml2t.seqd.notation="http://www.eclipse.org/mdt/uml2tools/sequence-diagram/notation/2008" xmi:id="_kFhroX-WEd-_ivf0aBZOoA" type="UMLSequence" name="generate.umlseq" measurementUnit="Pixel">
+  <children xmi:type="notation:Shape" xmi:id="_lzzLUH-WEd-_ivf0aBZOoA" type="2001" fontName="DejaVu Sans Condensed">
+    <children xmi:type="notation:DecorationNode" xmi:id="_lz8VQn-WEd-_ivf0aBZOoA" type="5002"/>
+    <children xmi:type="notation:Shape" xmi:id="__NNqoH-WEd-_ivf0aBZOoA" type="3001" fontName="DejaVu Sans Condensed">
+      <children xmi:type="notation:DecorationNode" xmi:id="__NNqon-WEd-_ivf0aBZOoA" type="5001"/>
+      <children xmi:type="notation:DecorationNode" xmi:id="__NNqo3-WEd-_ivf0aBZOoA" type="5005"/>
+      <element xmi:type="uml:Lifeline" href="generate.uml#__M6vsH-WEd-_ivf0aBZOoA"/>
+      <layoutConstraint xmi:type="notation:Bounds" xmi:id="__NNqoX-WEd-_ivf0aBZOoA" x="56" y="28" width="64" height="300"/>
+    </children>
+    <styles xmi:type="uml2t.seqd.notation:SDModelStorageStyle" xmi:id="_lz8VQH-WEd-_ivf0aBZOoA"/>
+    <element xmi:type="uml:Interaction" href="generate.uml#_lzfpUH-WEd-_ivf0aBZOoA"/>
+    <layoutConstraint xmi:type="notation:Bounds" xmi:id="_lz8VQX-WEd-_ivf0aBZOoA" x="30" y="25" width="476" height="426"/>
+  </children>
+  <styles xmi:type="notation:DiagramStyle" xmi:id="_kFhron-WEd-_ivf0aBZOoA"/>
+  <element xmi:type="uml:Package" href="generate.uml#_kFhroH-WEd-_ivf0aBZOoA"/>
+</notation:Diagram>

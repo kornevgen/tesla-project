@@ -5,6 +5,11 @@ public class Generator
 	private Solver solver;
 	private TextConstructor constructor;
 	
+	public Generator()
+	{
+		solver = new Solver();
+	}
+	
 	public void setTextConstructor( TextConstructor c )
 	{
 		constructor = c;
