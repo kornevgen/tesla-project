@@ -2,29 +2,71 @@ package ru.teslaprj;
 
 public class Generator
 {
-	private Solver solver;
-	private TextConstructor constructor;
-	
-	public Generator()
+	private Solver solver = new Solver();
+	private TextConstructor text_constructor = null;
+
+	public Program generate( Template template )
+		throws Unsat, Timeout
 	{
-		solver = new Solver();
-	}
-	
-	public void setTextConstructor( TextConstructor c )
-	{
-		constructor = c;
-	}
-	
-	public void run(XMLTemplate template)
-	{
-		//TODO 1. вся ли конфигурация задана?
-		if ( constructor == null )
-			throw new IllegalStateException("TextConstructor isn't set yet");
+		if (! is_initialized() )
+			throw new IllegalStateException("Generator isn't initialized");
 		
-		//TODO 2. вызвать ruby, который сгенерирует и решит ограничения
-		solver.solve(template);
-		
-		//TODO 3. вызвать constructor
+		return text_constructor.build_initialization(
+					solver.solve(template) );
 	}
 
+	
+	private boolean is_initialized()
+	{
+		return is_constructor_initialized()
+			&& is_solver_initialized();
+	}
+
+
+	private boolean is_solver_initialized() {
+		return solver.is_initialized();
+	}
+
+
+	private boolean is_constructor_initialized() {
+		return text_constructor != null;
+	}
+
+
+	/**
+	 * @param text_constructor the text_constructor to set
+	 */
+	public void setTextConstructor(TextConstructor text_constructor) {
+		this.text_constructor = text_constructor;
+	}
+	
+	public void setMicroprocessor( Microprocessor microprocessor )
+	{
+		solver.setMicroprocessor( microprocessor );
+	}
+	
+	public void setPathToRubySources( String path )
+	{
+		solver.setPathToRubySources( path );
+	}
+	
+	public void setJrubyHome( String path )
+	{
+		solver.setJrubyHome( path );
+	}
+
+	public void setJrubyLib( String path )
+	{
+		solver.setJrubyLib( path );
+	}
+
+	public void setJrubyShell( String path )
+	{
+		solver.setJrubyShell( path );
+	}
+
+	public void setJrubyScript( String path )
+	{
+		solver.setJrubyScript( path );
+	}
 }

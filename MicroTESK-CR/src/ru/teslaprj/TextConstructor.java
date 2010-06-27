@@ -1,5 +1,9 @@
 package ru.teslaprj;
 
-public abstract class TextConstructor {
+import java.util.Map;
 
+public interface TextConstructor
+{
+
+	Program build_initialization(Map<Parameter, Value> solve);
 }
