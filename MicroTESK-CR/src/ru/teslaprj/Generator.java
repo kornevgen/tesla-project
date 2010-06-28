@@ -5,14 +5,14 @@ public class Generator
 	private Solver solver = new Solver();
 	private TextConstructor text_constructor = null;
 
-	public Program generate( Template template )
+	public Program generate( Template template, boolean with_binsearch )
 		throws Unsat, Timeout
 	{
 		if (! is_initialized() )
 			throw new IllegalStateException("Generator isn't initialized");
 		
 		return text_constructor.build_initialization(
-					solver.solve(template) );
+					solver.solve(template, with_binsearch ) );
 	}
 
 	
