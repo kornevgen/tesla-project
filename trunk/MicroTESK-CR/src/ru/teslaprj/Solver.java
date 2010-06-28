@@ -1,6 +1,7 @@
 package ru.teslaprj;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.script.ScriptContext;
@@ -22,7 +23,7 @@ public class Solver
 	protected ScriptContext context;
 
 	
-	protected Map<Parameter, Value> solve( Template template, boolean with_binsearch )
+	protected Map<Parameter, Long> solve( Template template, boolean with_binsearch )
 		throws Unsat, Timeout
 	{
 		if ( ! is_initialized() )
@@ -30,7 +31,7 @@ public class Solver
 
 		try { initialize_rubyEngine();
 		
-		Map<Parameter, Value> init = ruby_cycle(template, all_max(template) );
+		Map<Parameter, Long> init = ruby_cycle(template, all_max(template) );
 		
 		if ( with_binsearch )
 		{
@@ -71,12 +72,12 @@ public class Solver
 		return null;
 	}
 
-	protected Map<Parameter, Value> binsearch(Template template) {
+	protected Map<Parameter, Long> binsearch(Template template) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
-	protected Map<Parameter, Value> ruby_cycle(
+	protected Map<Parameter, Long> ruby_cycle(
 				Template template,
 				Map<Table, Integer> init_lengths )
 					throws Unsat, Timeout, ScriptException
@@ -94,24 +95,18 @@ public class Solver
 		if ( o == "timeout" )
 			throw new Timeout();
 		
-		Map<String, Long> model = parse_ruby_hash( (RubyHash)o );
-		return filterModel( model, template );
-	}
-	
-	
-
-	private Map<Parameter, Value> filterModel(
-			Map<String, Long> model,
-			Template template )
-	{
-		// TODO Auto-generated method stub
-		return null;
+		return convertParametersValues( (RubyHash)o, template );
 	}
 
-	private Map<String, Long> parse_ruby_hash( RubyHash o)
+	private Map<Parameter, Long> convertParametersValues(RubyHash o,
+			Template template)
 	{
-		// TODO parse as plain RubyHash
-		return null;
+		Map<Parameter, Long> result = new HashMap<Parameter, Long>();
+		for( Parameter p : template.getParameters() )
+		{
+			result.put( p, (Long)o.get(p.getName() + "_X") );
+		}
+		return result;
 	}
 
 	protected void setMicroprocessor(Microprocessor microprocessor)
