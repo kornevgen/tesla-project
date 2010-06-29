@@ -69,4 +69,9 @@ public class Generator
 	{
 		solver.setJrubyScript( path );
 	}
+	
+	public void setSolver( Solver solver )
+	{
+		this.solver = solver;
+	}
 }
