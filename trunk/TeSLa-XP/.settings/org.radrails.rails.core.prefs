@@ -1,0 +1,12 @@
+#Thu Sep 17 12:11:31 MSD 2009
+eclipse.preferences.version=1
+org.radrails.rails.core.compiler.problem.railsDeprecationActiveRecordFindMethods=ignore
+org.radrails.rails.core.compiler.problem.railsDeprecationHumanSizeHelperAlias=ignore
+org.radrails.rails.core.compiler.problem.railsDeprecationImageLinkMethods=ignore
+org.radrails.rails.core.compiler.problem.railsDeprecationPostFormat=ignore
+org.radrails.rails.core.compiler.problem.railsDeprecationPushWithAttributes=ignore
+org.radrails.rails.core.compiler.problem.railsDeprecationRedirectCalls=ignore
+org.radrails.rails.core.compiler.problem.railsDeprecationRenderCalls=ignore
+org.radrails.rails.core.compiler.problem.railsDeprecationStartEndFormTag=ignore
+org.radrails.rails.core.compiler.problem.railsDeprecationUpdateElementFunction=ignore
+org.radrails.rails.core.compiler.problem.railsInstanceVariable=ignore

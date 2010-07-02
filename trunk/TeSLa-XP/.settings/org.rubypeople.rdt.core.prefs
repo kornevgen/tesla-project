@@ -1,0 +1,8 @@
+#Thu Sep 17 12:11:31 MSD 2009
+eclipse.preferences.version=1
+org.rubypeople.rdt.core.compiler.problem.constantReassignment=ignore
+org.rubypeople.rdt.core.compiler.problem.emptyStatement=ignore
+org.rubypeople.rdt.core.compiler.problem.redefinition.core.class.method=ignore
+org.rubypeople.rdt.core.compiler.problem.ruby19HashCommaSyntax=ignore
+org.rubypeople.rdt.core.compiler.problem.ruby19WhenStatements=ignore
+org.rubypeople.rdt.core.compiler.problem.unreachableCode=ignore
