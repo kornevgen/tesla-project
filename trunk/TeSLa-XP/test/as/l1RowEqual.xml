@@ -1,0 +1,11 @@
+<situation>
+	<argument name="x" length="64" state="readonly"/>
+	<argument name="y" length="64" state="readonly"/>
+	
+	<assume>
+		<eq>
+			<bits end="3" start="0"><var>x</var></bits>
+			<bits end="3" start="0"><var>y</var></bits>
+		</eq>
+	</assume>
+</situation>

@@ -1,0 +1,25 @@
+<situation>
+	<argument name="x" length="64" state="readonly"/>
+	<argument name="y" length="64" state="readonly"/>
+	
+	<let id="virtual">
+		<sum>
+			<var>x</var>
+			<var>y</var>
+		</sum>
+	</let>
+	
+	<let name="vv" id="ryf">
+		<sum>
+			<var>x</var>
+			<var>x</var>
+		</sum>
+	</let>
+	
+	<assume>
+		<uless>
+			<constant length="10">100</constant>
+			<bits end="9" start="0"><var>x</var></bits>
+		</uless>
+	</assume>
+</situation>

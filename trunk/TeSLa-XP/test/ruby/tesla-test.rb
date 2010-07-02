@@ -86,7 +86,7 @@ i += 1
 
 template_file = "template/#{(i-1)%10}.xml"
 
-$initlength = ALL.length/2 * $L1ASSOC + [cts1,cts2,cts3,cts4].reject{|ii| ii == "l1Miss"}.length
+$initlength = ALL.length/2 * $L1ASSOC + [cts1,cts2,cts3,cts4].select{|ii| ii == "l1Miss"}.length
 
 
 File.new(template_file, "w")

@@ -1,0 +1,17 @@
+<template>
+	<register name="x" length="64"/>
+	<register name="y" length="64"/>
+	
+	<instruction name="BBB">
+		<argument name="x"/>
+		<argument name="y"/>
+		<external name="v1" id="virtual" />
+		<situation>
+			<branch name="abc"/>
+		</situation>
+	</instruction>
+	
+	<assume name="great">
+		<argument name="v1"/>
+	</assume>
+</template>
