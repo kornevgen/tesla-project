@@ -1,4 +1,5 @@
 #summary описание API решателя TeSLa
+#labels Deprecated
 
 = Описание интерфейса TeSLa =
 
