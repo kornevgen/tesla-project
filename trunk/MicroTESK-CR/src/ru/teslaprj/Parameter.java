@@ -1,10 +1,10 @@
 package ru.teslaprj;
 
-public abstract class Parameter
+public interface Parameter
 {
-		public abstract String getName();
+		String getName();
 		
-		public static enum Type { REGISTER, KEY };
+		public static enum Type { REGISTER, KEY, CONST };
 		
-		public abstract Type getType(); 
+		Type getType(); 
 }
