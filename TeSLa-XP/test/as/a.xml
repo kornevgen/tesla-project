@@ -1,0 +1,13 @@
+<template>
+	<register name="x" length="64"/>
+	<register name="y" length="64"/>
+	
+	<assume name="l1RowEqual">
+		<argument name="x"/>
+		<argument name="y"/>
+	</assume>
+	
+	<assume name="great">
+		<argument name="x"/>
+	</assume>
+</template>

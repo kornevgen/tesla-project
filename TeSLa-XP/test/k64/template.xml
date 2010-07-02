@@ -14,7 +14,9 @@
         </situation>
 		<external name='virt1' id='virtual'/>
 		<external name='phys2' id='physical'/>
-    </instruction><register name='reg2' length='64'/><constant name='of3' length='16'/>
+		<external name='prephys2' id='prephysical'/>
+    </instruction>
+    <register name='reg2' length='64'/><constant name='of3' length='16'/>
     <instruction name='sb'>
         <argument name='reg2'/><argument name='reg0'/><argument name='of3'/>
         <situation>
@@ -22,7 +24,10 @@
             <access>
                 <cache level='1' type='DATA' id='l1Miss'/><microtlb type='DATA' id='mtlbMiss'/>
             </access>
-        </situation><external name='virt4' id='virtual'/><external name='phys5' id='physical'/>
+        </situation>
+        <external name='virt4' id='virtual'/>
+        <external name='phys5' id='physical'/>
+        <external name='prephys5' id='prephysical'/>
     </instruction>
     <assume name='l1RowNotEqual'>
         <argument name='phys5'/><argument name='phys2'/>

@@ -13,6 +13,8 @@ full_solver = MIPS_FullMirrorSolver.new
 timeout = 0
 all = 0
 i = 0
+maxtime = 0
+sumtime = 0
 
 ALL = Array.new(2*N){|aLL_w_index| "x#{aLL_w_index}" }
 Ins1 = Array.new(N){ ["LW", "SB"] }.flatten
@@ -33,8 +35,8 @@ File.delete("out#{i-4}.smt") if File.exists?("out#{i-4}.smt")
 File.delete("tmpl#{i-4}.xml") if File.exists?("tmpl#{i-4}.xml")
 template_file = "tmpl#{i}.xml"
 
-$initlength = N * $L1ASSOC + ins2.select{|ii| ii == "l1Hit"}.length
-$initlength_mtlb = N * $TLBASSOC + ins3.select{|ii| ii == "mtlbHit"}.length
+$initlength = N * $L1ASSOC + ins2.select{|ii| ii == "l1Miss"}.length
+$initlength_mtlb = N * $TLBASSOC + ins3.select{|ii| ii == "mtlbMiss"}.length
 
 
 File.new(template_file, "w")
@@ -73,12 +75,12 @@ File.open(data_file, "w"){|f|
   f.puts "<data>"
   
   f.puts "<cache level='1' mode='DATA'>"
-  (0..2**7-1).each{|set|
+  (0..2**$SETLEN-1).each{|set|
     f.puts "<set value='#{set}'>"
     tags = Array.new
-      (1..4).each{|tagn|
+      (1..$L1ASSOC).each{|tagn|
           begin
-            tag = rand(2**24)
+            tag = rand(2**$TAGLEN)
           end until ! tags.include? tag
           tags << tag
           f.puts "<tag value='#{tag}' />"
@@ -88,12 +90,8 @@ File.open(data_file, "w"){|f|
   f.puts "</cache>"
   
   f.puts "<tlb>"
-  # content
-  f.puts "<content>"
   vpns = []
-  lines0 = []
-  lines1 = []
-  48.times{
+  44.times{
     begin
       vpn = rand(2**18)
     end while vpns.include?(vpn)    
@@ -102,23 +100,33 @@ File.open(data_file, "w"){|f|
     f.puts "<line range='0' vpndiv2='#{vpn}' mask='0'" +
            " pfn0='#{(p0 = rand(2**$PFNLEN))}' CCA0='Cached'" + 
            " pfn1='#{(p1 = rand(2**$PFNLEN))}' CCA1='Cached' />"
-           
-    lines0 << p0 if lines0.length < 4
-    lines1 << p1 if lines1.length < 4
   }
-  f.puts "</content>"
+  f.puts "</tlb>"
   
   # microtlb
   f.puts "<microtlb>"
-  (lines0 + lines1).each{|iii| f.puts "<pfn value='#{iii}' />" }
+  $TLBASSOC.times{
+    begin
+      vpn = rand(2**18)
+    end while vpns.include?(vpn)    
+    vpns << vpn
+    
+    f.puts "<line range='0' vpndiv2='#{vpn}' mask='0'" +
+           " pfn0='#{(p0 = rand(2**$PFNLEN))}' CCA0='Cached'" + 
+           " pfn1='#{(p1 = rand(2**$PFNLEN))}' CCA1='Cached' />"
+  }
   f.puts "</microtlb>"
-  
-  f.puts "</tlb>"
   
   f.puts "</data>"
 }
 
+s = Time.now
 f = Runner.new.run( mirror_solver, i, template_file, data_file )
+e = Time.now
+dd = e-s
+dd = 0 if f.include?("timeout")
+maxtime = dd if maxtime < dd
+sumtime += dd
 f1 = Runner.new.run( full_solver, i, template_file, data_file )
 
 raise RuntimeError, "Mirror sat /\\ Full unsat" if ! f.include?("unsat") && f1.include?("unsat")
@@ -129,6 +137,8 @@ timeout += 1 if f.include?("timeout")
 all += 1
 
 puts "ÊÏÄ: #{(all-timeout) * 100 / all} %"
+puts "maxtime: #{maxtime} c."
+puts "middle time: #{sumtime / all} c."
 puts "=======NEXT===DEPENDENCIES======================="
 puts ""
 

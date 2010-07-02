@@ -30,8 +30,8 @@ File.delete("out#{i-4}.smt") if File.exists?("out#{i-4}.smt")
 File.delete("tmpl#{i-4}.xml") if File.exists?("tmpl#{i-4}.xml")
 template_file = "tmpl#{i}.xml"
 
-$initlength = ALL.length/2 * $L1ASSOC + ins2.select{|ii| ii == "l1Hit"}.length
-$initlength_mtlb = ALL.length/2 * $TLBASSOC + ins3.select{|ii| ii == "mtlbHit"}.length
+$initlength = ALL.length/2 * $L1ASSOC + ins2.select{|ii| ii == "l1Miss"}.length
+$initlength_mtlb = ALL.length/2 * $TLBASSOC + ins3.select{|ii| ii == "mtlbMiss"}.length
 
 
 File.new(template_file, "w")

@@ -1,0 +1,10 @@
+<situation>
+	<argument name="x" length="64" state="readonly"/>
+	
+	<assume>
+		<uless>
+			<constant length="6">50</constant>
+			<bits end="5" start="0"><var>x</var></bits>
+		</uless>
+	</assume>
+</situation>
