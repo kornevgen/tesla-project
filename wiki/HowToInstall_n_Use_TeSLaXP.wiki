@@ -35,11 +35,29 @@
 {{{
   // ИНИЦИАЛИЗАЦИЯ ГЕНЕРАТОРА
     	ru.teslaprj.Generator smt_generator = new ru.teslaprj.Generator();
-    	ru.teslaprj.Solver solver = new ru.teslaprj.Solver();
-        solver.setMicroprocessor( microprocessor );
-    	smt_generator.setSolver( solver );
+
+        smt_generator.setMicroprocessor( microprocessor );
+    	smt_generator.setSolver( new ru.teslaprj.Solver() );
     	smt_generator.setTextConstructor( new ThisTextConstructor() );
 
+        set_environment( smt_generator )
+
+  // ЗАПУСК ГЕНЕРАТОРА    	   	
+    	try
+    	{
+    		return smt_generator.generate( template, false );
+    	}
+    	catch(Exception e)
+    	{
+    		e.printStackTrace();
+    	}
+}}}
+
+Обязательная последовательность действий по работе с генератором следующая:
+  # инициализация
+    * 
+
+{{{
     	// for example, jruby.home = C:/Program Files/jruby-1.4.0
     	String jruby_home =  System.getProperty( "jruby.home" );
     	if ( jruby_home == null )
@@ -74,21 +92,6 @@
     	final String instructions_path = System.getProperty("xmls.path");
     	if ( instructions_path == null )
     		throw new IllegalStateException("Isn't defined environment variable XMLS_PATH");
-
-  // ЗАПУСК ГЕНЕРАТОРА    	   	
-    	try
-    	{
-    		return smt_generator.generate( template, false );
-    	}
-    	catch(Exception e)
-    	{
-    		e.printStackTrace();
-    	}
-    	
-    	return preparation;
 }}}
-
-Обязательная последовательность действий по работе с генератором следующая:
-  # инициализация .....
   # запуск
  ...
