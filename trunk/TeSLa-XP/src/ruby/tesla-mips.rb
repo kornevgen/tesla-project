@@ -7,7 +7,7 @@
 
 require "rexml/document"
 
-require "tesla"
+require "tesla.rb"
 
 class Instruction
   attr_accessor :tagset
@@ -533,7 +533,7 @@ def vpn_pfn(tagset, virtual_address)
   puts "(let (#{pfn_name} #{getPfn( tagset )})"
   puts "(let (#{vpn_name} #{getVPN( virtual_address )}))"
   
-  puts "(or "
+  puts "(or false "
   @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
     if tlbline.CCA0 == "Cached"
       puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
@@ -591,7 +591,7 @@ end
 
 def l1Hit_mtlbHit(previous_tagsets, tagset, virtual_address)
   puts ":assumption"
-  puts "(or "
+  puts "(or false "
   (1..4).each{|n| puts send("l1Hit_mtlbHit_part#{n}", previous_tagsets, tagset) }
   puts ")"
   
@@ -620,7 +620,7 @@ def cache_cardinality_constraint( lambda, delta, previous_tagsets, current_tagse
           (0..previous_tagsets.length-1).collect{|i|
               if @l1Hits.include? previous_tagsets[i]
                   "(and " +
-                      "(or " + @data_builder.L.\
+                      "(or false " + @data_builder.L.\
                                   select{|l,d| l%128 == lambda%128 }.
                                   select{|l,d| d > delta }.
                                   collect{|l,d|
@@ -658,7 +658,7 @@ def tlb_cardinality_constraint(delta_T, previous_tagsets, relation, sumlength)
       "(#{relation} bv#{$TLBASSOC - delta_T - previous_tagsets.length + @mtlbHits.length}[#{sumlength}] (bvadd bv0[#{sumlength}] " +
             (0..previous_tagsets.length-1).collect{|i| if @mtlbHits.include? previous_tagsets[i]
             "(and " +
-                "(or " +
+                "(or false " +
                   @data_builder.M[delta_T..$TLBASSOC-1].collect{|mtail|
                     "(= #{getPfn previous_tagsets[i]} bv#{mtail}[#{$PFNLEN}]) " }.join +
                 ")" +
@@ -703,7 +703,7 @@ def l1Hit_mtlbMiss(previous_tagsets, tagset, virtual_address)
   previous_tagsets.collect{|t| getRegion(t) }.not_isin( getRegion(tagset) )
   
   puts ":assumption"
-  puts "(or "
+  puts "(or false "
   (1..2).each{|n| puts send("l1Hit_mtlbMiss_part#{n}", previous_tagsets, tagset) }
   puts ")"
   
@@ -754,7 +754,7 @@ def l1Miss_mtlbHit_part4 previous_tagsets, tagset
           "(and " +
                 "(= #{tagset} bv#{lambda}[#{$TAGSETLEN}])" +
                 cache_tagset_is_displaced_already(previous_tagsets, tagset, lambda, delta) +
-                "(or " + previous_tagsets.collect{|prev_tagset|
+                "(or false " + previous_tagsets.collect{|prev_tagset|
                           "(= #{getRegion tagset} #{getRegion prev_tagset})"
                           }.join + ")" +
           ")"
@@ -806,7 +806,7 @@ def l1Miss_mtlbHit( previous_tagsets, tagset, virtual_address )
   previous_tagsets.not_isin(tagset)
   
   puts ":assumption"
-  puts "(or "
+  puts "(or false "
   (1..4).each{|n| puts send("l1Miss_mtlbHit_part#{n}", previous_tagsets, tagset) }
   puts ")" 
   
@@ -820,7 +820,7 @@ def l1Miss_mtlbMiss( previous_tagsets, tagset, virtual_address )
   }
   
   puts ":assumption"
-  puts "(or "
+  puts "(or false "
   (1..4).each{|n| puts send("l1Miss_mtlbMiss_part#{n}", previous_tagsets, tagset) }
   puts ")"
   
@@ -869,7 +869,7 @@ class MIPS_CombinedSolver < MIPS_Solver
     puts "(let (#{pfn_name} #{instruction.pfn})"
     puts "(let (#{vpn_name} #{instruction.vpn})"
     
-    puts "(or "
+    puts "(or false "
     @data_builder.TLB.select{|l| l.mask == $MASK && l.r == 0}.each{|tlbline|
       if tlbline.CCA0 == "Cached"
         puts "(and (= #{pfn_name} bv#{tlbline.pfn0}[#{$PFNLEN}])" +
@@ -922,7 +922,7 @@ class MIPS_CombinedSolver < MIPS_Solver
   end
   
   def l1Hit_mtlbHit(previous_instructions, current_instruction)
-    puts "(or "
+    puts "(or false "
      (1..3).each{|p| send("l1Hit_mtlbHit_part#{p}", previous_instructions, current_instruction)}
     puts ")"
   end
@@ -930,7 +930,7 @@ class MIPS_CombinedSolver < MIPS_Solver
   def l1Hit_mtlbMiss(previous_instructions, current_instruction)
     puts "(and "
       previous_instructions.collect{|i| i.vpnd2}.notisin(current_instruction.vpnd2)      
-    puts "(or "
+    puts "(or false "
      (1..3).each{|p| send("l1Hit_mtlbMiss_part#{p}", previous_instructions, current_instruction)}
     puts "))"
   end
@@ -969,7 +969,7 @@ class MIPS_CombinedSolver < MIPS_Solver
   def l1Miss_mtlbHit(previous_instructions, current_instruction)
     puts "(and "
       previous_instructions.collect{|i| i.tagset}.notisin(current_instruction.tagset)      
-      puts "(or ";(1..3).each{|p| send("l1Miss_mtlbHit_part#{p}", previous_instructions, current_instruction)};puts ")"
+      puts "(or false ";(1..3).each{|p| send("l1Miss_mtlbHit_part#{p}", previous_instructions, current_instruction)};puts ")"
     puts ")"
   end
   
@@ -1007,12 +1007,12 @@ class MIPS_CombinedSolver < MIPS_Solver
     puts "(and "
       previous_instructions.collect{|i| i.tagset}.notisin(current_instruction.tagset)      
       previous_instructions.collect{|i| i.vpnd2}.notisin(current_instruction.vpnd2)      
-      puts "(or ";(1..4).each{|p| send("l1Miss_mtlbMiss_part#{p}", previous_instructions, current_instruction)};puts ")"
+      puts "(or false ";(1..4).each{|p| send("l1Miss_mtlbMiss_part#{p}", previous_instructions, current_instruction)};puts ")"
     puts ")"
   end
   
   def l1Miss_mtlbMiss_part1(previous_instructions, current_instruction)
-    puts "(and "
+    puts "(and true "
       @data_builder.L1interNotMTLB.collect{|d| "bv#{d.tagset}[#{$TAGSETLEN}]"}.notisin(current_instruction.tagset)
       @data_builder.notV0.collect{|v| "bv#{v}[#{$VPNdiv2LEN}]"}.isin(current_instruction.vpnd2)
     puts ")"
@@ -1129,16 +1129,18 @@ def mirror( _T, previous_tagsets, x, mirrrelation )
                 puts ") 1 0)"
                 xs + [t]
           }
-          t1 = _T
-          t2 = previous_tagsets
+          t1 = _T #init + viewed
+          t2 = previous_tagsets #notviewed yet
           previous_tagsets.each{|x_i|
                 puts "(ite (and "
+                # start of u_x (x_i)
                 x.notisin t2
                 puts "(= #{x.region} #{x_i.region})"
                 t1.reverse.each{|t_i|
                   puts "(and (= bit0 (bvcomp #{x_i} #{t_i})) (or (= #{x} #{t_i}) "                
                 }
                 puts "false" + ")" * (2*t1.length)
+                # end of u_x (x_i)
                 puts ") 1 0)"
                 t1 = t1 + [t2[0]] if t2.length > 0
                 t2 = t2[1..t2.length-1] if t2.length > 0
@@ -1158,7 +1160,7 @@ def mtlbHit(previous_instructions, current_instruction)
 end
 
 def mtlbMiss(previous_instructions, current_instruction)
-  puts "(and true"
+  puts "(and "
     previous_instructions.map{|i| i.vpnd2}.notisin( current_instruction.vpnd2 )
     puts "(or false "
       @data_builder.notV0.map{|v| "bv#{v}[#{$VPNdiv2LEN}]"}.isin( current_instruction.vpnd2 )
@@ -1240,6 +1242,55 @@ end
 def solve3(template, data, pairs )
   @pairs = pairs || []
   solve2(template, data)
+end
+
+end
+
+class MIPS_MirrorSolver2 < MIPS_MirrorSolver
+  def l1Hit( init_tagsets, previous_tagsets, current_tagset )
+    mirror init_tagsets, previous_tagsets, init_tagsets + previous_tagsets, current_tagset, ">"
+  end
+
+  def l1Miss( init_tagsets, previous_tagsets, current_tagset )
+    mirror init_tagsets, previous_tagsets, init_tagsets + previous_tagsets, current_tagset, "<="
+  end
+
+# x is current tag
+# _T is a list of initial tags
+def mirror( _T, previous_tagsets, _S, x, mirrrelation )
+  puts "(and "
+    x.isin _S
+    
+    puts "(#{mirrrelation} #{$L1ASSOC} (+ "
+          _T.inject(_S){|_s,t|
+                puts "(ite (and "
+                x.notisin _s
+                puts "(= #{t.region} #{x.region})"
+                t.notisin previous_tagsets
+                puts ") 1 0)"
+                if _s.length > 0 then 
+                  _s[1.._s.length - 1]
+                else
+                  []
+                end
+          }
+
+          previous_tagsets.inject(previous_tagsets){|_s,t|
+                puts "(ite (and "
+                x.notisin _s
+                puts "(= #{t.region} #{x.region})"
+                if _s.length > 0 then 
+                  s1 = _s[1.._s.length - 1]
+                else
+                  s1 = []
+                end
+                t.notisin s1
+                puts ") 1 0)"
+                s1
+          }
+
+    puts "))"
+  puts ")"
 end
 
 end
@@ -1372,5 +1423,3 @@ def procedures_preparations doc
 end
 
 end
-
-

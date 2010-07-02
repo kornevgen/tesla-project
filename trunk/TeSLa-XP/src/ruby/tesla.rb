@@ -1,4 +1,7 @@
 require "rexml/document"
+#require 'rubygems'
+#gem 'jrexml'
+#require 'jrexml'
 
 class Solver
 
@@ -117,6 +120,7 @@ def process_instruction(instruction)
   full_context = Hash.new
   @lengths_context = Hash.new
   reverse_synonyms.each{|tsarg, insarg|
+      raise "[#{insarg.attributes['name']}]" if !@synonyms[insarg.attributes['name']]
       full_context[tsarg.attributes['name']] = @synonyms[insarg.attributes['name']] +
                         (tsarg.attributes["state"] == "result" ? "_X" : "" )
       @lengths_context[tsarg.attributes['name']] = @varlengths[insarg.attributes['name']]
@@ -227,7 +231,7 @@ end
 def length_equalbinary(operator)
   len1 = send("length_#{operator.elements[1].name}", operator.elements[1])
   len2 = send("length_#{operator.elements[2].name}", operator.elements[2])
-  raise "arguments must have equal bitlengths (now #{len1} and #{len2})" if len1 != len2
+  raise "arguments must have equal bitlengths (now #{len1} and #{len2}) [#{operator.elements[1]}] [#{operator.elements[2]}]" if len1 != len2
   len1  
 end
 
@@ -349,18 +353,17 @@ class Runner
     #File.open(smt_file.path).each{|s| puts s }
     output = `z3 /m #{smt_file.path} /T:60`
     #puts output
-    (#puts "out#{i}.smt: timeout";
+    (puts "out#{i}.smt: timeout";
       return "timeout") if output.include?("timeout")
-    (#puts "out#{i}.smt: unsat"; 
+    (puts "out#{i}.smt: unsat"; 
       return "unsat") if output.include?("unsat")
-    #puts "out#{i}.smt: sat" if !output.include?("unsat") && !output.include?("timeout")
+    puts "out#{i}.smt: sat" #if !output.include?("unsat") && !output.include?("timeout")
     #smt_file.unlink
     hash = Hash[*(output[0..-5].scan(/(.+) -> bv(\d+)\[\d+\]/)).flatten]
     # using solver.synonyms, replace corresponding names in hash (localvar -> id)
     #solver.synonyms.each_pair{|k,v| puts "%%% #{k} +> #{v}"}
     
     solver.synonyms.each_pair{|k,v|
-      #raise "??? (#{k} +> #{v})" if hash[v] == nil
       hash[k] = hash[v]
     }
 
@@ -371,7 +374,6 @@ class Runner
 
     #puts ">>>#{hash.to_a.collect{|a| '['+a[0]+'=>'+a[1]+']'}}"
     #hash.each_pair{|k,v| puts ">>> #{k} +> #{v}"}
-    
     
     hash
   end
