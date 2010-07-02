@@ -31,3 +31,71 @@
   * инициализация блоков MMU последовательностью инструкций обращения к памяти, которые обращаются именно к этим блокам
 
 == Подготовить и исполнить процедуру, вызывающую генератор из jar ==
+Типичная процедура вызова генератора имеет следующий вид (`microprocessor` -- модель микропроцессора, `template` -- тестовый шаблон):
+{{{
+    	ru.teslaprj.Generator smt_generator = new ru.teslaprj.Generator();
+    	ru.teslaprj.Solver solver = new ru.teslaprj.Solver();
+        solver.setMicroprocessor( microprocessor );
+    	smt_generator.setSolver( solver );
+    	KMD64TextConstructor text_constructor = new KMD64TextConstructor();
+    	smt_generator.setTextConstructor( text_constructor );
+    	text_constructor.setState( (KMD64)processor );
+    	text_constructor.setContext( (KMD64Context)context );
+
+    	// for example, jruby.home = C:/Program Files/jruby-1.4.0
+    	String jruby_home =  System.getProperty( "jruby.home" );
+    	if ( jruby_home == null )
+    		throw new IllegalStateException("Isn't defined environment variable JRUBY_HOME");    	
+    	smt_generator.setJrubyHome( jruby_home );
+
+    	// for example, jruby.lib = C:/Program Files/jruby-1.4.0/lib
+    	String jruby_lib = System.getProperty("jruby.lib");
+    	if ( jruby_lib == null )
+    		throw new IllegalStateException("Isn't defined environment variable JRUBY_LIB");    	
+    	smt_generator.setJrubyLib( jruby_lib );
+    	
+    	// for example, jruby.script = C:/Program Files/jruby-1.4.0/bin/jruby.bat
+    	String jruby_script = System.getProperty("jruby.script");
+    	if ( jruby_script == null )
+    		throw new IllegalStateException("Isn't defined environment variable JRUBY_SCRIPT");    	
+    	smt_generator.setJrubyScript( jruby_script );
+    	
+    	// for example, jruby.shell = cmd.exe
+    	String jruby_shell = System.getProperty("jruby.shell");
+    	if ( jruby_shell == null )
+    		throw new IllegalStateException("Isn't defined environment variable JRUBY_SHELL");    	
+    	smt_generator.setJrubyShell( jruby_shell );
+    	
+    	// for example, tesla.ruby = ./ruby
+    	String tesla_ruby = System.getProperty("tesla.ruby");
+    	if ( tesla_ruby == null )
+    		throw new IllegalStateException("Isn't defined environment variable TESLA_RUBY");    	
+    	smt_generator.setPathToRubySources( tesla_ruby );
+    	
+    	// for example, xmls.path = ./tesla
+    	final String instructions_path = System.getProperty("xmls.path");
+    	if ( instructions_path == null )
+    		throw new IllegalStateException("Isn't defined environment variable XMLS_PATH");
+    	solver.setMicroprocessor( new Microprocessor() {			
+			@Override
+			public String getInstructionsPath() {
+				return instructions_path;
+			}
+		});
+
+    	   	
+    	Program preparation = new Program();
+    	try
+    	{
+    		KMD64Program prepare = (KMD64Program)smt_generator.generate( new KMD64Tmpl(template), false );
+    		preparation = prepare.getProgram();
+    		
+    		System.out.println("K64: " + preparation);
+    	}
+    	catch(Exception e)
+    	{
+    		e.printStackTrace();
+    	}
+    	
+    	return preparation;
+}}}
