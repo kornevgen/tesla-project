@@ -9,9 +9,13 @@
 	<argument name="base" state="readonly" length="64" />
 	<argument name="offset" state="readonly" length="16" />
 	
+	<let name="ttt">
+			<sign_extend size="64"><var>offset</var></sign_extend>
+	</let>
+	
 	<let name="vAddr">
 		<sum>
-			<sign_extend size="64"><var>offset</var></sign_extend>
+			<var>ttt</var>
 			<var>base</var>
 		</sum>
 	</let>
