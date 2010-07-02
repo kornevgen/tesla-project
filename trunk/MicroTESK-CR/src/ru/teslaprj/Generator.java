@@ -7,10 +7,14 @@ public class Generator
 {
 	private Solver solver = new Solver();
 	private TextConstructor text_constructor = null;
+	private Microprocessor microprocessor = null;
 
 	public Program generate( Template template, boolean with_binsearch )
 		throws Unsat, Timeout
 	{
+		if ( microprocessor != null )
+			solver.setMicroprocessor( microprocessor );
+		
 		if (! is_initialized() )
 			throw new IllegalStateException("Generator isn't initialized");
 		
@@ -45,7 +49,7 @@ public class Generator
 	
 	public void setMicroprocessor( Microprocessor microprocessor )
 	{
-		solver.setMicroprocessor( microprocessor );
+		this.microprocessor = microprocessor;
 	}
 	
 	public void setPathToRubySources( String path )
