@@ -1,4 +1,5 @@
 #summary Установка TeSLa
+#labels Deprecated
 
   # Скачать jar и zip-архивы с главной страницы проекта
   # Скачать и установить логический интерпретатор ECLiPSe (http://eclipse-clp.org/)
