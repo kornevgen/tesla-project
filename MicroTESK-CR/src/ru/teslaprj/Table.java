@@ -1,7 +1,17 @@
 package ru.teslaprj;
 
-public abstract class Table {
-
-	abstract public String getName();
+public class Table
+{
+	protected final String name;
+	
+	public Table( String name )
+	{
+		this.name = name;
+	}
+	
+	public String getName()
+	{
+		return name;
+	}
 
 }

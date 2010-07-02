@@ -1,5 +1,8 @@
 package ru.teslaprj;
 
+import java.math.BigInteger;
+import java.util.Map;
+
 public class Generator
 {
 	private Solver solver = new Solver();
@@ -11,8 +14,8 @@ public class Generator
 		if (! is_initialized() )
 			throw new IllegalStateException("Generator isn't initialized");
 		
-		return text_constructor.build_initialization(
-					solver.solve(template, with_binsearch ) );
+		Map<Parameter, BigInteger> solution = solver.solve(template, with_binsearch );
+		return text_constructor.build_initialization( solution, solver.getInitLengths(), template );
 	}
 
 	
