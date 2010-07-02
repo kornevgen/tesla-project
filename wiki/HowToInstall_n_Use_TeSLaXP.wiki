@@ -1,5 +1,5 @@
 #summary Руководство по установке и использованию
-#labels Featured
+#labels Featured,Phase-Deploy
 
 = Установка и использование =
   # скачать архив с исходниками на ruby
