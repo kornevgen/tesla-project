@@ -7,7 +7,38 @@
 $$( \exists k \in \mathds{N} : x < 2^k \leqslant y ) \Leftrightarrow (y > x ~\wedge~ x \oplus y > x)$$
 \end{lemma}
 \begin{proof}
-  // TODO
+1) Докажем, что 
+$$\left\{\begin{array}{l}
+( \exists k \in \mathds{N} : x < 2^k \leqslant y ) \Rightarrow y > x\\
+( \exists k \in \mathds{N} : x < 2^k \leqslant y ) \Rightarrow  x \oplus y > x\\
+\end{array}\right.$$
+
+Первое очевидно.
+
+Докажем второе. $(x \oplus y)_{0..k} = x_{0..k} \oplus y_{0..k} = y_{0..k}$ (старшие биты $x$ равны нулю). Значит, $x \oplus y \geqslant 2^k > x$. Доказано.
+
+2) Докажем, что $( \forall k \in \mathds{N} : (x < 2^k \rightarrow y < 2^k ) \Leftrightarrow (y \leqslant x ~\vee~ x \oplus y \leqslant x)$.
+
+При $x \geqslant y$ следствие тождественно истинно, значит и вся импликация истинна.
+
+Рассмотрим случай $x < y$. Будем доказывать по следующей схеме:
+
+$( \forall k \in \mathds{N} : (x < 2^k \rightarrow y < 2^k ) \Rightarrow\\
+\left[\begin{array}{l}
+\exists n \in \mathds{N} : x < 2^n \wedge y < 2^n \wedge x \geqslant 2^{n-1} \wedge y \geqslant 2^{n-1}\\
+\exists m \in \mathds{N} : y < 2^m \leqslant x\\
+\end{array}\right. 
+\Rightarrow (x \oplus y \leqslant x)$
+
+Неформально говоря, если про $x$ и $y$ нельзя сказать, что у первого больше нулевых старших бит, чем у второго, то либо у них одинаковое количество старших нулевых бит, либо у второго их больше.
+
+Первый шаг. Рассмотрим множество $\{k \in \mathds{N} | x < 2^k\}$. Это множество непустое (поскольку $x < 2^N$), а, значит, обладает нижней гранью. Иными словами, существует $k'$ такое, что $x < 2^{k'}$ и $x \geqslant 2^{k'-1}$. Т.к. $y < x$, то $y < 2^{k'}$. Кроме того, справедлива дизъюнкция: либо $y \geqslant 2^{k'-1}$, либо $y < 2^{k'-1}$. Иными словами, справедлива следующая дизъюнкция:
+$$\left[\begin{array}{l}
+\exists (n = k') \in \mathds{N} : x < 2^{k'} \wedge y < 2^{k'} \wedge x \geqslant 2^{k'-1} \wedge y \geqslant 2^{k'-1}\\
+\exists (m = k'{-}1) \in \mathds{N} : y < 2^{k'-1} \leqslant x\\
+\end{array}\right.$$
+
+Второй шаг. Используя первую часть доказательства, из второй части дизъюнкции первого шага заменой переменных получаем следствие. Осталось доказать, что $(\exists n \in \mathds{N} : x < 2^n \wedge y < 2^n \wedge x \geqslant 2^{n-1} \wedge y \geqslant 2^{n-1}) \Rightarrow (x \oplus y \leqslant x)$. Из посылки следует, что $(x \oplus y)_{0..n} = x_{0..n} \oplus y_{0..n} = x_{0..n} \oplus x_{0..n} = 0$, а $x_{0..n} = 1$. Значит, $x\oplus y \leqslant x$.
 \end{proof}
 
 \theoremtext{\ref{mirror_fullness_none}}{\FullnessMirrorNone}
