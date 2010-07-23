@@ -1,0 +1,63 @@
+% !Mode:: "TeX:UTF-8"
+
+\zhead{Посчитать значения функций}
+
+\z Для следующей алгебраической спецификации посчитать значения указанных выражений:
+\begin{lstlisting}
+scheme Sets = class
+  type Set, Elem
+  value
+        empty: Unit -> Set,
+        add: Elem >< Set-> Set,
+        delete: Elem >< Set -> Set,
+        inset: Elem >< Set -> Set
+  axiom
+    forall s: Set, x, y: Elem :-
+        add(x, add(x, s)) is add(x, s),
+        delete(x, empty() ) is delete(x, empty()),
+        delete(x, add(x, s)) is delete(x, s),
+        delete(x, add(y, s)) is add(y, delete(x,s)),
+        ~inset(x, empty() ),
+        inset(x, add(y, s)) is (x = y \/ inset(x,s)),
+        inset(x, delete(y,s)) is x ~= y /\ inset(x,s)
+end
+\end{lstlisting}
+\begin{itemize}
+  \item inset(1, add(1, empty()));
+  \item inset(1, delete(1, empty()));
+  \item inset(1, delete(1, add(1, empty())));
+  \item delete(1, add(1, empty()));
+  \item delete(1, add(2, empty()));
+  \item delete(1, add(1, add(1, empty())));
+  \item delete(1, add(2, add(1, empty())));
+  \item add(2, delete(1, add(2, add(1, empty()))));
+  \item inset(3, add(2, delete(1, add(2, add(1, empty())))));
+  \item inset(3, add(2, delete(3, add(2, add(1, empty())))));
+  \item inset(3, add(3, delete(1, add(2, add(1, empty())))));
+  \item inset(3, add(3, delete(3, add(3, add(3, empty())))));
+\end{itemize}
+
+Решение (1):
+\begin{lstlisting}
+inset(1, add(1, empty())) is
+   1 = 1 \/ inset(1, empty()) is true
+\end{lstlisting}
+
+Решение (3):
+\begin{lstlisting}
+inset(1, delete(1, add(1, empty()))) is
+    1 ~= 1 /\ inset(1, add(1, empty())) is false
+\end{lstlisting}
+
+Решение (4):
+\begin{lstlisting}
+delete(1, add(1, empty())) is delete(1, empty())
+\end{lstlisting}
+В данном случае произвести другие упрощения невозможно.
+
+Обратите внимание, что
+\begin{enumerate}
+  \item аксиома delete(x, empty() ) is delete(x, empty()) бесполезная, потому что является тождественной истиной; ее можно безболезненно исключить из спецификации;
+  \item легко выписать набор аксиом, с которым крайне тяжело работать, из них тяжело извлечь полезный смысл (тяжело ответить на нужные вопросы) --- они сводятся не к произведению полезных выводов (в т.ч. вычислений), а бездумным переписываниям.
+\end{enumerate}
+

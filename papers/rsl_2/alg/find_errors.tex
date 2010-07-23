@@ -1,0 +1,119 @@
+% !Mode:: "TeX:UTF-8"
+
+\zhead{Ошибки в спецификациях}
+
+\z Специфицируется АТД <<множество>> с операциями добавления и удаления элементов. Правильна ли следующая спецификация?
+\begin{lstlisting}
+scheme Sets = class
+  type Set, Elem
+  value
+        empty: Unit -> Set,
+        add: Elem >< Set-> Set,
+        delete: Elem >< Set -> Set
+  axiom
+    forall s: Set, x, y: Elem :-
+        add(x, add(x, s)) is add(x, s),
+        delete(x, empty() ) is empty(),
+        delete(x, add(x, s)) is s,
+        delete(x, add(y, s)) is add(y, delete(x,s))
+                pre x ~= y
+end
+\end{lstlisting}
+
+Решение: не соответствует (delete может оставить во множестве элемент во множестве, не удалив его, если он добавлялся несколько раз): введем функцию
+\begin{lstlisting}
+inset : Elem >< Set -> Bool
+\end{lstlisting}
+Она истинна тогда и только тогда, когда элемент есть во множестве.
+\begin{lstlisting}
+delete(1, add(1, add(1, empty))) is add(1, empty)
+\end{lstlisting} по третьей аксиоме, но тогда
+\begin{lstlisting}
+inset(1, delete(1, add(1, add(1, empty)))) is
+    inset(1, add(1, empty)) is true
+\end{lstlisting}
+а должен быть \textbf{false}, т.к. единицу должны были удалить.
+
+Обратите внимание, что:
+\begin{enumerate}
+  \item методом исследования алгебраических спецификаций является исследование значений термов;
+  \item чтобы получать следствия, не обязательно <<уменьшать>> терм --- может потребоваться <<навесить>> на него другие операции.
+\end{enumerate}
+
+Ответьте на вопросы:
+\begin{enumerate}
+  \item является ли спецификация полной?
+  \item описывает ли она какие-нибудь операции полностью?
+  \item является ли спецификация непротиворечивой?
+\end{enumerate}
+
+\z Специфицируется АТД <<множество>> с операциями добавления и удаления элементов. Правильна ли следующая спецификация? Полна ли? Согласована ли?
+\begin{lstlisting}
+scheme Sets = class
+  type Set, Elem
+  value
+        empty: Unit -> Set,
+        add: Elem >< Set-> Set,
+        delete: Elem >< Set -> Set
+  axiom
+    forall s: Set, x, y: Elem :-
+        add(x, add(x, s)) is add(x, s),
+        delete(x, empty() ) is empty(),
+        delete(x, add(x, s)) is delete(x, s),
+        delete(x, add(y, s)) is add(y, delete(x,s))
+                pre x ~= y
+end
+\end{lstlisting}
+
+\z Специфицируется АТД <<множество>> с операциями добавления и удаления элементов. Правильна ли следующая спецификация? Полна ли? Согласована ли?
+\begin{lstlisting}
+scheme Sets = class
+  type Set, Elem
+  value
+        empty: Unit -> Set,
+        add: Elem >< Set-> Set,
+        delete: Elem >< Set -> Set
+  axiom
+    forall s: Set, x, y: Elem :-
+        add(x, add(x, s)) is add(x, s),
+        delete(x, empty() ) is delete(x, empty()),
+        delete(x, add(x, s)) is delete(x, s),
+        delete(x, add(y, s)) is add(y, delete(x,s))
+end
+\end{lstlisting}
+
+\z Специфицируется АТД <<очередь>> с операциями добавления и удаления элементов. Правильна ли следующая спецификация? Полна ли? Согласована ли?
+\begin{lstlisting}
+scheme Queue = class
+  type Q, Elem
+  value
+        empty: Unit -> Q,
+        add: Elem >< Q-> Q,
+        delete: Elem >< Q -> Q
+  axiom
+    forall s: Q, x, y: Elem :-
+        add(x, add(x, s)) is add(x, s),
+        delete(x, empty() ) is empty(),
+        delete(x, add(x, s)) is s,
+        delete(x, add(y, s)) is add(y, delete(x,s))
+                pre x ~= y
+end
+\end{lstlisting}
+
+\z Специфицируется АТД <<стек>> с операциями добавления и удаления элементов. Правильна ли следующая спецификация? Полна ли? Согласована ли?
+\begin{lstlisting}
+scheme List = class
+  type L, Elem
+  value
+        empty: Unit -> L,
+        add: Elem >< L -> L,
+        delete: Elem >< L -> L
+  axiom
+    forall s: L, x, y: Elem :-
+        add(x, add(x, s)) is add(x, s),
+        delete(x, empty() ) is empty(),
+        delete(x, add(x, s)) is s,
+        delete(x, add(y, s)) is add(y, delete(x,s))
+                pre x ~= y
+end
+\end{lstlisting}
