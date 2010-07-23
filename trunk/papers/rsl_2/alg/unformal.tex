@@ -1,0 +1,155 @@
+% !Mode:: "TeX:UTF-8"
+
+\zhead{Неформальные интерпретации}
+
+\z Для данной алгебраической спецификации дать неформальную интерпретацию ее типов (терминов) и операций; старайтесь увидеть случаи, в которых поведение функций не определяется в спецификации:
+\begin{lstlisting}[escapechar={|}]
+type E, S
+value capacity: Nat,
+    empty: Unit -~-> S,
+    |is\_empty|: S -> Bool,
+    push: S >< E -~-> S,
+    pop: S -~-> S >< E,
+    top: S -> Nat,
+    elem: S >< Nat -~-> E,
+    f: S >< E -> S f(s,e) is s,
+    sc: S >< E -> S sc(s,e) is e
+axiom forall s: S, e: E, i: Nat :-
+  top( empty() ) is 0,
+  top( push(s, e) ) is top(s) + 1
+            pre top(s) < capacity ,
+  top( pop(s, e) ) is top(s) - 1
+            pre ~|is\_empty|(s) ,
+  elem( push(s, e), top(s) + 1 ) is e
+            pre top(s) < capacity ,
+  elem( push(s,e), i ) is elem(s, i)
+        pre i ~= top(s) + 1 /\ top(s) < capacity,
+  elem( f(pop(s)), i ) is elem(s, i)
+            pre i ~= top(s),
+  elem( s, top(s) ) is sc(pop(s))
+            pre ~|is\_empty|(s),
+  |is\_empty|( empty() ),
+  ~|is\_empty|( push(s,e) ),
+  capacity > 0
+\end{lstlisting}
+
+Решение:
+\begin{itemize}
+  \item S --- структура конечного размера (capacity --- максимальный размер);
+  \item empty возвращает пустую структуру;
+  \item is\_empty проверяет, пуста ли структура;
+  \item push помещает элемент в структуру, если после этого размер не переполнится;
+  \item pop удаляет из структуры последний добавленный элемент и возвращает его вместе с измененной структурой, если структура не пустая;
+  \item top вычисляет количество элементов (размер структуры);
+  \item elem возвращает элемент, хранящийся в структуре по данному индексу, если значение индекса не выходит за допустимые рамки.
+\end{itemize}
+
+\z Для данной алгебраической спецификации дать неформальную интерпретацию ее типов (терминов) и операций; старайтесь увидеть случаи, в которых поведение функций не определяется в спецификации:
+\begin{lstlisting}
+type Owner, Auto, Warrant
+value
+    empty: DB,
+    add: Owner >< DB -~-> DB,
+    known: Owner >< DB -> Bool,
+    known: Auto >< DB -> Bool,
+    known: Warrant >< DB -> Bool,
+    add: Owner >< Auto >< DB -~-> DB,
+    add: Auto >< Warrant >< DB -~-> DB,
+    get_owner: Auto >< DB -~-> Owner
+axiom forall o1, o2 : Owner,
+    a, a2 : Auto, db : DB, w, w2 : Warrant :-
+    ~ known(o1, empty),
+    known(o1, add(o2, db)) is o1 = o2 \/ known(o1, db)
+            pre ~known(o2, db),
+    known(o1, add(o2,a,db)) is known(o1,db)
+            pre known(o2,db) /\ ~known(a,db),
+    known(o1, add(a,w,db)) is known(o1,db)
+            pre known(a,db) /\ ~known(w,db),
+
+    ~ known(a, empty),
+    known(a, add(o1,db)) is known(a,db)
+        pre ~known(o1,db),
+    known(a, add(o2,a2,db)) is a = a2 \/ known(a,db)
+        pre known(o2,db) /\ ~known(a2,db),
+    known(a, add(a2,w,db)) is known(a,db)
+        pre known(a2,db) /\ ~known(w,db),
+
+    ~known(w, empty),
+    known(w, add(o, db)) is known(w, db)
+        pre ~known(o, db),
+    known(w, add(a,w2, db)) is w = w2 \/ known(w,db)
+        pre known(a,db) /\ ~known(w2,db),
+    known(w, add(o, a, db)) is known(w,db)
+        pre known(o, db) /\ ~known(a,db),
+
+    get_owner(a, add(o,db)) is get_owner(a, db)
+        pre ~known(o, db) /\ known(a, db),
+    get_owner(a, add(o, a2, db)) is if a = a2 then o
+        else get_owner(a, db) end
+        pre known(o,db) /\ ~known(a2, db) /\
+            (a = a2 \/ known(a,db)),
+    get_owner(a, add(a2,w,db)) is get_owner(a,db)
+        pre known(a2,db) /\ ~known(w,db) /\
+            known(a,db)
+\end{lstlisting}
+
+\z Для данной алгебраической спецификации дать неформальную интерпретацию ее типов (терминов) и операций; старайтесь увидеть случаи, в которых поведение функций не определяется в спецификации:
+\begin{lstlisting}
+type GTree, Person
+value
+    empty: Person -> GTree,
+    add_child: Person >< Person >< GTree -~-> GTree,
+    add_parent: Person >< Person >< GTree -~-> GTree,
+    known: Person >< GTree -> Bool,
+    get_childs: Person >< GTree -~-> Person-set
+axiom forall p,p1,p2: Person, g: GTree :-
+    known(p, empty(p1)) is p = p1,
+    known(p, add_child(p1, p2, g)) is p = p2 \/ known(p,g)
+        pre ~known(p2, g) /\ known(p1,g),
+    known(p, add_parent(p1,p2,g)) is p = p2 \/ known(p,g)
+        pre ~known(p2,g) /\ known(p1,g),
+
+    get_childs(p, empty(p)) is {},
+    get_childs(p, add_child(p1, p2,g)) is
+      (if p = p1 then {p2} else {} end) union get_childs(p,g)
+      pre known(p1,g) /\ ~known(p2,g) /\ known(p,g),
+    get_childs(p, add_parent(p1,p2,g)) is get_childs(p,g)
+      pre known(p1,g) /\ ~known(p2,g) /\ known(p,g)
+\end{lstlisting}
+
+\z Для данной алгебраической спецификации дать неформальную интерпретацию ее типов (терминов) и операций; старайтесь увидеть случаи, в которых поведение функций не определяется в спецификации:
+\begin{lstlisting}
+type RwS, Station, Train, TrainNumber,
+    Time = Nat, Platform
+value
+    station: Station,
+    platforms: Platform-set,
+    getStart: Train -> Station,
+    getEnd: Train -> Station,
+    getNumber: Train -> TrainNumber,
+    getStay: Train -~-> Time >< Time,
+    empty: RwS,
+    add_train: Train >< Platform >< RwS -~-> RwS,
+    free: Platform >< Time >< Time >< RwS -~-> Bool,
+    trains_tos: Station >< RwS -~-> Train-set
+axiom forall t1,t2 : Time, t, tr1, tr2 : Train,
+                    r : RwS, s: Station :-
+    free(p, t1, t2, empty) pre p isin platforms,
+    free(p, t1, t2, add_train(t,p2,r)) is
+        if p ~= p2 then free(p, t1, t2,r)
+        else let (s1,s2) = getStay(t) in
+            t2 < s1 \/ s2 < t1 end end ),
+        pre {p,p2} <<= platforms /\ t1 < t2,
+
+    trains_tos(s, empty) is {},
+    trains_tos(s, add_train(t,p,r)) is
+        (if s = getEnd(t) then {t} else {} end)
+            union trains_tos(s,r)
+            pre p isin platforms /\
+            free(p, getStart(t), getEnd(t), r),
+
+    let (s1,s2) = getStay(t) in s1 <  s2 end,
+    (getNumber(tr1) = getNumber(tr2)) is tr1 = tr2,
+    platforms ~= {}
+\end{lstlisting}
+
