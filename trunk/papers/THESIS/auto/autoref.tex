@@ -259,6 +259,10 @@ $$) \wedge \bigwedge_{j=i+1}^{l} (R_j \neq R_l \vee k_j \neq k_i) \mbox{~then~}
 \CorrectnessMirror
 \end{theorem}
 
+\begin{theorem}[Полнота алгоритма генерации ограничений на ключи обращений для таблицы, стратегия вытеснения которой есть \texttt{none}]\label{mirror_fullness_none}
+\FullnessMirrorNone
+\end{theorem}
+
 Стратегию вытеснения будем называть \emph{существенно вытесняющей}, если $w$ промахов в один регион полностью вытесняют его предыдущее содержимое ($w$ --- значение параметра \texttt{lines} таблицы).
 
 \begin{theorem}[Полнота алгоритма генерации ограничений на ключи обращений для таблицы, стратегия вытеснения которой не \texttt{none} и является \textbf{существенно вытесняющей}]\label{mirror_fullness}
