@@ -395,6 +395,59 @@ delete(x, add(y,s)) is if x = y then delete(x,s) else add(y, delete(x,s)) end --
 %\chapter{Поведенческие спецификации}
 %TBD
 
+
+Спецификация для функции append в <<исполнимой>> манере:
+\begin{lstlisting}
+type E, L = E*
+value append: L >< L -> L
+    append(x, y) is x ^ y
+\end{lstlisting}
+
+Спецификация для функции append в <<логической>> манере:
+\begin{lstlisting}
+type E, L = E*
+value append: L >< L -> L
+    append(x, y) as z
+    post
+        len z = len x + len y /\
+        (all i: Nat :- i isin inds x => z(i) = x(i)) /\
+        (all i: Nat :- i isin inds y => z(i+len x) = y(i))
+\end{lstlisting}
+
+Спецификация для функции reverse в <<исполнимой>> манере:
+\begin{lstlisting}
+type E, L = E*
+value reverse: L -> L
+    reverse(x) is
+        local variable y : L :- y = <..> in
+            for xi in x do
+                y := <.xi.> ^ y
+            end;
+            y;
+        end
+\end{lstlisting}
+
+Спецификация для функции reverse в <<логической>> манере:
+\begin{lstlisting}
+type E, L = E*
+value reverse: L -> L
+  reverse(x) as y
+  post len x = len y /\
+    (all i: Nat :- i isin inds x => y(i) = x(len x + 1 - i))
+\end{lstlisting}
+
+Спецификация для функции reverse в <<алгебраической>> манере:
+\begin{lstlisting}
+type E, L = E*
+value reverse: L -> L
+axiom
+    reverse(<..>) is <..>,
+    all x, y: L :- reverse(x^y) is reverse(y) ^ reverse(x)
+\end{lstlisting}
+
+Что из этого короче? Что понятнее? Что лучше? (зависит от задачи)
+
+
 \appendix
 \include{rslprior}
 
