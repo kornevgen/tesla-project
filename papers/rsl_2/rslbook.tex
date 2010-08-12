@@ -6,7 +6,7 @@
 %\usepackage[cp1251]{inputenc}
 \usepackage[utf8]{inputenx}
 \usepackage[russian]{babel}
-\usepackage{pscyr}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%\usepackage{pscyr}
 %\usepackage[T1]{fontenc} %cm-super
 %\usepackage{type1cm}
 \usepackage{indentfirst}
@@ -17,6 +17,8 @@
 %\usepackage{dsfont}
 \usepackage{xspace}
 \usepackage[numbers,compress,sort]{natbib}
+\usepackage{clrscode}
+
 \pagestyle{headings}
 
 \textheight 23cm % 29.7-2-2
@@ -121,13 +123,248 @@ add(x,y) is x+y
 После сигнатуры идет тело функции. Вначале идет имя функции с формальными параметрами, затем символ $\Is$ и затем выражение. Вычислением функции является вычисление этого выражения (в данном случае, сложение двух чисел-аргументов).
 
 \head{Встроенные типы}
-Int, Nat (целые неотрицательные числа), Real, Bool, Char, Text (список Char'в), Unit (аналог \textit{void}).
+\textbf{Int}, \textbf{Nat}, \textbf{Real}, \textbf{Bool}, \textbf{Char}, \textbf{Text}, \textbf{Unit}.
 
-\head{Операции над встроенными типами:} ........................................
+Тип \textbf{Int} содержит в себе все возможные целые числа. Ограничений на их значения (типа MAXINT) нет.
 
-\head{Выражения} -- ............... (последовательность, if, while )
+Тип \textbf{Nat} содержит число 0 и все возможные положительные целые числа. Ограничений сверху на их значения нет. Тип поддерживает все операции, определенные для типа \textbf{Int}.
 
-\head{Побочный эффект в функции} -- ...........
+Тип \textbf{Real} содержит в себе все возможные вещественные числа. Важно понимать, что эти числа являются математической абстракцией тех вещественных чисел, которые представимы в архитектуре компьютера. Тип \textbf{Real} --- это те числа, с которыми работают математики. Следовательно, они включают и все вещественные числа, представимые в какой-угодно архитектуре компьютера. Например, в этом типе есть число <<квадратный корень из двух>>.
+
+Тип \textbf{Bool} содержит булевские значения \textbf{true} и \textbf{false}.
+
+Тип \textbf{Char} содержит все возможные отдельные символы. Этот тип не привязан ни к одной из кодировок (поскольку этот тип --- лишь математическая абстракция). Этот тип содержит все мыслимые символы. Поэтому не определена операция получения <<кода символа>>, привычная для многих языков программирования.
+
+Тип \textbf{Text} является массивом символов (о массивах см.ниже).
+
+Тип \textbf{Unit} является специальным и используется для ограниченного количества случаев (см.ниже). Основное применение --- то же, какое имеет ключевое слово \texttt{void} в сигнатурах функций языка Си.
+
+\head{Операции над встроенными типами}
+Арифметические:
+\begin{lstlisting}
+value
+  +: Int >< Int -> Int,
+  -: Int >< Int -> Int,
+  *: Int >< Int -> Int,
+  /: Int >< Int -~-> Int,
+  \: Int >< Int -~-> Int,
+  **: Int >< Int -~-> Int,
+  abs: Int -> Nat,
+  real: Int -> Real,
+
+  +: Real >< Real -> Real,
+  -: Real >< Real -> Real,
+  *: Real >< Real -> Real,
+  /: Real >< Real -~-> Real,
+  **: Real >< Real -~-> Real,
+  abs: Real -> Real,
+  int: Real -> Int,
+
+  <: Int >< Int -> Bool,
+  <=: Int >< Int -> Bool,
+  >: Int >< Int -> Bool,
+  >=: Int >< Int -> Bool,
+  
+  <: Real >< Real -> Bool,
+  <=: Real >< Real -> Bool,
+  >: Real >< Real -> Bool,
+  >=: Real >< Real -> Bool,
+
+  ~: Bool       -> Bool,
+  /\: Bool >< Bool -> Bool,
+  \/: Bool >< Bool -> Bool,
+  =>: Bool >< Bool -> Bool,
+\end{lstlisting}
+
+Для любого типа определены операции сравнения на равенство:
+\begin{lstlisting}
+type T
+value
+  = : T >< T -> Bool,
+  ~= : T >< T -> Bool
+\end{lstlisting}
+
+Порядок вычисления операций строго определен: сначала первый аргумент, затем, если необходимо, второй и т.д.
+
+Логика короткая. Это означает, например, что если первый аргумент конъюнкции равен \textbf{false}, то второй аргумент не вычисляется и вся конъюнкция принимает значение \textbf{false}.
+
+\head{Глобальные переменные}
+Кроме своих аргументов функция может оперировать глобальными переменными. Каждая глобальная переменная должна быть определена в разделе \textbf{variable}, а в сигнатуре функции должен быть указан режим работы функции с переменной: по чтению или по записи-чтению. Функции разрешено оперировать лишь с теми глобальными переменными, которые указаны в сигнатуре. Например,
+\begin{lstlisting}
+variable status : Text
+value
+  init : Unit -> write status Unit
+  init() is (status := "initialized")	
+\end{lstlisting}
+
+Функция \texttt{init} не имеет аргументов --- для указания этого факта перед стрелкой в сигнатуре функции указан тип \textbf{Unit}. Также у функции нет и возвращаемого значения --- она лишь изменяет значение глобальной переменной \texttt{status}. Этот факт также указан типом \textbf{Unit} в качестве типа возвращаемого значения.
+
+Еще пример:
+\begin{lstlisting}[escapechar={|}]
+variable status : Text
+value
+  |is\_initialized| : Unit -> read status Bool
+  |is\_initialized|() is
+	(status = "initialized")	
+\end{lstlisting}
+
+Здесь глобальная переменная лишь читается в функции, поэтому в сигнатуре переменная \texttt{status} указана с модификатором \textbf{read}.
+
+Можно указать в сигнатуре, что функция может читать или изменять любую глобальную переменную. В этом случае вместо имени переменной в сигнатуре функции надо написать ключевое слово \textbf{any}.
+
+\head{Выражения}
+Тело функции является выражением того типа, какой должна возвращать функция. Например, функция
+\begin{lstlisting}
+value f: Int -> Int
+      f(x) is
+	       x+1
+\end{lstlisting}
+возвращает значение типа \textbf{Int}. Ее тело состоит из суммы целых чисел, а сумма возвращает значение типа Int. Этой \textbf{математической} функции соответствует, например, следующая функция на языке Си:
+\begin{lstlisting}
+int f( int x )
+{
+    return x+1;
+}
+\end{lstlisting}
+
+Кроме возврата значения такого простого выражения язык RSL допускает более сложные управляющие структуры. Они составляются из более простых выражений. К таким простым выражениям относятся:
+\begin{itemize}
+\item встроенные операции:
+\begin{lstlisting}
+value f: Int -> Int
+      f(x) is x+1
+\end{lstlisting}
+
+\item вызов другой функции (со статической проверкой типов аргументов):
+\begin{lstlisting}
+value g: Int -> Int
+      g(x) is 2 * f(x-1)
+\end{lstlisting}
+
+\item условный оператор: \textbf{if} логическое выражение \textbf{then} выражение1 \textbf{else} выражение2 \textbf{end} --- типы выражений <<выражение1>> и <<выражение2>> должны совпадать --- условный оператор возвращает значение этого же типа (значение одного из выражений, в зависимости от значения логического выражения):
+\begin{lstlisting}
+value
+   abs: Int -> Nat
+   abs(x) is if x > 0 then x else -x end  
+\end{lstlisting}
+
+Условный оператор без \textbf{else} --- допустим только в случае, если <<выражение1>> имеет тип \textbf{Unit}:
+\begin{lstlisting}
+variable status: Text
+value
+   init: Bool -> write status Unit
+   init(needed) is
+     if needed then status := "initialized" end
+\end{lstlisting}
+
+Условный оператор с несколькими ветками:
+\begin{lstlisting}
+variable status: Text
+value
+   op: Int >< Int -> read status Int
+   op(x,y) is
+	if status = "sum" then
+               x + y
+        elsif status = "mul" then
+               x * y
+	else
+		0
+	end
+\end{lstlisting}
+
+\item оператор присваивания: используется для изменения значений глобальных переменных (аргументы функции переменными не являются, они лишь хранят значение)
+\begin{lstlisting}
+variable status : Text
+value
+  init : Unit -> write status Unit
+  init() is (status := "initialized")	
+\end{lstlisting}
+
+Оператор присваивания имеет тип \textbf{Unit}.
+
+\item последовательность операторов: через точку с запятой
+\begin{lstlisting}
+variable status : Text
+value
+  next : Int -> write status Int
+  next() is 
+	status := "moved";
+	x+1	
+\end{lstlisting}
+В этой функции сначала изменяется значение переменной \texttt{status}, а затем вычисляется выражение x+1. Значением последовательности операторов является значение последнего оператора. А все остальные элементы должны иметь тип \textbf{Unit}. Поэтому, например, следующая запись будет некорректной:
+\begin{lstlisting}
+variable status : Text
+value
+  next : Int -> write status Int
+  next() is 
+        x+1;
+	status := "moved"
+\end{lstlisting}
+
+\item операторы циклов: while, do-while и for
+\begin{lstlisting}
+variable a: Nat, b : Nat
+value
+  euclid: Unit -> Nat
+  euclid() is
+     while a > 0 /\ b > 0 do
+        if a > b then a := a - b
+        else b := b - a end
+     end;
+     if a = 0 then b else a end   
+\end{lstlisting}
+
+\begin{lstlisting}
+variable sum : Nat
+value
+  sumN: Nat -> Unit
+  sumN(n) is
+	sum := 0;
+        for i in <.1 .. n.> do
+	  sum := sum + i
+	end;
+\end{lstlisting}
+
+Способов прервать цикл типа break в RSL нет.
+
+\item локальные переменные:
+\begin{lstlisting}
+variable a: Nat, b : Nat
+value
+  euclid: Unit -> Nat
+  euclid() is
+   local variable a1: Nat := a,
+                  b1: Nat := b in
+     while a1 > 0 /\ b1 > 0 do
+        if a1 > b1 then a1 := a1 - b1
+        else b1 := b1 - a1 end
+     end;
+     if a1 = 0 then b1 else a1 end
+   end
+\end{lstlisting}
+
+\item выражение \textbf{let}: не вводит локальные переменные! а вводит новые синонимы значений; кроме того, выполняет сопоставление с образцами (pattern matching):
+явный \textbf{let}:
+\begin{lstlisting}
+value simple:  Int -> Int
+  simple(x) is
+    let y = abs x in y-x end 
+\end{lstlisting}
+
+Выражение в \textbf{let} вычисляется один раз перед вычислением <<тела>> оператора \textbf{let}.
+
+неявный \textbf{let}:
+\begin{lstlisting}
+value
+  random: Nat -~-> Nat
+  random(n) is
+      let r : Nat :- r <= n in
+	   r
+      end	
+\end{lstlisting}
+
+\end{itemize}
+
 
 \head{Тотальная функция}
 Это функция, для которой выполнены все 3 свойства:
@@ -164,7 +401,7 @@ value some: Int -~-> Int
 some(x) is
     local variable n:Int := x in
         while n ~= 1 do
-            if n \% 2 = 0 then n := n/2
+            if n \ 2 = 0 then n := n/2
                 else n := 3 * n + 1 end
         end;
         n
@@ -187,12 +424,91 @@ pre x > 2 /\ y > 4
 \end{lstlisting}
 
 
-\head{Массивы} -- ..........
+\head{Массивы}
+Следующая функция использует массив целых чисел:
+\begin{lstlisting}
+value sort: Int* -> Int*
+\end{lstlisting}
 
-\head{Структуры} ---
+Массивы в RSL могут изменять длину (путем операции конкатенации). Элементы массивов проиндексированы, начиная с единицы:
+\begin{lstlisting}
+value
+  sum: Int* -> Int
+  sum(ls) is
+    local variable s : Int := 0 in
+       for i in <.1 .. len ls.> do
+             s := s + ls(i)
+       end;
+       s
+    end;     
+\end{lstlisting}
+
+Операция \textbf{len} возвращает текущую длину массива.
+
+Эту же функцию, суммирующую элементы массива, можно записать и без использования индексов:
+\begin{lstlisting}
+value
+  sum: Int* -> Int
+  sum(ls) is
+    local variable s : Int := 0 in
+       for l in ls do
+             s := s + l
+       end;
+       s
+    end;     
+\end{lstlisting}
+
+Тип \textbf{Text} является массивом из \textbf{Char}.
+
+Операция \textbf{tl} возвращает <<подмассив>> --- от второго элемента до последнего элемента исходного массива. Операция определена только для непустых массивов. Пустой список обозначается символом <..>. Тем самым функцию sum можно записать следующим образом с использованием рекурсии:
+\begin{lstlisting}
+value
+  sum: Int* -> Int
+  sum(ls) is
+    if ls = <..> then 0
+    else ls(1) + sum(tl ls) end
+\end{lstlisting}
+
+
+\head{Структуры}
+\begin{lstlisting}
+type FIO ::
+         name : Text
+         surname : Text
+value
+   hello: FIO -> Text
+   hello(fio) is
+      "Hello, " ^ name(fio) ^ 
+           "  " ^ surname(fio) ^ "!"
+\end{lstlisting}
+
+Обращение к полю делается в виде вызова функции с именем поля.
+
+\begin{lstlisting}
+type FIO ::
+         name : Text
+         surname : Text
+value
+   new_fio: Text >< Text -> FIO
+   new_fio(n,sn) is mk_FIO(n,sn)    
+\end{lstlisting}
+
+Создание структуры делается с помощью функции с предопределенным именем. Это имя начинается с <<mk\_>>, за которым идет имя типа структуры. В скобках подряд перечисляются выражения, дающие значения полям новой структуры.
+
+\head{Перечисления (enumeration)}
+\begin{lstlisting}
+type Color == red | blue | white | green
+value
+  from_rus : Color -> Bool
+  from_rus(c) is c = red \/ c = blue \/ c = white
+\end{lstlisting}
+
+\head{Указатели}
+RSL не содержит встроенных механизмов для задания алгоритмов, работающих с указателями.
 
 \section*{Задачи}
 
+\input{alg/prog}
 
 
 \chapter{Логико-алгебраические спецификации}
