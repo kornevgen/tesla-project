@@ -165,4 +165,23 @@ R_i = R(s_j)\\
 \end{array}\right.
 $$
 $$P(x, y) \equiv (y > x~~\wedge~~x \oplus y > x)$$
+
+$\pi'_i$ определено следующим образом: если $S_i$ = hit, то  
+$$
+\begin{array}{l}
+\texttt{(ite~} ((k_i||R_i) = (k_{i-1}||R_{i-1})) ~~ (\pi'_i = \pi_{i-1})\\
+\texttt{(ite~} ((k_i||R_i) = (k_{i-2}||R_{i-2})) ~~ (\pi'_i = \pi_{i-2})\\
+... ~(\pi'_i = 0)\texttt{)))...)}\\
+\end{array}
+$$
+
+если $S_i = $ miss, то ( $\{\pi_i, ..., \pi_j\}_m$ обозначает подмножество множества позиций от $i$'го до $j$'го обращения из неуспешных обращений):
+$$
+\begin{array}{l}
+\texttt{(ite~} ((k_i||R_i) = (k_{i-1}||R_{i-1})) ~~ (\pi'_i = \pi_{i-1})\\
+\texttt{(ite~} ((k_i||R_i) = (k_{i-2}||R_{i-2})) ~~ (\pi'_i = \pi_{i-2} \wedge \pi'_i \in \{\pi_{i-1}\}_m)\\
+\texttt{(ite~} ((k_i||R_i) = (k_{i-3}||R_{i-3})) ~~ (\pi'_i = \pi_{i-3} \wedge \pi'_i \in \{\pi_{i-1}, \pi_{i-2}\}_m)\\
+... ~(\pi'_i = 0)\texttt{)))...)}\\
+\end{array}
+$$
 } 
