@@ -1,12 +1,12 @@
-277 Patch Control
+275 Patch Control
 
 0
 0
 1
 thesis.tex
+3
+2
 1
-1
-0
 
 
 
@@ -15,12 +15,18 @@ thesis.tex
 
 thesis.tex
 TeX:UTF-8:UNIX
-420589563 0 -1 0 -1 0 66 75 922 637 0 22 0 -1 -1 0 0 -1 -1 -1 -1 1 0 0 -1   0
+152154107 1 219 1 219 9 66 75 922 637 0 102 276 -1 -1 0 0 22 0 0 22 1 0 9 219   0
+theor.tex
+TeX:UTF-8
+286273531 0 11 9 11 26 66 87 898 658 0 272 253 -1 -1 0 0 -1 -1 -1 -1 1 0 26 11   0
+review.tex
+TeX:UTF-8
+286273531 0 1256 25 1260 11 44 58 876 629 0 122 694 -1 -1 0 0 -1 -1 -1 -1 1 0 11 1260   0
 
 *thesis.tex
 >
 *intro11
-*? theorems
+*theorems
 *review
 *theor
 *experiments
