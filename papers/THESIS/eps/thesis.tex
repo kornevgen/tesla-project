@@ -50,6 +50,12 @@ top=1.8cm,bottom=2.5cm,bindingoffset=0cm,  %a4paper
 \usepackage{ccaption} % заменяем для рисунков ':' после номера рисунка на другой символ
 \captiondelim{. } % разделитель точка и пробел
 
+\usepackage{listingsutf8}
+\lstloadlanguages{RSL}
+\lstset{%numbers=left,
+language=RSL, extendedchars=true}
+%, inputencoding=utf8/latin1, commentstyle=\itshape, stringstyle=\bfseries}
+
 
 \newtheorem{theorem}{Теорема}
 \newtheorem{lemma}{Лемма}
@@ -209,6 +215,7 @@ top=1.8cm,bottom=2.5cm,bindingoffset=0cm,  %a4paper
 \include{appendix/proofs}
 \include{appendix/xml}
 \include{appendix/syntax}
+%\include{appendix/semantics}
 
 % SEMANTICS !!!!!!!!!!!!!!!!!!!!!!!
 
