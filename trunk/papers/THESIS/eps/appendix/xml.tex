@@ -1,21 +1,14 @@
 % !Mode:: "TeX:UTF-8"
-\chapter{Пример модели инструкции}\label{sec:xml}
+\chapter{Пример формализованного описания варианта инструкции}\label{sec:xml}
 
-Если не сказано обратное, речь везде идет об архитектуре MIPS~\cite{mips64II}.
-
-\section*{Инструкция загрузки из памяти LD с промахом в L1 и попаданием в DTLB}
+В этом приложении приведено формализованное описание одного из вариантов инструкции LD архитекутры MIPS64~\cite{mips64II}. Эта инструкция осуществляет загрузку 64 бит из памяти по адресу, задаваемому аргументами этой инстуркции. Рассматрвиаемый вариант инструкции LD будет предполагать выполнение инструкции, которое не обрывается по причине возникновения каких-либо исключительных ситуаций, при этом выполнении происходит попадание в буфере при TLB (DTLB) и промах в кэш-памяти первого уровня.
 
 \begin{verbatim}
 <situation name="full[l1Miss, mtlbHit]" instruction="LD">
 
-    <argument name="rt" state="result" length="64" />
-    <argument name="base" state="readonly" length="64" />
-    <argument name="offset" state="readonly" length="16" />
-
-    <table name="mtlb" /> <!-- DTLB -->
-    <table name="tlb" /> <!-- TLB -->
-    <table name="l1" />  <!-- L1-cache -->
-    <table name="memory" /> <!-- Main memory -->
+    <argument name="rt" length="64" />
+    <argument name="base" length="64" />
+    <argument name="offset" length="16" />
 
     <let name="tmp">
       <sign_extend size="64"><var>offset</var></sign_extend>
@@ -45,6 +38,13 @@
       </key>
     </hit>
 
+    <let name="pfn0" length="24" />
+    <let name="CCA0" length="2" />
+    <let name="valid0" length="1" />
+    <let name="pfn1" length="24" />
+    <let name="CCA1" length="2" />
+    <let name="valid1" length="1" />
+
     <hit table="tlb">
       <key>
         <var>r</var>
@@ -52,12 +52,12 @@
       </key>
       <line>
         <loaded>
-          <field name="pfn0">pfn0</field>
-          <field name="CCA0">CCA0</field>
-          <field name="valid0">valid0</field>
-          <field name="pfn1">pfn1</field>
-          <field name="CCA1">CCA1</field>
-          <field name="valid1">valid1</field>
+          <field name="pfn0"><var>pfn0</var></field>
+          <field name="CCA0"><var>CCA0</var></field>
+          <field name="valid0"><var>valid0</var></field>
+          <field name="pfn1"><var>pfn1</var></field>
+          <field name="CCA1"><var>CCA1</var></field>
+          <field name="valid1"><var>valid1</var></field>
         </loaded>
       </line>
     </hit>
@@ -65,7 +65,8 @@
     <let name="vodd">
       <bit index="12"><var>vAddr</var></bit>
     </let>
-    <let name="pfn" length="24">
+    <let name="pfn" length="24" />
+    <assume>
       <or>
         <and>
           <eq><var>vodd</var><constant length="1">0</constant></eq>
@@ -78,7 +79,8 @@
           <eq><var>CCA1</var><constant length="2">2</constant></eq>
         </and>
       </or>
-    </let>
+    </assume>
+    
     <let name="pAddr">
       <concat>
         <var>pfn</var>
@@ -95,12 +97,14 @@
     <let name="set">
       <bits end="11" start="5"><var>pAddr</var></bits>
     </let>
+    
+    <let name="memdoubleword" length=64 />
 
     <hit table="memory">
       <key><var>pAddr</var></key>
       <line>
         <loaded>
-          <field name="data">memdoubleword</field>
+          <field name="data"><var>memdoubleword</var></field>
         </loaded>
       </line>
     </hit>
@@ -115,9 +119,9 @@
       </line>
     </miss>
 
-    <assume>
-      <eq><var>rt</var><var>memdoubleword</var></eq>
-    </assume>
+    <let name="rt">
+      <var>memdoubleword</var>
+    </let>
 
 </situation>
 \end{verbatim} 
