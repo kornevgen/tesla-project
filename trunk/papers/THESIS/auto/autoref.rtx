@@ -29,7 +29,7 @@
 \begin{flushright}
   \firstskip
   \asmanuscriptname\\
-%%  \ifDis@facsimile\facsimile\fi
+  \ifDis@facsimile\facsimile\fi
 \end{flushright}
 \begin{center}
   \secondskip
