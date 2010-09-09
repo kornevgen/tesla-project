@@ -1,10 +1,10 @@
-275 Patch Control
+277 Patch Control
 
 0
 0
 1
 autoref.tex
-3
+5
 1
 0
 
@@ -15,7 +15,13 @@ autoref.tex
 
 autoref.tex
 TeX:UTF-8:UNIX
-420589563 0 338 20 338 33 0 0 825 560 0 342 253 -1 -1 0 0 22 0 0 22 1 0 33 338   0
+420491259 1 -1 1690 -1 1698 0 0 825 560 0 79 100 -1 -1 0 0 21 -1 -1 21 1 0 1698 -1   0
+C:\Documents and Settings\kornevgen\Desktop\tesla.2008.09.24\papers\THESIS\eps\intro11.tex
+TeX:UTF-8
+286273531 0 -1 18420 -1 18422 66 75 922 637 0 475 280 -1 -1 0 0 -1 -1 -1 -1 1 0 18422 -1   0
+C:\Documents and Settings\kornevgen\Desktop\tesla.2008.09.24\papers\THESIS\eps\theorems.tex
+TeX:UTF-8
+286273531 0 -1 0 -1 0 44 50 900 612 0 22 0 -1 -1 0 0 -1 -1 -1 -1 1 0 0 -1   0
 disser.cls
 DATA
 273678578 2 202 19 202 21 110 125 1001 558 1 280 608 -1 -1 0 0 3 0 0 3 1 0 21 202   0
@@ -26,7 +32,7 @@ DATA
 *autoref.tex
 >
 *common
-*../delta/theorems
-*../delta/intro11
+*../eps/theorems
+*../eps/intro11
 *../delta/thesis.bib
 <
