@@ -1,12 +1,12 @@
-275 Patch Control
+277 Patch Control
 
 0
 0
 1
 thesis.tex
-12
+10
 2
-0
+1
 
 
 
@@ -15,22 +15,19 @@ thesis.tex
 
 thesis.tex
 TeX:UTF-8:UNIX
-420491259 0 17 30 34 20 66 75 922 637 0 212 782 -1 -1 0 0 22 0 0 22 1 0 20 34   0
+152154107 1 -1 5559 -1 5567 66 75 922 637 0 79 260 -1 -1 0 0 21 -1 -1 21 1 0 5567 -1   0
+theor.tex
+TeX:UTF-8
+286273531 0 -1 83597 -1 83884 66 87 898 658 0 421 460 -1 -1 0 0 21 -1 -1 21 1 0 83884 -1   0
 appendix\syntax.tex
 TeX:UTF-8
-17838075 0 26 3 25 66 154 175 1010 737 0 672 575 -1 -1 0 0 22 0 0 22 1 0 66 25   0
+286273531 0 -1 999 -1 995 154 175 1010 737 0 22 500 -1 -1 0 0 21 -1 -1 21 1 0 995 -1   0
 experiments.tex
 TeX:UTF-8
 286273531 0 1015 23 1015 23 88 100 944 662 0 242 69 -1 -1 0 0 22 0 0 22 1 0 23 1015   0
-theor.tex
-TeX:UTF-8
-286273531 0 2999 21 2999 15 66 87 898 658 0 162 161 -1 -1 0 0 22 0 0 22 1 0 15 2999   0
 review.tex
 TeX:UTF-8
 286273531 0 629 53 745 59 44 58 876 629 0 602 299 -1 -1 0 0 22 0 0 22 1 0 59 745   0
-C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\rsl_2\rslbook.tex
-TeX:UTF-8:UNIX
-286371835 1 60 1 65 1 0 0 832 571 0 22 529 -1 -1 0 0 -1 -1 -1 -1 1 0 1 65   0
 appendix\xml.tex
 TeX:UTF-8
 286273531 0 134 31 134 31 132 150 988 712 0 322 3082 -1 -1 0 0 22 0 0 22 1 0 31 134   0
@@ -40,9 +37,6 @@ TeX:UTF-8
 intro11.tex
 TeX:UTF-8
 286273531 5 448 1 448 2 154 203 986 774 0 32 805 -1 -1 0 0 -1 -1 -1 -1 1 0 2 448   0
-C:\Documents and Settings\kornevgen2\My Documents\dissertation\papers\THESIS\auto\autoref.tex
-TeX:UTF-8
-286273531 0 614 16 584 9 132 174 964 745 0 102 12451 -1 -1 0 0 -1 -1 -1 -1 1 0 9 584   0
 epilogue.tex
 TeX:UTF-8
 286273531 0 8 1 10 2 88 116 920 687 0 32 -916 -1 -1 0 0 -1 -1 -1 -1 1 0 2 10   0
@@ -61,5 +55,6 @@ TeX:UTF-8
 *appendix/proofs
 *appendix/xml
 *appendix/syntax
+*appendix/semantics
 *thesis.bib
 <
