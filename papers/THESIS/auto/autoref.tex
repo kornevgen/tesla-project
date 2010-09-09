@@ -56,7 +56,7 @@
 \newcommand{\FIFO}{FIFO\xspace}
 \newcommand{\PseudoLRU}{Pseudo-LRU\xspace}
 
-
+\renewcommand{\facsimile}{\vspace{0.5cm}\includegraphics[width=3cm]{my}}
 % --------------------------------------------------------------------------
 \begin{document}
 
@@ -105,16 +105,22 @@
 %Отзывы и замечания по автореферату в двух экземплярах, заверенные печатью, просьба высылать по вышеуказанному адресу на имя ученого секретаря диссертационного совета.
 
 \vfill\noindent
-Ученый секретарь\\
-диссертационного совета\\
-\emph{профессор}
-\hfill
-\makeatletter
+\raisebox{-30pt}[1pt][10pt]{\includegraphics[width=1cm]{sh}}
+Ученый секретарь
+
+\hspace{0.4cm}диссертационного совета
+
+\hspace{0.4cm}\emph{профессор}%
+%
+%\makeatletter
 % вставка файла, содержащего факсимиле ученого секретаря
 %\ifDis@facsimile
-%  \raisebox{-4pt}{\includegraphics[width=3cm]{sec-facsimile}}\hfill
+  %\raisebox{100pt}{\includegraphics[width=4cm]{korolev}}\hfill
+  \hspace{5cm}\raisebox{-4pt}[1pt][10pt]{\includegraphics[width=4cm]{korolev}}
 %\fi%
-\makeatother%
+%\makeatother%
+%
+\hfill
 \emph{Н.П. Трифонов}
 
 \clearpage
