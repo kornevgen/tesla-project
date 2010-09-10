@@ -44,6 +44,17 @@
 \def\p@enumiii{\theenumi\theenumii}
 \makeatother
 
+\usepackage{ifpdf}
+
+\ifpdf
+% we are running pdflatex, so convert .eps files to .pdf
+% run pdflatex with --shell-escape and thesis.aux
+\usepackage[pdftex]{graphicx}
+\usepackage{epstopdf}
+\else
+% we are running LaTeX, not pdflatex
+\usepackage{graphicx}
+\fi
 
 % Включение файла с общим текстом диссертации и автореферата
 % (текст титульного листа и характеристика работы).
