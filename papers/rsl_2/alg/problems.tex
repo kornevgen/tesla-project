@@ -155,6 +155,36 @@ end
 
 \z Противоречива ли следующая спецификация?
 \begin{lstlisting}
+type E, T
+value empty : T,
+      add: T >< E -> T,
+      check: T >< E -> Bool
+axiom forall e,e1: E, t: T :-
+   add(add(t,e),e) is add(t,e),
+   add(add(t,e),e1) is add(add(t,e1),e),
+   ~check(empty, e),
+   check( add(t,e1), e) is e = e1 \/ check(t,e),
+\end{lstlisting}
+
+%\textbf{Решение:}
+%check( add(empty,
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type Integer = Int
+value MAXINT : Integer :- MAXINT > 0
+axiom all i: Integer :- abs i < MAXINT
+value add: Integer >< Integer -~-> Integer
+axiom forall x, y: Integer :-
+   add(x, 0) is x,
+   add(x, y+1) is add(x,y)+1
+\end{lstlisting}
+
+\textbf{Решение:}
+Из сигнатуры add следует, что all x, y : Int :- abs x < MAXINT /\ abs y < MAXINT /\ (add определена для x и y => abs add(x,y) < MAXINT). Из первой аксиомы следует, что add(MAXINT-1, 0) определен и равен MAXINT-1. Тогда по второй аксиоме add(MAXINT-1,1) определен и равен MAXINT --- получили противоречие с тем, что аргументы функции допустимы и функция для них определена, но ее значение выходит за рамки типа. Ответ: противоречива.
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
 type T
 value empty : T,
     put: T >< Nat -> T,
