@@ -40,11 +40,11 @@
 \li $j \gets r+1$
 \li \While $\const{TRUE}$
 \li \Do \Repeat $j \gets j-1$
-\li \Until $A[j] <= x$
+\li \Until $A[j] \leqslant x$
 \li \Repeat $i \gets i+1$
-\li \Until $A[i] >= x$
+\li \Until $A[i] \geqslant x$
 \li \If $i < j$
-\li \Then $\mbox{поменять~} A[i] <-> A[j]$
+\li \Then $\mbox{поменять~} A[i] \leftrightarrow A[j]$
 \li \Else \Return $j$ \End \End
 \end{codebox}
 
@@ -52,7 +52,7 @@
 \begin{lstlisting}
 type Key,
   ClosedHashElement == empty | occupied(elem:Key),
-  ClosedHash = ClosedHashElement*
+  ClosedHash = ClosedHashElement-list
 \end{lstlisting}
 
 \begin{codebox}
@@ -81,7 +81,8 @@ value
        for i in <.0 .. m-1.> do
           let j = h(k,i) in
              if ~ready /\ T(j) = empty then
-                    T(j) := mk_T(k);
+                    T := <.if i=j then occupied(k)
+                      else T(i) end|i in <.1..len T.>.>;
                     index := j;
                     ready := true
              end
@@ -89,8 +90,8 @@ value
         end;
         index
      end
-  pre exists i : Nat :- i >= 0 /\ i <= m /\ 
-          T(h(k,i)) = empty
+  pre (exists i : Nat :- i >= 0 /\ i <= m /\
+          T(h(k,i)) = empty)
 \end{lstlisting}
 
 m задана в виде константы. Для вызываемой функции $h$ добавлена сигнатура. Предусловие описывает те ситуации, когда исходная процедура не достигнет оператора \textbf{error}. Если известно, что $T(j) \neq$ empty, то можно вызывать функцию elem($T(j)$), чтобы получить значение, хранящееся в $j$'м элементе хеш-таблицы.
