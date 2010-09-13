@@ -1,0 +1,357 @@
+% !Mode:: "TeX:UTF-8"
+
+\zhead{Выбор генераторов}
+
+\z Для стека, определенного таким образом:
+\begin{lstlisting}
+type E, S == empty | push(S, E) | pop(S, E)
+\end{lstlisting}
+дать достаточно полную алгебраическую спецификацию операции проверки наличия заданного элемента
+\begin{lstlisting}
+value include: S >< E -> Bool
+\end{lstlisting}
+
+\textbf{Решение:}
+\begin{lstlisting}
+type E, S == empty | push(S, E) | pop(S)
+value include: S >< E -> Bool
+axiom forall e,e1:E, s:S :-
+  ~ include(e, empty),
+  include(e, push(s,e1)) is e = e1 \/ include(e,s),
+  include(e, pop(s)) is
+     if e = top(s) then count(e,s) > 1
+             else count(e,s) > 0 end  pre s ~= empty
+value count: E >< S -> Nat,
+      top: S -~-> E
+axiom forall e,e1:E, s:S :-
+   count(e, empty) is 0,
+   count(e, push(s,e1)) is count(e,s) +
+      if e = e1 then 1 else 0 end,
+   count(e, pop(s)) is count(e,s) -
+      if e = top(s) then 1 else 0 end pre s ~= empty,
+
+   top(push(s,e1)) is e1,
+   top(pop(s)) is last(s,2) pre size(s) >= 2
+
+value last: S >< Nat -~-> E,
+      size: S -> Nat
+axiom forall s:S, e:E, n:Nat :-
+   size(empty) is 0,
+   size(push(s,e)) is size(s) + 1,
+   size(pop(s)) is size(s) - 1 pre s ~= empty,
+
+   last(push(s,e), n) is
+      if n = 1 then e else last(s, n-1) end
+        pre n > 0 /\ n <= size(s),
+   last(pop(s), n) is last(s, n+1)
+        pre s ~= empty /\ n > 0 /\ n < size(s)
+\end{lstlisting}
+
+Обратите внимание, что
+\begin{enumerate}
+\item при помощи выбранных для описания стека генераторов значение стека будет иметь вид, например, push(push(pop(push(empty,1)),10),1); такое выражения значения в типе стек может казаться наиболее адекватным, ведь добавление и удаление элементов --- именно те операции, при помощи которых можно изменить значение (<<состояние>>) стека; однако посмотрите, насколько увеличивается спецификация и теряется ее наглядность, если в число генераторов включена лишняя функция (pop); сравните:
+\begin{lstlisting}
+type E, S == empty | push(S, E)
+value include: S >< E -> Bool
+axiom forall e,e1:E, s:S :-
+  ~ include(e, empty),
+  include(e, push(s,e1)) is e = e1 \/ include(e,s),
+\end{lstlisting}
+
+\item в этом примере синтаксически разные термы из генераторов могут означать одинаковые значения типа, например, push(pop(push(empty,1)),2) и push(pop(push(empty,3)),2); в таких случаях надо быть внимательными при выписывании аксиом: помнить и понимать, сколько разных возможностей есть для рекурсивной части цепочки (речь идет о переменной <<s>> в примерах) --- например, в аксиоме с генератором, удаляющим элемент, надо в том числе предполагать, что этот элемент может появиться много раз до этого, добавляться и удаляться.
+\end{enumerate}
+
+%% минимальный набор генераторов уменьшает спецификацию (оценить количество аксиом?)
+
+%% при нескольких генераторах надо быть аккуратными
+
+\z Для множества, определенного таким образом:
+\begin{lstlisting}
+type E, S == empty | add(S, E) | delete(S, E)
+\end{lstlisting}
+дать алгебраическую спецификацию операции проверки наличия заданного элемента
+\begin{lstlisting}
+value include: S >< E -> Bool
+\end{lstlisting}
+
+\zhead{Описание эффекта  на основе структуры терма}
+
+Вы уже заметили, что основной принцип написания аксиомы --- понять, как вычисляется обсервер после последнего сработавшего генератора. При этом для выражения этой аксиомы используются аргументы, с которыми вызван обсервер и последний генератор. Однако не всегда просто описать эффект работы генератора на основе лишь аргументов последнего из них.
+
+\z Дать достаточно полную алгебраическую спецификацию типа <<Ограниченная очередь>>. В эту очередь можно добавлять и удалять элементы, но только если количество хранящихся элементов не превышает заданную величину.
+
+\textbf{Решение:}
+\begin{lstlisting}
+value capacity : Nat
+type E, S == empty | add(E,S)
+value delete: S -~-> E
+axiom forall e:E, s:S :-
+   delete(add(e,s)) is s
+     pre size(s) < capacity
+
+value size: S -> Nat
+axiom forall e:E, s:S :-
+   size(empty) is 0,
+   size(add(e,s)) is size(s) + 1
+       pre size(s) < capacity
+\end{lstlisting}
+
+Обратите внимание, что
+\begin{enumerate}
+\item пришлось добавить и описать дополнительный обсервер size;
+\item существует множество способов реализации ограниченной очереди при помощи имеющихся в языках программирования средств (например, при помощи <<кольцевой очереди>>, реализованной при помощи массива и двух указателей), однако здесь предъявляется именно формализация функциональности операций, которая остается справедливой и неизменной для любой реализации <<ограниченной очереди>>;
+\item данное описание не дает определения того, в каких случаях определена каждая операция в отдельности;
+\item при написании аксиомы для рекурсивной части терма достаточно представлять только \emph{правильно построенные термы} --- такие термы, в которых все функции вызваны с аргументами правильных типов и в каждой функции выполнено ее предусловие; например, для аксиомы size(add(e,s)) не надо представлять, что она должна описывать и такой терм: size(add(e,add(e1,add(e2,empty)))) при capacity = 2.
+\end{enumerate}
+
+\z Дать достаточно полную алгебраическую спецификацию типа <<Исключающая очередь>>. В эту очередь элемент добавляется в том случае, если его не было, а если он там был, то он удаляется из очереди. Опишите операцию проверки наличия заданного элемента в такой очереди.
+
+
+%% не всегда просто понять, полна ли спецификация
+\zhead{Противоречивость алгебраических спецификаций}
+
+Если спецификация допускает подстановку и <<вычисление>> термов увеличивающейся длины, пытаться <<вычислять>> эти термы разными способами, которые допускают аксиомы, и проверять, получаются ли одинаковые результаты в разных способах. Если получились разные, значит, найдено противоречие.
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type E, T
+value empty : T,
+      add: T >< E -> T,
+      check: T >< E -> Bool
+axiom forall e,e1: E, t: T :-
+   add(add(t,e),e) is add(t,e),
+   add(add(t,e),e1) is add(add(t,e1),e),
+   ~check(empty, e),
+   check( add(t,e1), e) is e = e1 \/ check(t,e),
+\end{lstlisting}
+
+\textbf{Решение:}
+Она непротиворечива. В доказательство достаточно привести модель. Например, такую:
+\begin{lstlisting}
+type E, T = E-set
+value empty : T = {},
+      add: T >< E -> T add(t,e) is t union {e},
+      check: T >< E -> Bool check(t,e) is e isin t
+\end{lstlisting}
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type E, T
+value empty : T,
+      add: T >< E -> T,
+      choose: T -~-> E
+axiom forall e,e1: E, t: T :-
+   add(add(t,e),e) is add(t,e),
+   add(add(t,e),e1) is add(add(t,e1),e),
+   choose(add(t,e)) is e
+\end{lstlisting}
+
+\textbf{Решение:}
+Противоречивая. Докажем это. Поскольку верна вторая аксиома, то верно, что choose(add(add(t,e1),e2)) is choose(add(add(t,e2),e1)) для e1 $\Not$= e2. По третьей аксиоме левая часть эквивалентна e2, а правая e1, т.е. e2 is e1, что является тождественно ложным утверждением. Получено противоречие. Важным моментом здесь является то, что хотя choose может быть недетерминированной, но она эквивалентным образом должна себя вести на эквивалентных аргументах (для сравнения на равенство этот факт был бы ложным).
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type Integer = Int
+value MAXINT : Integer :- MAXINT > 0
+axiom all i: Integer :- abs i < MAXINT
+value add: Integer >< Integer -~-> Integer
+axiom forall x, y: Integer :-
+   add(x, 0) is x,
+   add(x, y+1) is add(x,y)+1
+\end{lstlisting}
+
+\textbf{Решение:}
+Из сигнатуры add следует, что all x, y : Int :- abs x < MAXINT $\wedge$ abs y < MAXINT $\wedge$ (add определена для x и y => abs add(x,y) < MAXINT). Из первой аксиомы следует, что add(MAXINT-1, 0) определен и равен MAXINT-1. Тогда по второй аксиоме add(MAXINT-1,1) определен и равен MAXINT --- получили противоречие с тем, что аргументы функции допустимы и функция для них определена, но ее значение выходит за рамки типа. Ответ: противоречива.
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type T
+value empty : T,
+    put: T >< Nat -> T,
+    get: T >< Nat -> Bool
+axiom forall t: T, x, y, z: Nat :-
+  put( put(t, x), x ) is put(t, x),
+  ~get( empty, x ),
+  get( put(empty, x), y ) is (x = y /\ x\2 = 0),
+  get(put(put(empty,x),y),z) is (z=x /\ y\2=0) pre x\2=0,
+  get( put(t, y), x ) is get(t, x) pre y ~= x,
+  get( put( put(t, x), y), x ) is get( put(t,x), x ),
+  ~get(put(put(t,x),x+1),x+1) pre ~get(t,x+1) /\ get(t,x)
+\end{lstlisting}
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type T
+value empty: T,
+    put: T >< Nat -> T,
+    get: T >< Nat -> Bool
+axiom forall t:T, x, y, z: Nat :-
+  put(put(t, x), x) is put(t, x),
+  get( put (put(t, 0), x ), x) is (x > 0),
+  get( put (put(t, 2*x), x ), x) is (x > 0),
+  ~get( empty, x ),
+  ~get( put(empty,x), y ),
+  get(put(put(empty,x),y),z) is (z>0 /\ z=abs(x-y) )
+\end{lstlisting}
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type T = Nat
+value empty: T,
+    put: T >< Nat -> T,
+    get: T >< Nat -> Bool
+axiom forall t: T, x, y, z: Nat :-
+  put( put(t, x), y ) is put(t,x) pre y <= x,
+  ~get( empty, x ),
+  get( put(empty, x), y ) is (x = y),
+  get(put(put(empty,x),y),z) is (z = x \/ z = y /\ y > x),
+  get( put(t,x), y ) is get(t,y) pre y ~= x,
+  ~get(put(t,2*y),2*y) pre get(t,y) /\
+       get(t,y+1) /\~get(t,2*y),
+  get( put(put(t, 0), x), x ) is get( put(t,x), x )
+\end{lstlisting}
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type T
+value empty: T,
+    put: T >< Nat -> T,
+    get: T >< Nat -> Bool
+axiom forall t: T, x, y, z: Nat :-
+  put( put(t, x), y ) is put(t,x) pre y <= x,
+  ~get( empty, x ),
+  get( put(empty, x), y ) is (x = y),
+  get(put(put(empty,x),y),z) is (z = x \/ z = y /\ y > x),
+  get( put(t,x), y ) is get(t,y) pre y ~= x,
+  ~get( put(t, 2*y), 2*y ) pre get(t,y) /\ get(t, y+1),
+  get( put(put(t, 0), x), x ) is get( put(t,x), x )
+\end{lstlisting}
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type T
+value empty: T,
+    put: T >< Nat -> T,
+    get: T >< Nat -> Bool
+axiom forall t: T, x, y, z: Nat :-
+  put( put(t,x), x ) is put(t,x),
+  ~get( empty, x ),
+  get( put(empty, x), y ) is (x = y),
+  get(put(put(empty,x),y),z) is (z=x \/ z=y /\ y>2),
+  get( put(t,x), y ) is get(t, y) pre y ~= x,
+  get( put(t,y), y ) pre get( put(t,x), x ) /\ x <= y,
+  ~get(t,x) pre get( put(t, 0), 0),
+  ~get(t, x) /\ ~get(t,y) pre x ~= y /\ get(put(t,1),1)
+\end{lstlisting}
+
+\z Противоречива ли следующая спецификация?
+\begin{lstlisting}
+type T
+value empty: T,
+    put: T >< Nat -> T,
+    get: T >< Nat -> Bool
+axiom forall t: T, x, y, z: Nat :-
+  put( put(t,x), x ) is put(t,x),
+  ~get( empty, x ),
+  get( put(empty, x), y ) is (x = y),
+  get( put( put(empty,x), y ), z ) is (z = x \/ z = y /\ y > 0),
+  get( put(t,x), y ) is get(t, y) pre y ~= x,
+  get( put(t,y), y ) pre get( put(t,x), x ) /\ x <= y,
+  ~get(t,x) pre get( put(t, 0), 0) /\ ~get(t,0),
+  ~get(t,x) \/ ~get(t,y) pre x~=y /\ get(put(t,1),1) /\ ~get(t,1)
+\end{lstlisting}
+
+\zhead{Полнота алгебраических спецификаций}
+
+Не забывайте, что у нас есть только система аксиом и логика, т.е. правила получения новых выражений из имеющихся. За символами имен операций не стоит никакой семантики, даже если она <<предполагалась>> автором. Наоборот, эта система аксиом должна \emph{дать} нам семантику символов, т.е. дать нам возможность сделать с этими символами некие осмысленные действия.
+
+\z Полно ли описывает следующая спецификация тип <<Множество>> ?
+\begin{lstlisting}
+type E, S
+value empty: S,
+      add: E >< S -> S,
+axiom forall e1, e2: E, s : S :-
+   add(e1, add(e1, s)) is add(e1, s),
+   add(e1, add(e2, s)) is add(e2, add(e1, s))
+\end{lstlisting}
+
+\textbf{Решение:}
+В этой спецификации нет ни одного обсервера, поэтому вопрос о полноте для нее некорректен.
+
+\z Полна ли следующая спецификация типа <<Очередь>> ?
+\begin{lstlisting}
+type E, Q
+value empty: Q,
+      add: E >< Q -> Q,
+      size: Q -> Nat
+axiom forall e: E, q : Q :-
+    size(empty) is 0,
+    size(add(q, e)) is size(q) + 1
+\end{lstlisting}
+
+\textbf{Решение:}
+Обсервер --- size. Он определен для empty и определен для генератора add. Значит, он определен для любого терма, дающего тип Q. Значит, функция size описана полно.
+
+\z Полна ли следующая спецификация типа <<Очередь>> ?
+\begin{lstlisting}
+type E, Q
+value empty: Q,
+      add: Q >< E -> Q,
+      size: Q -> Nat
+axiom forall e: E, q : Q :-
+    size(empty) is 0,
+    size(add(q, e)) is size(q) + 1,
+    add(add(q, e), e) is add(q, e)
+\end{lstlisting}
+
+\textbf{Решение:}
+Без учета последней аксиомы size(add(add(q,e),e)) is size(add(q,e)) + 1 is size(q) + 2. А теперь с последней аксиомой: size(add(add(q,e),e)) is size(add(q,e)) is size(q) + 1. Получается, что size(q) + 1 = size(q) + 2. Иными словами, из аксиом следует ложь, система аксиом противоречива. А раз так, вопрос о полноте некорректен.
+
+
+\z Полна ли следующая спецификация типа <<Очередь>> ?
+\begin{lstlisting}
+type E, Q
+value empty: Q,
+      add: Q >< E -> Q,
+      first: Q -~-> E,
+      size: Q -> Nat
+axiom forall e: E, q : Q :-
+    first(add(empty, e)) is e,
+    first(add(q, e)) is first(q) pre q ~= empty,
+    size(empty) is 0,
+    size(add(q,e)) is size(q) + 1
+\end{lstlisting}
+
+\textbf{Решение:}
+Любое значение в целевом типе Q имеет один из двух видов (просто напросто, нет других функций, возвращающих Q):
+\begin{itemize}
+  \item empty
+  \item add(add(add(...add(add(empty, e1), e2)...)
+\end{itemize}
+
+Посмотрим на first с точки зрения определения достаточной полноты. Обе аксиомы для простоты можно объединить в одну: first(add(q,e)) is if q = empty then e else first(q) end. Тогда такое выражение <<вычислить>> можно: first(add(empty,e1)) is e1 (по первой аксиоме). Посмотрим такое выражение: first(add(add(empty,e1),e2)) is if add(empty,e1) = empty then e2 else e1 end. Чтобы закончить <<вычисление>>, надо понять истинность выражения add(empty,e1) = empty. В общем случае дать ответ на этот вопрос нельзя (\emph{проблема равенства термов алгоритмически неразрешима}). Однако в данном случае ответить на этот вопрос можно.
+
+Для этого сделаем такой хитрый ход -- \emph{<<навесим>> на эти два выражения сверху другой обсервер}: size(empty) is 0, size(add(empty,e1)) is size(empty) + 1 is 0 + 1 is 1, т.е. size(empty) $\Not$= size(add(empty,e1)). Поскольку size --- тотальная функция, то она детерминированная, т.е. all x, y : Q :- x = y => size(x) = size(y), что то же самое, что size(x) $\Not$= size(y) => x $\Not$= y. Теперь в качестве x возьмем empty, а в качестве y возьмем add(empty, e1). Получим, что add(empty, e1) $\Not$= empty. Ура, желаемое доказано! Тем самым, можно и вычислить второй терм, он равен e1. Аналогично, можно вычислить и все остальные термы.
+
+Осталось рассмотреть единственный терм: first(empty). Если бы существовали такие q' и e', что add(q',e') равнялось empty, то было бы возможно применение аксиом. Но, как следует из первой части, такие q' и e' не существуют, значит, <<вычислить>> first(empty) на основе данных аксиом нельзя. Ответ: неполна.
+
+\z Полна ли следующая спецификация типа <<Очередь>> ?
+\begin{lstlisting}
+type E, Q
+value empty: Q,
+      add: Q >< E -> Q,
+      first: Q -~-> E,
+axiom forall e: E, q : Q :-
+    first(add(empty, e)) is e,
+    first(add(q, e)) is first(q) pre q ~= empty,
+\end{lstlisting}
+
+\textbf{Решение:}
+Рассуждая аналогично предыдущей задаче, приходим к вопросу об истинности add(empty,e1) = empty и в данной системе аксиом дать ответ на этот вопрос нельзя. Ответ: неполна.
+
+
+
+
+
+
+%попробовать описать такие функции для множества как длина, вложение, вхождение элемента во множество

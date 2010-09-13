@@ -1,13 +1,13 @@
 % !Mode:: "TeX:UTF-8"
 
-\head{Описание сигнатуры функции на RSL:}
+\head{Описание сигнатуры функции на RSL}
 
 \begin{lstlisting}
 value add: Int >< Int -> Int
 \end{lstlisting}
 Имеется одна функция \texttt{add} с двумя аргументами типа Int (аргументы разделяются символом $\Fn$), функция является тотальной (стрелка ->). Функция вычисляет одно значение и это значение типа Int (несколько значений так же разделяются символом $\times$). Функция не имеет побочного эффекта.
 
-\head{Описание функции целиком:}
+\head{Описание функции целиком}
 \begin{lstlisting}
 value add: Int >< Int -> Int
 add(x,y) is x+y
@@ -193,7 +193,7 @@ value
 	status := "moved"
 \end{lstlisting}
 
-\item операторы циклов: while, do-while и for
+\item операторы циклов: while, do-until и for
 \begin{lstlisting}
 variable a: Nat, b : Nat
 value
@@ -204,6 +204,17 @@ value
         else b := b - a end
      end;
      if a = 0 then b else a end
+\end{lstlisting}
+
+\begin{lstlisting}
+variable n: Nat, x : Nat
+value
+  digits: Unit -> Nat
+  digits() is
+     n := 0;
+     do n := n + 1; x := x / 10
+     while x = 0;
+     n
 \end{lstlisting}
 
 \begin{lstlisting}
@@ -389,7 +400,7 @@ value
 
 \head{Перечисления (enumeration)}
 \begin{lstlisting}
-type Color == red | blue | white | green
+type Color = red | blue | white | green
 value
   from_rus : Color -> Bool
   from_rus(c) is c = red \/ c = blue \/ c = white
