@@ -1,4 +1,4 @@
-275 Patch Control
+277 Patch Control
 
 0
 0
@@ -15,10 +15,10 @@ rslbook.tex
 
 rslbook.tex
 TeX:UTF-8:UNIX
-420589563 0 316 8 316 27 44 58 594 434 0 282 736 -1 -1 0 0 22 0 0 22 1 0 27 316   0
+420589563 1 -1 10165 -1 10159 44 58 594 434 0 22 420 -1 -1 0 0 21 -1 -1 21 1 0 10159 -1   0
 alg\compness.tex
 TeX:UTF-8
-286273531 0 126 1 126 1 110 145 942 716 0 22 1495 -1 -1 0 0 22 0 0 22 1 0 1 126   0
+286273531 0 -1 2842 -1 2851 110 145 942 716 0 356 420 -1 -1 0 0 21 -1 -1 21 1 0 2851 -1   0
 alg\comprobs.tex
 TeX:UTF-8
 286273531 2 448 40 448 41 132 174 964 745 0 422 805 -1 -1 0 0 22 0 0 22 1 0 41 448   0
@@ -69,6 +69,8 @@ TeX:DTX:UNIX
 *alg/find_errors
 *alg/unformal
 *alg/problems
+*alg/compness
+*alg/comprobs
 *rslprior
 *rslbooks.bib
 <
