@@ -10,7 +10,7 @@ scheme Sets = class
         empty: Unit -> Set,
         add: Elem >< Set-> Set,
         delete: Elem >< Set -> Set,
-        inset: Elem >< Set -> Set
+        inset: Elem >< Set -> Bool
   axiom
     forall s: Set, x, y: Elem :-
         add(x, add(x, s)) is add(x, s),

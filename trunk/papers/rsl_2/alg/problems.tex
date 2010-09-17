@@ -9,14 +9,12 @@
 scheme FS = class
   type Path, Mode, FID, FS
   value
-        creat : Path >< Mode >< FS -~-> FS >< FID,
+        creat : FS >< Path >< Mode -~-> FS >< FID,
         size: FS >< FID -~-> Nat,
         known: FS >< Path -> Bool,
         access: FS >< FID -~-> Mode,
-        first: FS >< FID -> FS
-        first(a,b) is a
-  axiom
-    forall path: Path, mode: Mode, fs: FS :-
+        first: FS >< FID -> FS  first(a,b) is a
+  axiom forall path: Path, mode: Mode, fs: FS :-
         size(creat( path, mode, fs )) is 0,
         known(first(creat( path, mode, fs )), path),
         access(creat( path, mode, fs)) is mode

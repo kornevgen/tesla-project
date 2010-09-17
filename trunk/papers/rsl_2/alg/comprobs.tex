@@ -4,7 +4,10 @@
 
 \z Для стека, определенного таким образом:
 \begin{lstlisting}
-type E, S == empty | push(S, E) | pop(S, E)
+type E, S
+value empty : S,
+  push: S >< E -> S,
+  pop: S >< E -~-> S
 \end{lstlisting}
 дать достаточно полную алгебраическую спецификацию операции проверки наличия заданного элемента
 \begin{lstlisting}
@@ -13,8 +16,11 @@ value include: S >< E -> Bool
 
 \textbf{Решение:}
 \begin{lstlisting}
-type E, S == empty | push(S, E) | pop(S)
-value include: S >< E -> Bool
+type E, S
+value empty : S,
+  push: S >< E -> S,
+  pop: S >< E -~-> S,
+  include: S >< E -> Bool
 axiom forall e,e1:E, s:S :-
   ~ include(e, empty),
   include(e, push(s,e1)) is e = e1 \/ include(e,s),
@@ -51,7 +57,9 @@ axiom forall s:S, e:E, n:Nat :-
 \begin{enumerate}
 \item при помощи выбранных для описания стека генераторов значение стека будет иметь вид, например, push(push(pop(push(empty,1)),10),1); такое выражения значения в типе стек может казаться наиболее адекватным, ведь добавление и удаление элементов --- именно те операции, при помощи которых можно изменить значение (<<состояние>>) стека; однако посмотрите, насколько увеличивается спецификация и теряется ее наглядность, если в число генераторов включена лишняя функция (pop); сравните:
 \begin{lstlisting}
-type E, S == empty | push(S, E)
+type E, S
+value empty : S,
+  push: S >< E -> S
 value include: S >< E -> Bool
 axiom forall e,e1:E, s:S :-
   ~ include(e, empty),
@@ -67,7 +75,10 @@ axiom forall e,e1:E, s:S :-
 
 \z Для множества, определенного таким образом:
 \begin{lstlisting}
-type E, S == empty | add(S, E) | delete(S, E)
+type E, S
+value empty : S,
+  add: S >< E -> S,
+  delete: S >< E -> S
 \end{lstlisting}
 дать алгебраическую спецификацию операции проверки наличия заданного элемента
 \begin{lstlisting}
