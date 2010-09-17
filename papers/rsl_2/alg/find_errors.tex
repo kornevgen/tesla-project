@@ -6,12 +6,10 @@
 \begin{lstlisting}
 scheme Sets = class
   type Set, Elem
-  value
-        empty: Unit -> Set,
-        add: Elem >< Set-> Set,
+  value  empty: Unit -> Set,
+        add: Elem >< Set -> Set,
         delete: Elem >< Set -> Set
-  axiom
-    forall s: Set, x, y: Elem :-
+  axiom  forall s: Set, x, y: Elem :-
         add(x, add(x, s)) is add(x, s),
         delete(x, empty() ) is empty(),
         delete(x, add(x, s)) is s,
@@ -22,7 +20,7 @@ end
 
 \textbf{Решение:}
 
-не соответствует (delete может оставить во множестве элемент во множестве, не удалив его, если он добавлялся несколько раз): введем функцию
+неправильная (delete может оставить во множестве элемент, не удалив его, если он добавлялся несколько раз): введем функцию
 \begin{lstlisting}
 inset : Elem >< Set -> Bool
 \end{lstlisting}
@@ -53,12 +51,10 @@ inset(1, delete(1, add(1, add(1, empty)))) is
 \begin{lstlisting}
 scheme Sets = class
   type Set, Elem
-  value
-        empty: Unit -> Set,
-        add: Elem >< Set-> Set,
+  value   empty: Unit -> Set,
+        add: Elem >< Set -> Set,
         delete: Elem >< Set -> Set
-  axiom
-    forall s: Set, x, y: Elem :-
+  axiom forall s: Set, x, y: Elem :-
         add(x, add(x, s)) is add(x, s),
         delete(x, empty() ) is empty(),
         delete(x, add(x, s)) is delete(x, s),
@@ -71,12 +67,10 @@ end
 \begin{lstlisting}
 scheme Sets = class
   type Set, Elem
-  value
-        empty: Unit -> Set,
-        add: Elem >< Set-> Set,
+  value   empty: Unit -> Set,
+        add: Elem >< Set -> Set,
         delete: Elem >< Set -> Set
-  axiom
-    forall s: Set, x, y: Elem :-
+  axiom  forall s: Set, x, y: Elem :-
         add(x, add(x, s)) is add(x, s),
         delete(x, empty() ) is delete(x, empty()),
         delete(x, add(x, s)) is delete(x, s),
@@ -88,12 +82,10 @@ end
 \begin{lstlisting}
 scheme Queue = class
   type Q, Elem
-  value
-        empty: Unit -> Q,
-        add: Elem >< Q-> Q,
+  value  empty: Unit -> Q,
+        add: Elem >< Q -> Q,
         delete: Elem >< Q -> Q
-  axiom
-    forall s: Q, x, y: Elem :-
+  axiom  forall s: Q, x, y: Elem :-
         add(x, add(x, s)) is add(x, s),
         delete(x, empty() ) is empty(),
         delete(x, add(x, s)) is s,
@@ -106,15 +98,29 @@ end
 \begin{lstlisting}
 scheme List = class
   type L, Elem
-  value
-        empty: Unit -> L,
+  value    empty: Unit -> L,
         add: Elem >< L -> L,
         delete: Elem >< L -> L
-  axiom
-    forall s: L, x, y: Elem :-
+  axiom  forall s: L, x, y: Elem :-
         add(x, add(x, s)) is add(x, s),
         delete(x, empty() ) is empty(),
         delete(x, add(x, s)) is s,
+        delete(x, add(y, s)) is add(y, delete(x,s))
+                pre x ~= y
+end
+\end{lstlisting}
+
+\z Специфицируется АТД <<мультимножество>> с операциями добавления и удаления элементов (в мультимножестве элементы неупорядочены, но могут повторяться). Правильна ли следующая спецификация? Полна ли? Согласована ли?
+\begin{lstlisting}
+scheme Bags = class
+  type Bag, Elem
+  value   empty: Unit -> Bag,
+        add: Elem >< Bag -> Bag,
+        delete: Elem >< Bag -> Bag
+  axiom forall s: Bag, x, y: Elem :-
+        add(x, add(x, s)) is add(x, s),
+        delete(x, empty() ) is empty(),
+        delete(x, add(x, s)) is delete(x, s),
         delete(x, add(y, s)) is add(y, delete(x,s))
                 pre x ~= y
 end
