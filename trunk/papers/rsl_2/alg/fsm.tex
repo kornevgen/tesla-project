@@ -1,0 +1,340 @@
+% !Mode:: "TeX:UTF-8"
+
+\zhead{Алгебраические спецификации и конечные автоматы}
+
+В каждой задаче этого типа дается алгебраическая спецификация и часть конечного автомата. Требуется ответить на вопрос, может ли конечный автомат, часть которого представлена в задаче, быть реализацией алгебраической спецификации. Положительный ответ означает наличие модели для состояний и для всех операций. В случае такого ответа требуется привести такую модель. В случае отрицательного ответа нужно этот ответ доказать.
+
+При решении задачи следует учитывать следующие моменты:
+\begin{enumerate}
+\item в алгебраической спецификации ничего не сказано про структуру состояния (структуру данных состояния);
+\item со структурой состояния связаны классы эквивалентности термов из генераторов (два терма эквивалентны, если при вычислении они дают одинаковые значения целевого типа);
+\item в алгебраической спецификации явно не выделены некоторые важные свойства операций (обратимость, идемпотентность), но тем не менее возможен логический вывод этих свойств из аксиом;
+\item не сказано, что цепочки из данных генераторов исчерпывают всё множество значений целевого типа;
+\item по аксиомам вычисления значений операций-обсерверов ведутся на основе \textbf{синтаксической} структуры терма-аргумента этих обсерверов.
+\end{enumerate}
+
+При обозначении автоматов будет использоваться ряд символов. Если не сказано обратное, разным символам должны быть сопоставлены различные значения (например, $e_1$ и $e_2$ должны иметь различные значения).
+
+Для решения задачи предлагается выделять характерные особенности функциональности операций-генераторов. Если эти особенности окажутся несовместными, то ответ в задаче отрицательный. Если совместными, то по ним надо предложить и модель.
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     include: S >< E -> Bool
+axiom forall s: S, e, e' : E :-
+  ~include(empty, e),
+  include( add(s,e'), e ) is e = e' \/ include(s,e)
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(2,3)}
+% states
+\State{(1,1)}{S1}
+% transitions
+\LoopE{S1}{add(e)}
+%
+\end{VCPicture}}
+
+\textbf{Ответ:} соответствуют. Например, S --- это множество элементов типа E, add добавляет элемент к этому множеству, в состоянии на рисунке уже присутствует e.
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     include: S >< E -> Bool
+axiom forall s: S, e, e' : E :-
+  ~include(empty, e),
+  include( add(s,e'), e ) is e = e' \/ include(s,e)
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(7,1)}{S2}
+% transitions
+\ArcL{S1}{S2}{add(e)}
+\ArcL{S2}{S1}{add(e)}
+%
+\end{VCPicture}}
+
+\textbf{Ответ:} соответствуют.
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     include: S >< E -> Bool
+axiom forall s: S, e, e' : E :-
+  ~include(empty, e),
+  include( add(s,e'), e ) is e = e' \/ include(s,e)
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(20,3)}
+% states
+\State{(1,1)}{S1} \State{(6,1)}{S2} \State{(11,1)}{S3}
+% transitions
+\EdgeL{S1}{S2}{add(e)}
+\EdgeL{S2}{S3}{add(e)}
+%
+\end{VCPicture}}
+
+\textbf{Ответ:} соответствуют.
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     include: S >< E -> Bool
+axiom forall s: S, e, e' : E :-
+  ~include(empty, e),
+  include( add(s,e'), e ) is e = e' \/ include(s,e)
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(20,3)}
+% states
+\State{(1,1)}{S1} \State{(6,1)}{S2} \State{(11,1)}{S3}
+% transitions
+\EdgeL{S1}{S2}{add(e)}
+\EdgeL{S2}{S3}{add(e)}
+\LoopE{S3}{add(e)}
+%
+\end{VCPicture}}
+
+\textbf{Ответ:} соответствуют.
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     size: S -> Nat
+axiom forall s: S, e : E :-
+  size(empty) is 0,
+  size( add(s,e) ) is size(s) + 1
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(2,3)}
+% states
+\State{(1,1)}{S1}
+% transitions
+\LoopE{S1}{add(e)}
+%
+\end{VCPicture}}
+
+\textbf{Ответ:} не соответствуют. Из второй аксиомы следует, что size(add(s,e)) $\Neq$ size(s) для любых s и e. Откуда из-за тотальности size следует, что add(s,e) $\Neq$ s для любых s и e. А на картинке нашлись такие s и e, для которых это неравенство должно быть невыполнено.
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     size: S -> Nat
+axiom forall s: S, e : E :-
+  size(empty) is 0,
+  size( add(s,e) ) is size(s) + 1
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(7,1)}{S2}
+% transitions
+\ArcL{S1}{S2}{add(e)}
+\ArcL{S2}{S1}{add(e)}
+%
+\end{VCPicture}}
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     size: S -> Nat
+axiom forall s: S, e : E :-
+  size(empty) is 0,
+  size( add(s,e) ) is size(s) + 1
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(7,1)}{S2}
+% transitions
+\ArcL{S1}{S2}{add(e1)}
+\ArcL{S2}{S1}{add(e2)}
+%
+\end{VCPicture}}
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     find: S >< E -~-> E
+axiom forall s: S, e, e' : E :-
+  find(add(s,e'),e) is if e = e' then e else f(s,e) end
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(7,1)}{S2}
+% transitions
+\EdgeL{S1}{S2}{add(e1)}
+\LoopE{S2}{add(e2)}
+%
+\end{VCPicture}}
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     count: S >< E -> Nat
+axiom forall s: S, e, e' : E :-
+  count(empty,e) is 0,
+  count(add(s,e'),e) is count(s,e) +
+       if e = e' then 1 else 0 end
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(7,1)}{S2}
+% transitions
+\ArcL{S1}{S2}{add(e1)}
+\ArcL{S2}{S1}{add(e2)}
+%
+\end{VCPicture}}
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     count: S >< E -> Nat
+axiom forall s: S, e, e' : E :-
+  count(empty,e) is 0,
+  count(add(s,e'),e) is count(s,e) +
+       if e = e' then 1 else 0 end
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(7,1)}{S2}
+% transitions
+\ArcL{S1}{S2}{add(e1)}
+\ArcR{S1}{S2}{add(e2)}
+%
+\end{VCPicture}}
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     count: S >< E -> Nat
+axiom forall s: S, e, e' : E :-
+  count(empty,e) is 0,
+  count(add(s,e'),e) is count(s,e) +
+       if e = e' then 1 else 0 end
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(7,1)}{S2}
+% transitions
+\ArcL{S1}{S2}{add(e)}
+\ArcL{S2}{S1}{add(e)}
+%
+\end{VCPicture}}
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     count: S >< E -> Nat
+axiom forall s: S, e, e' : E :-
+  count(empty,e) is 0,
+  count(add(s,e'),e) is count(s,e) +
+       if e = e' then 1 else 0 end
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(7,1)}{S2}
+% transitions
+\ArcL{S1}{S2}{add(e1)}
+\ArcL{S2}{S1}{add(e2)}
+%
+\end{VCPicture}}
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     include: S >< E -> Bool,
+     uniq: S -> S
+axiom forall s:S, e,e':E :-
+  ~include(empty, e),
+  include(add(s,e'),e) is e=e' \/ include(s,e),
+  uniq(empty) is empty,
+  uniq(add(s,e)) is if include(s,e) then uniq(s)
+    else add(uniq(s),e) end
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(6,1)}{S2} \State{(11,1)}{S3}
+% transitions
+\EdgeL{S1}{S2}{uniq}
+\EdgeL{S2}{S3}{uniq}
+%
+\end{VCPicture}}
+
+\textbf{Решение:} не соответствуют. Докажем свойство \emph{идемпотентности} операции uniq, т.е. uniq(uniq(s)) is uniq(s) для любого s, индукцией по длине терма s. Для s = empty свойство идемпотентности выполнено по третьей аксиоме. Пусть оно выполнено для некоторого s. Рассмотрим uniq(uniq(add(s,e))) для произвольного e. По последней аксиоме это выражение равно if include(s,e) then uniq(uniq(s)) else uniq(add(uniq(s),e)) end is if include(s,e) then uniq(s) else uniq(add(uniq(s),e)) end. Осталось показать, что если $\Not$ include(s,e), то uniq(add(uniq(s),e)) is add(uniq(s),e). Опять применим последнюю аксиому: uniq(add(uniq(s),e)) is if include(uniq(s),e) then uniq(uniq(s)) else add(uniq(uniq(s)),e) end is if include(uniq(s),e) then uniq(s) else add(uniq(s),e) end. Если будет показано, что include(s,e) is include(uniq(s),e), то всё доказательство будет завершено. Покажем это снова индукцией по длине терма s. Для s = empty это верно по третьей аксиоме. Пусть это свойство доказано для некоторого s. Покажем, что include(add(s,e'),e) is include(add(uniq(s),e'),e). Распишем левую часть по второй аксиоме: include(add(s,e'),e) is e=e' $~\Or~$ include(s,e). Распишем правую часть: if include(s,e') then include(uniq(s),e) else include(add(uniq(s),e'),e) end is if include(s,e') then include(s,e) else include(add(uniq(s),e'),e) end is if include(s,e') then include(s,e) else e=e` $~\Or~$ include(s,e) end is include(s,e) $~\Or~$ (e=e`) $~\And~$ $\Not$include(s,e') is (e=e') $~\Or~$ include(s,e). Обе части совпали. Тем самым свойство идемпотентности опереации uniq доказано полностью.
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     include: S >< E -> Bool,
+     uniq: S -> S
+axiom forall s:S, e,e':E :-
+  ~include(empty, e),
+  include(add(s,e'),e) is e=e' \/ include(s,e),
+  uniq(empty) is empty,
+  uniq(add(s,e)) is if include(s,e) then uniq(s)
+    else add(uniq(s),e) end
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(7,1)}{S2}
+% transitions
+\ArcL{S1}{S2}{uniq}
+\ArcL{S2}{S1}{uniq}
+%
+\end{VCPicture}}
+
+
+\z \begin{lstlisting}
+type E, S
+value empty: S,
+     add: S >< E -> S,
+     include: S >< E -> Bool,
+     uniq: S -> S
+axiom forall s:S, e,e':E :-
+  ~include(empty, e),
+  include(add(s,e'),e) is e=e' \/ include(s,e),
+  uniq(empty) is empty,
+  uniq(add(s,e)) is if include(s,e) then uniq(s)
+    else add(uniq(s),e) end
+\end{lstlisting}
+
+\MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
+% states
+\State{(1,1)}{S1} \State{(5,1)}{S2}  \State{(9,1)}{S3}
+% transitions
+\EdgeL{S1}{S2}{add(e)}
+\LoopS{S2}{add(e)}
+\EdgeL{S2}{S3}{uniq}
+%
+\end{VCPicture}}
