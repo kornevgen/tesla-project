@@ -15,9 +15,9 @@ scheme FS = class
         access: FS >< FID -~-> Mode,
         first: FS >< FID -> FS  first(a,b) is a
   axiom forall path: Path, mode: Mode, fs: FS :-
-        size(creat( path, mode, fs )) is 0,
-        known(first(creat( path, mode, fs )), path),
-        access(creat( path, mode, fs)) is mode
+        size(creat( fs, path, mode )) is 0,
+        known(first(creat( fs, path, mode )), path),
+        access(creat( fs, path, mode )) is mode
 end
 \end{lstlisting}
 Обратите внимание, что
