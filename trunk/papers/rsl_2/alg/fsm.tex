@@ -13,7 +13,7 @@
 \item по аксиомам вычисления значений операций-обсерверов ведутся на основе \textbf{синтаксической} структуры терма-аргумента этих обсерверов.
 \end{enumerate}
 
-При обозначении автоматов будет использоваться ряд символов. Если не сказано обратное, разным символам должны быть сопоставлены различные значения (например, $e_1$ и $e_2$ должны иметь различные значения).
+При обозначении автоматов будет использоваться ряд символов. Если не сказано обратное, разным символам должны быть сопоставлены различные значения (например, $e_1$ и $e_2$ должны иметь различные значения). Состояние в конечном автомате на рисунке в задаче --- это некое конкретное состояние, а не <<обобщенное>> (например, не <<в состоянии хранится любое четное число>>, а <<в состоянии хранится число 2>>).
 
 Для решения задачи предлагается выделять характерные особенности функциональности операций-генераторов. Если эти особенности окажутся несовместными, то ответ в задаче отрицательный. Если совместными, то по ним надо предложить и модель.
 
@@ -170,15 +170,16 @@ value empty: S,
      add: S >< E -> S,
      find: S >< E -~-> E
 axiom forall s: S, e, e' : E :-
-  find(add(s,e'),e) is if e = e' then e else f(s,e) end
+  find(add(s,e'),e) is if e ~= e' then e' else find(s,e) end
 \end{lstlisting}
 
 \MediumPicture\VCDraw{\begin{VCPicture}{(0,-2)(10,3)}
 % states
 \State{(1,1)}{S1} \State{(7,1)}{S2}
 % transitions
-\EdgeL{S1}{S2}{add(e1)}
+\ArcL{S1}{S2}{add(e1)}
 \LoopE{S2}{add(e2)}
+\ArcL{S2}{S1}{add(e3)}
 %
 \end{VCPicture}}
 
@@ -289,7 +290,7 @@ axiom forall s:S, e,e':E :-
 %
 \end{VCPicture}}
 
-\textbf{Решение:} не соответствуют. Докажем свойство \emph{идемпотентности} операции uniq, т.е. uniq(uniq(s)) is uniq(s) для любого s, индукцией по длине терма s. Для s = empty свойство идемпотентности выполнено по третьей аксиоме. Пусть оно выполнено для некоторого s. Рассмотрим uniq(uniq(add(s,e))) для произвольного e. По последней аксиоме это выражение равно if include(s,e) then uniq(uniq(s)) else uniq(add(uniq(s),e)) end is if include(s,e) then uniq(s) else uniq(add(uniq(s),e)) end. Осталось показать, что если $\Not$ include(s,e), то uniq(add(uniq(s),e)) is add(uniq(s),e). Опять применим последнюю аксиому: uniq(add(uniq(s),e)) is if include(uniq(s),e) then uniq(uniq(s)) else add(uniq(uniq(s)),e) end is if include(uniq(s),e) then uniq(s) else add(uniq(s),e) end. Если будет показано, что include(s,e) is include(uniq(s),e), то всё доказательство будет завершено. Покажем это снова индукцией по длине терма s. Для s = empty это верно по третьей аксиоме. Пусть это свойство доказано для некоторого s. Покажем, что include(add(s,e'),e) is include(add(uniq(s),e'),e). Распишем левую часть по второй аксиоме: include(add(s,e'),e) is e=e' $~\Or~$ include(s,e). Распишем правую часть: if include(s,e') then include(uniq(s),e) else include(add(uniq(s),e'),e) end is if include(s,e') then include(s,e) else include(add(uniq(s),e'),e) end is if include(s,e') then include(s,e) else e=e` $~\Or~$ include(s,e) end is include(s,e) $~\Or~$ (e=e`) $~\And~$ $\Not$include(s,e') is (e=e') $~\Or~$ include(s,e). Обе части совпали. Тем самым свойство идемпотентности опереации uniq доказано полностью.
+\textbf{Решение:} не соответствуют. Докажем свойство \emph{идемпотентности} операции uniq, т.е. uniq(uniq(s)) is uniq(s) для любого s, индукцией по длине терма s. Для s = empty свойство идемпотентности выполнено по третьей аксиоме. Пусть оно выполнено для некоторого s. Рассмотрим uniq(uniq(add(s,e))) для произвольного e. По последней аксиоме это выражение равно if include(s,e) then uniq(uniq(s)) else uniq(add(uniq(s),e)) end is if include(s,e) then uniq(s) else uniq(add(uniq(s),e)) end. Осталось показать, что если $\Not$ include(s,e), то uniq(add(uniq(s),e)) is add(uniq(s),e). Опять применим последнюю аксиому: uniq(add(uniq(s),e)) is if include(uniq(s),e) then uniq(uniq(s)) else add(uniq(uniq(s)),e) end is if include(uniq(s),e) then uniq(s) else add(uniq(s),e) end. Если будет показано, что include(s,e) is include(uniq(s),e), то всё доказательство будет завершено. Покажем это снова индукцией по длине терма s. Для s = empty это верно по третьей аксиоме. Пусть это свойство доказано для некоторого s. Покажем, что include(add(s,e'),e) is include(add(uniq(s),e'),e). Распишем левую часть по второй аксиоме: include(add(s,e'),e) is e=e' $~\Or~$ include(s,e). Распишем правую часть: if include(s,e') then include(uniq(s),e) else include(add(uniq(s),e'),e) end is if include(s,e') then include(s,e) else include(add(uniq(s),e'),e) end is if include(s,e') then include(s,e) else e=e` $~\Or~$ include(s,e) end is include(s,e) $~\Or~$ (e=e`) $~\And~$ $\Not$include(s,e') is (e=e') $~\Or~$ include(s,e). Обе части совпали. Тем самым свойство идемпотентности операции uniq доказано полностью.
 
 \z \begin{lstlisting}
 type E, S
