@@ -1,0 +1,265 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{Формальное определение семантики языка описания вариантов инструкций}\label{sec:semantics}
+
+\begin{lstlisting}
+scheme semantics = class
+
+type Var, Table, TableDef
+type Bitlen = Nat, Value = Nat
+type Content
+type ValueVector = (Var -m-> Value) >< (Table -m-> Content-list)
+type Values = ValueVector-set
+type Definitions = (Var -m-> Bitlen) >< (Table -m-> TableDef)
+type Set = Values >< Definitions
+
+axiom
+all s: Set :-
+    all e: ValueVector :- e isin values(s) =>
+	dom vars_vals(e) = vars(s) /\
+	dom tbls_vals(e) = tables(s),
+
+[all_values_are_in_range]
+all s: Set :- exists tc : Table -m-> Nat :- dom tc = tables(s) /\
+    ( all e: ValueVector :- e isin values(s) =>
+       let (vs,ts) = e in
+        (all v: Var :- v isin dom vs => vs(v) < 2**bitlen(s,v)) /\
+        (all t: Table :- t isin dom ts => len ts(t) = tc(t))
+       end )
+
+value vars_vals: ValueVector -> Var -m-> Value
+      vars_vals((vs,ts)) is vs,
+
+      tbls_vals: ValueVector -> Table -m-> Content-list
+      tbls_vals((vs,ts)) is ts
+
+value values: Set -> Values
+      values((vs,ds)) is vs,
+
+      definitions: Set -> Definitions
+      definitions((vs,ds)) is ds,
+
+      vars: Set -> Var-set
+      vars(s) is dom vars(definitions(s)),
+
+      tables: Set -> Table-set
+      tables(s) is dom tables(definitions(s))
+
+value vars: Definitions -> Var -m-> Bitlen
+      vars((vs,ts)) is vs,
+
+      tables: Definitions -> Table -m-> TableDef
+      tables((vs,ts)) is ts
+
+value bitlen: Set >< Var -~-> Bitlen
+      bitlen((vs,(vsdef,tsdef)), var) is vsdef(var)
+      pre var isin dom vsdef
+
+
+---- Initialization and Finalization
+
+value init_set: Definitions -> Set
+      init_set(defs) as s
+      post
+	definitions(s) = defs /\
+	values(s) = { (vars_evals, tbls_evals) |
+		vars_evals : Var -m-> Value,
+        tbls_evals : Table -m-> Content-list :-
+		   dom vars_evals = dom vars(defs) /\
+		   dom tbls_evals = dom tables(defs) /\
+		   ( all v: Var :- v isin dom vars_evals =>
+                  vars_evals(v) < 2**bitlen(s,v) ) /\
+		   ( all t: Table :- t isin dom tbls_evals =>
+                    len tbls_evals(t) = 1 /\
+                    correctly_defined( tables(defs)(t),
+                                  hd tbls_evals(t) ) )
+		}
+
+
+value correctly_defined : TableDef >< Content -> Bool
+
+type Arg = Var
+value get_test: Set >< Arg-set -~->
+                       (Arg -m-> Value) >< (Table -m-> Content)
+      get_test(s, args) as (args_vals, tbls_vals)
+      post
+	args = dom args_vals /\ dom tbls_vals = tables(s) /\
+        ( exists vals: ValueVector :- let (a_v, t_v) = vals in
+	    vals isin values(s) /\ args_vals = a_v / args /\
+            ( all t : Table :- t isin t_v =>
+                           tbls_vals(t) = hd t_v(t) )
+	end )
+      pre args <<= vars(s)
+
+---- Operator ASSUME
+value Assume: Set >< (Var -m-> Value)-set -~-> Set
+      Assume(s, expr) as s2
+      post definitions(s) = definitions(s2) /\
+           values(s2) = values(s) inter expand(expr)
+      pre ( all e: Var -m-> Value :- e isin expr => dom e = vars(s) )
+
+value expand: (Var -m-> Value)-set -~-> Values
+      expand(expr) is { (e,t) |
+		e : Var -m-> Value,
+		t : Table -m-> Content-list :-
+			e isin expr }
+
+---- Operator EXPLICIT LET
+value Let: Set >< Var >< Bitlen >< (Var -m-> Value)-set -~-> Set
+      Let(s, lvar, bitlen, expr) as s2
+      post
+        tables(definitions(s2)) = tables(definitions(s)) /\
+	vars(definitions(s2)) = vars(definitions(s))
+                                         union [lvar+>bitlen] /\
+        values(s2) = add_var(values(s), lvar, bitlen)
+                                         inter expand(expr)
+      pre lvar ~isin vars(s) /\
+	( all e: Var -m-> Value :- e isin expr =>
+                           dom e = vars(s) union {lvar} )
+
+value add_var: Values >< Var >< Bitlen -> Values
+      add_var(vs, lvar, bitlen) is
+           { vv1 | vv: ValueVector, vv1: ValueVector :-
+		vv isin vs /\
+		vv1 isin add_var(vv, lvar, bitlen) },
+      add_var: ValueVector >< Var >< Bitlen -> ValueVector-set
+      add_var( (vs, ts), lvar, bitlen ) is
+	   {(vs union [lvar+>n], ts)| n: Nat :- n < 2**bitlen}
+
+---- Operator IMPLICIT LET
+value Let: Set >< Var >< Bitlen -~-> Set
+      Let(s, lvar, bitlen) is
+          Let(s, lvar, bitlen, {v | v: Var-m-> Value :-
+                        dom v = vars(s) union {lvar} /\
+                        ( all  var : Var :- var isin dom v =>
+                         v(var) < 2**bitlen(s,var) )
+				})
+
+
+---- Operator HIT
+type Key = Value, Region = Value, Data
+value Hit: Set >< Table ><
+       ( (Var -m->Value) >< Key >< Region >< Data >< Data )-set
+               -~-> Set
+      Hit(s, table, expr) as s2
+      post
+         -- s->s1 : hit check + load
+          ( exists s1: Set :- definitions(s1) = definitions(s) /\
+         values(s1) = values(s) inter expand(s, table, expr) /\
+	  -- s1->s2 : store
+	       definitions(s2) = definitions(s1) /\
+               values(s2) = { add_content(vals, table, e) |
+			vals : ValueVector,
+        e: (Var -m-> Value) >< Key >< Region >< Data >< Data :-
+                         vals isin values(s1) /\ e isin expr }
+          )
+      pre table isin tables(s) /\
+	  ( all e : (Var -m-> Value) >< Key >< Region >< Data >< Data :-
+             e isin expr => let (vars, k, r, d1, d2) = e in
+                    dom vars = vars(s) /\
+                   ( all v : Var :- v isin dom vars =>
+                   vars(v) < 2**bitlen(s,v) )
+					end )
+
+
+value expand: Set >< Table ><
+((Var -m-> Value) >< Key >< Region >< Data >< Data)-set -> Values
+      expand(s, table, expr) is
+      { vv | e: (Var -m-> Value) >< Key >< Region >< Data >< Data,
+               vv : ValueVector :-
+               e isin expr /\ vv isin expand(s, table, e) },
+
+      expand: Set >< Table ><
+   ((Var -m-> Value) >< Key >< Region >< Data >< Data)
+            -> ValueVector-set
+      expand(s, table,
+      (vars_vals, key, region, ldata, sdata)) is
+          { (vars_vals, tbls_vals ) |
+            tbls_vals: Table -m-> Content-list :-
+                 dom tbls_vals = tables(s) /\
+                 has_key_in_region_with_data(
+                    tbls_vals(table)(len tbls_vals(table)),
+                    key, region, ldata
+		) }
+
+value add_content: ValueVector >< Table ><
+( (Var -m-> Value) >< Key >< Region >< Data >< Data ) -~-> ValueVector
+      add_content( (vars_vals, tbls_vals), table, e ) is
+           let (vars, key, region, ldata, sdata) = e in
+		( vars_vals,
+		  (tbls_vals / (dom tbls_vals \ {table})) union
+		  [ table +> tbls_vals(table) ^
+    <.change_data(tbls_vals(table)(len tbls_vals(table)),
+                           key, region, sdata).> ] )
+	   end
+
+value has_key_in_region_with_data: Content ><
+                 Key >< Region >< Data -> Bool
+value change_data: Content >< Key >< Region >< Data -~-> Content
+
+
+---- Operator MISS
+value Miss: Set >< Table ><
+( (Var -m-> Value) >< Key >< Region >< Data )-set -~-> Set
+      Miss(s, table, expr) as s2
+      post
+         -- s->s1 : remove valuevectors with (key,region)
+          ( exists s1: Set :- definitions(s1) = definitions(s) /\
+      values(s1) = values(s) \ expand(s, table, expr) /\
+	  -- s1->s2 : store
+	  definitions(s2) = definitions(s1) /\
+	  values(s2) = { add_content(vals, table, e) |
+            vals : ValueVector,
+            e: (Var -m-> Value) >< Key >< Region >< Data :-
+                  vals isin values(s1) /\ e isin expr }
+          )
+      pre table isin tables(s) /\
+	  ( all e : (Var -m-> Value) >< Key >< Region >< Data :-
+             e isin expr => let (vars, k, r, d) = e in
+                 dom vars = vars(s) /\
+                 ( all v : Var :- v isin dom vars =>
+                           vars(v) < 2**bitlen(s,v) )
+					end )
+
+value expand: Set >< Table ><
+((Var -m-> Value) >< Key >< Region >< Data)-set -> Values
+      expand(s, table, expr) is
+          { vv | e: (Var -m-> Value) >< Key >< Region >< Data,
+                    vv : ValueVector :-
+                e isin expr /\ vv isin expand(s, table, e) },
+
+      expand: Set >< Table ><
+((Var -m-> Value) >< Key >< Region >< Data) -> ValueVector-set
+      expand(s, table, (vars_vals, key, region, rdata)) is
+          { (vars_vals, tbls_vals ) |
+            tbls_vals: Table -m-> Content-list :-
+            dom tbls_vals = tables(s) /\
+            has_key_in_region(
+                  tbls_vals(table)(len tbls_vals(table)),
+                  key, region
+		) }
+
+value has_key_in_region: Content >< Key >< Region -> Bool
+
+value add_content: ValueVector >< Table ><
+( (Var -m-> Value) >< Key >< Region >< Data ) -~-> ValueVector
+      add_content( (vars_vals, tbls_vals), table, e ) is
+           let (vars, key, region, replace_data) = e in
+		( vars_vals,
+		  (tbls_vals / (dom tbls_vals \ {table})) union
+		  [ table +> tbls_vals(table) ^
+    <.change_line(tbls_vals(table)(len tbls_vals(table)),
+                      key, region, replace_data).> ] )
+	   end
+
+value change_line: Content >< Key >< Region >< Data -~-> Content
+      change_line( c, key, region, data) is
+          replace_key_with_data( c, displaced(c, region),
+                          key, region, data)
+      pre ~has_key_in_region(c, key, region)
+
+value replace_key_with_data: Content >< Key >< Key ><
+                             Region >< Data -~-> Content
+value displaced: Content >< Region -> Key
+
+end
+\end{lstlisting} 
