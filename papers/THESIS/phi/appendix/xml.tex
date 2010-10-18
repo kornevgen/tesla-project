@@ -1,0 +1,127 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{Пример формализованного описания варианта инструкции}\label{sec:xml}
+
+В этом приложении приведено формализованное описание одного из вариантов инструкции LD архитектуры MIPS64~\cite{mips64II}. Эта инструкция осуществляет загрузку 64 бит из памяти по адресу, задаваемому аргументами этой инструкции. Рассматрвиаемый вариант инструкции LD будет предполагать выполнение инструкции, которое не обрывается по причине возникновения каких-либо исключительных ситуаций, при этом выполнении происходит попадание в буфере при TLB (DTLB) и промах в кэш-памяти первого уровня.
+
+\begin{verbatim}
+<situation name="full[l1Miss, mtlbHit]" instruction="LD">
+
+    <argument name="rt" length="64" />
+    <argument name="base" length="64" />
+    <argument name="offset" length="16" />
+
+    <let name="tmp">
+      <sign_extend size="64"><var>offset</var></sign_extend>
+    </let>
+
+    <let name="vAddr">
+      <sum><var>tmp</var><var>base</var></sum>
+    </let>
+
+    <!-- начало трансляции адреса: в переменной vAddr
+        находится виртуальный адрес -->
+    <assume><eq>
+      <bits end="2" start="0"><var>vAddr</var></bits>
+      <constant length="3">0</constant>
+    </eq></assume>
+    <let name="r">
+      <bits end="63" start="62"><var>vAddr</var></bits>
+    </let>
+    <let name="vpnd2mask">
+      <bits end="39" start="13"><var>vAddr</var></bits>
+    </let>
+
+    <hit table="mtlb">
+      <key>
+        <var>r</var>
+        <var>vpnd2mask</var>
+      </key>
+    </hit>
+
+    <let name="pfn0" length="24" />
+    <let name="CCA0" length="2" />
+    <let name="valid0" length="1" />
+    <let name="pfn1" length="24" />
+    <let name="CCA1" length="2" />
+    <let name="valid1" length="1" />
+
+    <hit table="tlb">
+      <key>
+        <var>r</var>
+        <var>vpnd2mask</var>
+      </key>
+      <line>
+        <loaded>
+          <field name="pfn0"><var>pfn0</var></field>
+          <field name="CCA0"><var>CCA0</var></field>
+          <field name="valid0"><var>valid0</var></field>
+          <field name="pfn1"><var>pfn1</var></field>
+          <field name="CCA1"><var>CCA1</var></field>
+          <field name="valid1"><var>valid1</var></field>
+        </loaded>
+      </line>
+    </hit>
+
+    <let name="vodd">
+      <bit index="12"><var>vAddr</var></bit>
+    </let>
+    <let name="pfn" length="24" />
+    <assume>
+      <or>
+        <and>
+          <eq><var>vodd</var><constant length="1">0</constant></eq>
+          <eq><var>pfn</var><var>pfn0</var></eq>
+          <eq><var>CCA0</var><constant length="2">2</constant></eq>
+        </and>
+        <and>
+          <eq><var>vodd</var><constant length="1">1</constant></eq>
+          <eq><var>pfn</var><var>pfn1</var></eq>
+          <eq><var>CCA1</var><constant length="2">2</constant></eq>
+        </and>
+      </or>
+    </assume>
+
+    <let name="pAddr">
+      <concat>
+        <var>pfn</var>
+        <bits end="11" start="0"><var>vAddr</var></bits>
+      </concat>
+    </let>
+    <!-- трансляция адреса завершена: в переменной pAddr
+            находится физический адрес -->
+
+    <!-- началось обращение по физическому адресу -->
+    <let name="tag">
+      <bits end="35" start="12"><var>pAddr</var></bits>
+    </let>
+    <let name="set">
+      <bits end="11" start="5"><var>pAddr</var></bits>
+    </let>
+
+    <let name="memdoubleword" length=64 />
+
+    <hit table="memory">
+      <key><var>pAddr</var></key>
+      <line>
+        <loaded>
+          <field name="data"><var>memdoubleword</var></field>
+        </loaded>
+      </line>
+    </hit>
+
+    <miss table="l1">
+      <key><var>tag</var></key>
+      <region><var>set</var></region>
+      <line>
+        <replacing>
+          <field name="tag"><var>tag</var></field>
+        </replacing>
+      </line>
+    </miss>
+
+    <let name="rt">
+      <var>memdoubleword</var>
+    </let>
+
+</situation>
+\end{verbatim} 

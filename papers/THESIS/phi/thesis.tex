@@ -1,0 +1,231 @@
+% !Mode:: "TeX:UTF-8"
+\documentclass[14pt]{extreport}
+\usepackage{cmap}
+
+\usepackage{fix-cm}
+%\usepackage[cp1251]{inputenc}
+\usepackage[utf8]{inputenx}
+\usepackage[russian]{babel}
+%\usepackage{pscyr}
+%\usepackage[T1]{fontenc} %cm-super
+%\usepackage{type1cm}
+\usepackage{indentfirst}
+
+\usepackage{ifpdf}
+
+\ifpdf
+% we are running pdflatex, so convert .eps files to .pdf
+\usepackage[pdftex]{graphicx}
+\usepackage{epstopdf}
+\else
+% we are running LaTeX, not pdflatex
+\usepackage{graphicx}
+\fi
+
+
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{dsfont}
+\usepackage{lscape}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{xspace}
+\usepackage{ifthen}
+\usepackage[numbers,compress,sort]{natbib}
+\usepackage{setspace} % интервалы межстрочные
+\pagestyle{plain} \onehalfspacing
+
+\usepackage[left=3cm,right=1.2cm,
+top=1.8cm,bottom=2.5cm,bindingoffset=0cm,  %a4paper
+]{geometry} % поля
+
+%\textheight 25.7cm % 29.7-2-2
+%\textwidth 16.7cm % 21-2.5-1.5
+%\hoffset 0.46cm %2.5-2.54 слева 3 см
+%\voffset -0.54cm %2-2.54 сверху 2 см
+%\oddsidemargin 0cm \headheight 0cm \headsep 0cm \topmargin 0cm
+
+\usepackage{ccaption} % заменяем для рисунков ':' после номера рисунка на другой символ
+\captiondelim{. } % разделитель точка и пробел
+
+\usepackage{listingsutf8}
+\lstloadlanguages{RSL}
+\lstset{%numbers=left,
+language=RSL, extendedchars=true}
+%, inputencoding=utf8/latin1, commentstyle=\itshape, stringstyle=\bfseries}
+
+
+\newtheorem{theorem}{Теорема}
+\newtheorem{lemma}{Лемма}
+\newtheorem{utv}{Утверждение}
+\newtheorem*{sld}{Следствие}
+
+
+\newcommand{\LRU}{\textsf{LRU}\xspace}
+\newcommand{\FIFO}{\textsf{FIFO}\xspace}
+\newcommand{\PseudoLRU}{\textsf{Pseudo-LRU}\xspace}
+\newcommand{\MRU}{\textsf{MRU}\xspace}
+
+\newcommand{\lemmatext}[2]{
+\noindent\textbf{Лемма~{#1}}. \textit{#2}
+}
+
+\newcommand{\theoremtext}[2]{
+\noindent\textbf{Теорема~{#1}}. \textit{#2}
+}
+
+\newcommand{\theoremtextwname}[3]{
+\noindent\textbf{Теорема~{#1}}~(#2). \textit{#3}
+}
+
+%
+% Подправим команду \appendix : нумерация русскими буквами,
+% а не латинскими.
+\makeatletter
+\renewcommand\appendix{\par
+  \setcounter{chapter}{0}%
+  \setcounter{section}{0}%
+  \def\@chapapp{\appendixname}%
+  \def\thechapter{\@Asbuk\c@chapter}}
+\makeatother
+
+% Теперь "русифицируем" окружение enumerate:
+\makeatletter
+\def\labelenumi{\theenumi)}      % чтобы после номера шла скобка;
+\def\theenumii{\@asbuk\c@enumii}   % чтобы на втором уровне шли русские,
+\def\labelenumii{\theenumii)}    % а не латинские буквы
+\def\p@enumii{\theenumi}         % а это для \ref
+\def\labelenumiii{{\bf--}}       % а на третьем уровне пусть будут лишь тире,
+\let\theenumiii\relax            % и отдельных ссылок на него не будет
+\def\p@enumiii{\theenumi\theenumii}
+\makeatother
+
+\include{intro11}
+
+\begin{document}
+
+\thispagestyle{empty}
+
+\begin{singlespace}
+\begin{center}
+%МИНИСТЕРСТВО ОБРАЗОВАНИЯ И НАУКИ\\ РОССИЙСКОЙ ФЕДЕРАЦИИ\\[0.5cm]
+%
+МОСКОВСКИЙ ГОСУДАРСТВЕННЫЙ УНИВЕРСИТЕТ\\ ИМЕНИ М.~В.~ЛОМОНОСОВА\\[0.5cm]
+
+ФАКУЛЬТЕТ ВЫЧИСЛИТЕЛЬНОЙ МАТЕМАТИКИ\\ И КИБЕРНЕТИКИ\\[1cm]
+\end{center}
+
+\begin{flushright}
+На правах рукописи\\[2cm]
+\end{flushright}
+
+\begin{center}
+Корныхин Евгений Валерьевич\\[1cm]
+\textbf{%\renewcommand{\baselinestretch}{1.8}
+%\fontsize{28pt}{50pt} \selectfont
+\huge{%\textsc{нацеленное построение программ для тестирования подсистемы управления памяти микропроцессоров}}\\[0.5cm]}
+\textsc{построение тестовых программ для проверки подсистем управления памяти микропроцессоров}}\\[0.5cm]}
+%\huge{\textsc{ микропроцессоров}}}\\[1.5cm]
+
+Специальность 05.13.11 -- математическое и программное обеспечение вычислительных машин, комплексов и компьютерных сетей\\[1.5cm]
+
+
+Диссертация на соискание ученой степени\\
+кандидата физико-математических наук
+\end{center}
+
+\vspace{0.7cm}
+
+\begin{flushright} Научный руководитель:\\
+д.ф-м.н. Петренко Александр Константинович
+\end{flushright}
+
+\vspace{1.5cm}
+
+\begin{center}
+Москва -- 2010
+\end{center}
+
+
+\end{singlespace}
+
+\pagebreak
+
+\tableofcontents
+
+%%! определение LRU не "на списках", а "на перестановках"! + аналогичные
+
+%% "набор" -> "регион"
+%% "тег" -> "ключ"
+%% "кэширующий буфер" -> "таблица"
+%% "описывание" -> "описание"
+%% "метрика" -> "функционал"
+
+%% убрать слова "можно", "может"
+
+%%! определиться "последовательность инициализирующих" или "инициализирующая посл-ть"
+
+%% там, где в формулах разъехался "w-1", заменить на "w{-}1"
+
+%%%%! не ВЕРШИНЫ АВТОМАТА, а СОСТОЯНИЯ ! не ДУГИ АВТОМАТА, а ПЕРЕХОДЫ !
+
+%%? НУЖНЫ ЛИ ТОЧКИ ПОСЛЕ ЦИФР-НОМЕРОВ РАЗДЕЛОВ ?
+%% http://fuzzy-plates.googlecode.com/svn-history/r68/trunk/docs/sty/russcorr.sty
+
+%%%% 1. следить за числом и родом: "предлагаем" и "предлагается" - должен быть один вариант
+%%%% 2. "test case'ы", "design'ы" --- это плохо, англицизмы тоже плохо
+
+\include{theorems}
+
+\addcontentsline{toc}{chapter}{Введение}
+\chapter*{Введение}
+
+\section*{Актуальность}
+\Actuality
+
+\section*{Цель работы}
+\Objective
+
+\section*{Научная новизна}
+\Novelty
+
+\section*{Практическая значимость}
+\PracticalValue
+
+\section*{Апробация работы и публикации}
+\Pub
+
+\section*{Структура работы}
+Первая глава посвящена обзору существующих методов построения тестовых программ и подсистем управления памяти, их анализу и уточнению задач исследования. Вторая глава посвящена решению сформулированных в конце первой главы задач. В этой главе описываются предлагаемые модели и методы для построения тестовых программ. Третья глава посвящена оценке применимости для существующих архитектур микропроцессоров, автоматизации и экспериментальной оценке предлагаемых во второй главе методов.
+
+\include{review}
+
+\include{theor}
+
+\include{experiments}
+
+\include{epilogue}
+
+
+\pagebreak
+\appendix
+% \include{appendix/tables}
+\include{appendix/proofs}
+\include{appendix/xml}
+\include{appendix/syntax}
+\include{appendix/semantics}
+
+\pagebreak
+%%%%\bibliographystyle{plain}
+%%%%\bibliographystyle{gost71u}
+\addcontentsline{toc}{chapter}{Литература}
+\bibliographystyle{gost780s}
+\bibliography{thesis}
+
+%% привести оформление в соответствие с требованием: что-то всё время пропадает!
+
+%%! вписать название препринта и номер тома
+
+\end{document}
