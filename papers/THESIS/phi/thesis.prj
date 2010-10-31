@@ -1,10 +1,10 @@
-277 Patch Control
+303 Patch Control
 
 0
 0
 1
 thesis.tex
-10
+15
 3
 2
 
@@ -15,13 +15,28 @@ thesis.tex
 
 thesis.tex
 TeX:UTF-8:UNIX
-152154107 1 -1 5541 -1 5549 66 75 922 637 0 102 207 -1 -1 0 0 21 -1 -1 21 1 0 5549 -1   0
+152154107 1 -1 5541 -1 5549 0 0 1035 628 0 121 500 -1 -1 0 0 21 -1 -1 21 1 0 5549 -1   0
 review.tex
 TeX:UTF-8
-17838075 5 -1 58668 -1 58669 44 58 876 629 0 702 253 -1 -1 0 0 21 -1 -1 21 1 0 58669 -1   0
+17838075 5 -1 58668 -1 58669 0 0 1035 628 0 841 525 -1 -1 0 0 21 -1 -1 21 1 0 58669 -1   0
 theor.tex
 TeX:UTF-8
-286273531 0 -1 15490 -1 15868 66 87 898 658 0 212 667 -1 -1 0 0 21 -1 -1 21 1 0 15868 -1   0
+286273531 0 -1 19749 -1 19580 0 0 1035 628 0 601 275 -1 -1 0 0 21 -1 -1 21 1 0 19580 -1   0
+:\Documents and Settings\Ýììà\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Dictionaries.ini
+DATA:INI:EDT
+269484282 0 25 26 33 26 0 0 988 612 1 393 500 -1 -1 0 0 -1 -1 -1 -1 1 0 26 33   0
+:\Documents and Settings\Ýììà\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Spelling.ini
+DATA:INI:EDT
+269484282 0 0 1 0 1 0 0 988 612 1 93 0 -1 -1 0 0 -1 -1 -1 -1 1 0 1 0   0
+:\Documents and Settings\Ýììà\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Font.ini
+DATA:INI:EDT
+269484282 0 0 1 22 1 0 0 988 612 0 25 525 -1 -1 0 0 83 0 0 83 1 0 1 22   0
+:\Program Files\WinEdt Team\WinEdt 6\Doc\News.txt
+ASCII
+307242875 0 0 1 0 1 0 0 988 612 1 73 -2992 -1 -1 0 0 -1 -1 -1 -1 1 0 1 0   0
+:\Documents and Settings\Ýììà\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Fonts.ini
+DATA:INI:EDT
+269484282 0 0 1 67 14 0 0 988 612 1 177 391 -1 -1 0 0 -1 -1 -1 -1 1 0 14 67   0
 appendix\syntax.tex
 TeX:UTF-8
 286273531 0 -1 999 -1 995 154 175 1010 737 0 22 500 -1 -1 0 0 21 -1 -1 21 1 0 995 -1   0
