@@ -4,9 +4,9 @@
 0
 1
 thesis.tex
-16
-5
-4
+13
+2
+0
 
 
 
@@ -15,49 +15,40 @@ thesis.tex
 
 thesis.tex
 TeX:UTF-8:UNIX
-152154107 0 -1 5722 -1 5722 0 0 1276 607 0 25 200 -1 -1 0 0 21 -1 -1 21 1 0 5722 -1   0
-appendix\proofs.tex
+420589563 0 -1 5917 -1 6550 0 0 1276 861 0 595 720 -1 -1 0 0 21 -1 -1 21 1 0 6550 -1   0
+experiments.tex
 TeX:UTF-8
-17838075 0 -1 28155 -1 352 0 0 1276 607 0 289 175 -1 -1 0 0 21 -1 -1 21 1 0 352 -1   0
+17838075 0 -1 18759 -1 24256 0 0 1276 922 0 946 810 -1 -1 0 0 21 -1 -1 21 1 0 24256 -1   0
+epilogue.tex
+TeX:UTF-8
+286273531 0 -1 230 -1 316 0 0 1276 922 0 25 300 -1 -1 0 0 21 -1 -1 21 1 0 316 -1   0
 theorems.tex
 TeX:UTF-8
-17838075 0 -1 5246 -1 5328 0 0 1276 607 0 1057 425 -1 -1 0 0 21 -1 -1 21 1 0 5328 -1   0
-review.tex
-TeX:UTF-8
-17838075 5 -1 58668 -1 58669 0 0 1276 607 0 841 525 -1 -1 0 0 21 -1 -1 21 1 0 58669 -1   0
+17838075 0 -1 5246 -1 5328 0 0 1276 861 0 976 720 -1 -1 0 0 21 -1 -1 21 1 0 5328 -1   0
 theor.tex
 TeX:UTF-8
-286273531 0 -1 84929 -1 84937 0 0 1276 607 0 25 400 -1 -1 0 0 21 -1 -1 21 2 0 84937 -1  1 84937 -1   0
-:\Documents and Settings\Ёмма\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Dictionaries.ini
+17838075 0 -1 124186 -1 124246 0 0 1276 861 0 203 570 -1 -1 0 0 21 -1 -1 21 2 0 124246 -1  1 84993 -1   0
+review.tex
+TeX:UTF-8
+286273531 5 -1 58668 -1 58669 0 0 1276 861 0 757 210 -1 -1 0 0 21 -1 -1 21 1 0 58669 -1   0
+appendix\proofs.tex
+TeX:UTF-8
+286273531 0 452 13 -1 38 0 0 1276 843 0 191 30 -1 -1 0 0 21 -1 -1 21 1 0 38 -1   0
+D:\Documents and Settings\Ёмма »льинична\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Font.ini
 DATA:INI:EDT
-269484282 0 25 26 33 26 0 0 988 612 1 393 500 -1 -1 0 0 -1 -1 -1 -1 1 0 26 33   0
-:\Documents and Settings\Ёмма\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Spelling.ini
+1048826 0 0 1 24 13 0 0 1276 843 1 236 720 -1 -1 0 0 -1 -1 -1 -1 1 0 13 24   0
+D:\Documents and Settings\Ёмма »льинична\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Dictionaries.ini
 DATA:INI:EDT
-269484282 0 0 1 0 1 0 0 988 612 1 93 0 -1 -1 0 0 -1 -1 -1 -1 1 0 1 0   0
-:\Documents and Settings\Ёмма\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Font.ini
-DATA:INI:EDT
-269484282 0 0 1 22 1 0 0 988 612 0 25 525 -1 -1 0 0 83 0 0 83 1 0 1 22   0
-:\Program Files\WinEdt Team\WinEdt 6\Doc\News.txt
-ASCII
-307242875 0 0 1 0 1 0 0 988 612 1 73 -2992 -1 -1 0 0 -1 -1 -1 -1 1 0 1 0   0
-:\Documents and Settings\Ёмма\Application Data\WinEdt Team\WinEdt 6\ConfigEx\Fonts.ini
-DATA:INI:EDT
-269484282 0 0 1 67 14 0 0 988 612 1 177 391 -1 -1 0 0 -1 -1 -1 -1 1 0 14 67   0
+269484282 0 15 19 16 26 0 0 988 843 1 311 297 -1 -1 0 0 -1 -1 -1 -1 1 0 26 16   0
 appendix\syntax.tex
 TeX:UTF-8
 286273531 0 -1 999 -1 995 154 175 1010 737 0 22 500 -1 -1 0 0 21 -1 -1 21 1 0 995 -1   0
-experiments.tex
-TeX:UTF-8
-286273531 0 1015 23 1015 23 88 100 944 662 0 242 69 -1 -1 0 0 22 0 0 22 1 0 23 1015   0
 appendix\xml.tex
 TeX:UTF-8
 286273531 0 134 31 134 31 132 150 988 712 0 322 3082 -1 -1 0 0 22 0 0 22 1 0 31 134   0
 intro11.tex
 TeX:UTF-8
 286273531 5 448 1 448 2 154 203 986 774 0 32 805 -1 -1 0 0 -1 -1 -1 -1 1 0 2 448   0
-epilogue.tex
-TeX:UTF-8
-286273531 0 8 1 10 2 88 116 920 687 0 32 -916 -1 -1 0 0 -1 -1 -1 -1 1 0 2 10   0
 thesis.bib
 TeX:UTF-8
 286273531 0 -1 36788 -1 36788 176 200 1032 762 0 22 400 -1 -1 0 0 21 -1 -1 21 1 0 36788 -1   0
