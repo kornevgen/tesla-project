@@ -3,38 +3,48 @@
 %\addcontentsline{toc}{chapter}{Приложение А: Таблицы ограничений}
 
 \begin{lemma}\label{QuantorElimination}
-Для любых неотрицательных целых чисел $x$, $y$ и $N$ таких, что $0 \leqslant x, y < 2^N$, справедливо следующее (сравнения беззнаковые):
+Для любых неотрицательных целых чисел $x$, $y$ и $N$ таких, что $0 \leqslant x, y < 2^N$, справедливо следующее (сравнения беззнаковые, $\oplus$ --- сложение по модулю 2):
 $$( \exists k \in \mathds{N} : x < 2^k \leqslant y ) \Leftrightarrow (y > x ~\wedge~ x \oplus y > x)$$
 \end{lemma}
 \begin{proof}
-В доказательстве будет использована очевидная эквивалентность: $x < 2^k \Leftrightarrow x_{1..N-k} = 0$. Здесь и далее $t_{a..b}$ будет обозначать число, составленное конкатенацией бит $t_a$, $t_{a+1}$, ..., $t_b$.
+В доказательстве целые числа $x$ и $y$ рассматриваются и как битовые строки длины $N$ (поскольку по условию $0 \leqslant x, y < 2^N$). Отдельные биты числа будем обозначать как $x_a$, $a \in \{1, 2, ..., N\}$, $x = x_N + 2x_{N-1} + 4x_{N-2} + ... + 2^{N-1} x_1$. Из этого следует, что $x < 2^k \Leftrightarrow x_{1 .. N-k} = 0$. Здесь и далее $t_{a..b}$ будет обозначать число, составленное конкатенацией бит $t_a$, $t_{a+1}$, ..., $t_b$.
 
 1) Докажем, что
 $$\left\{\begin{array}{lc}
-( \exists k \in \mathds{N} : x < 2^k \leqslant y ) \Rightarrow y > x & (1)\\
-( \exists k \in \mathds{N} : x < 2^k \leqslant y ) \Rightarrow  x \oplus y > x & (2)\\
+( \exists k \in \mathds{N} : x < 2^k \leqslant y ) \Rightarrow x < y & [1]\\
+( \exists k \in \mathds{N} : x < 2^k \leqslant y ) \Rightarrow  x \oplus y > x & [2]\\
 \end{array}\right.$$
 
-(1) очевидно.
+Следствие [1] истинно по определению отношения сравнения << < >>.
 
-Докажем (2). $(x \oplus y)_{1..N-k} = x_{1..N-k} \oplus y_{1..N-k} = y_{1..N-k} \neq 0$ (старшие биты $x$ равны нулю, т.к. $x < 2^k$). Значит, $x \oplus y \geqslant 2^k > x$. Доказано.
+Докажем следствие [2]. $(x \oplus y)_{1..N-k} = x_{1..N-k} \oplus y_{1..N-k} = y_{1..N-k} \neq 0$ (старшие биты $x$ равны нулю, т.к. $x < 2^k$). Значит, $x \oplus y \geqslant 2^k > x$. Доказано.
 
-2) Докажем, что $( \forall k \in \mathds{N} : (x < 2^k \rightarrow y < 2^k )) \Rightarrow (y \leqslant x ~\vee~ x \oplus y \leqslant x)$.
+2) Докажем, что
+$$\begin{array}{lc}
+( \forall k \in \mathds{N} : (x < 2^k \rightarrow y < 2^k )) \Rightarrow (y \leqslant x ~\vee~ x \oplus y \leqslant x) & [3]\\
+\end{array}$$
 
-При $x \geqslant y$ следствие импликации тождественно истинно, значит и вся импликация истинна.
+При $x \geqslant y$ выражение $(y \leqslant x ~\vee~ x \oplus y \leqslant x)$ тождественно истинно, следовательно вся импликация [3] истинна.
 
-Рассмотрим случай $x < y$. Будем доказывать по следующей схеме:
+Рассмотрим случай $x < y$. Будем доказывать импликацию [3] в два шага. На первом шаге докажем, что:
 
 $( \forall k \in \mathds{N} : (x < 2^k \rightarrow y < 2^k )) \Rightarrow\\
 \left[\begin{array}{l}
 \exists n \in \mathds{N} : x < 2^n \wedge y < 2^n \wedge x \geqslant 2^{n-1} \wedge y \geqslant 2^{n-1}\\
 \exists m \in \mathds{N} : y < 2^m \leqslant x\\
-\end{array}\right.
-\Rightarrow (x \oplus y \leqslant x)$
+\end{array}\right.$
 
-Неформально говоря, если про $x$ и $y$ нельзя сказать, что у первого больше нулевых старших бит, чем у второго, то либо у них одинаковое количество старших нулевых бит, либо у второго их больше. Докажем это.
+На втором шаге докажем, что:
 
-Первый шаг. Рассмотрим множество $\{k \in \mathds{N} | x < 2^k\}$. Это множество непустое (поскольку $x < 2^N$), а, значит, обладает нижней гранью. Иными словами, существует $k'$ такое, что $x < 2^{k'}$ и $x \geqslant 2^{k'-1}$. Т.к. $y < x$, то $y < 2^{k'}$. Кроме того, справедлива дизъюнкция: либо $y \geqslant 2^{k'-1}$, либо $y < 2^{k'-1}$. Иными словами, справедлива следующая дизъюнкция:
+$( \forall k \in \mathds{N} : (x < 2^k \rightarrow y < 2^k )) \Rightarrow\\
+\left[\begin{array}{l}
+\exists n \in \mathds{N} : x < 2^n \wedge y < 2^n \wedge x \geqslant 2^{n-1} \wedge y \geqslant 2^{n-1}\\
+\exists m \in \mathds{N} : y < 2^m \leqslant x\\
+\end{array}\right. \Rightarrow (x \oplus y \leqslant x)$
+
+Из этих двух шагов будет следовать импликация [3].
+
+Первый шаг. Неформально говоря, первый шаг утверждает, что если про $x$ и $y$ нельзя сказать, что у первого больше нулевых старших бит, чем у второго, то либо у них одинаковое количество старших нулевых бит, либо у второго их больше. Рассмотрим множество $I = \{k \in \mathds{N} | x < 2^k\}$. Это множество непустое (поскольку $N \in I$, т.к. $x < 2^N$), а, значит, обладает нижней гранью. Иными словами, существует $k'$ такое, что $k' \in I$ и $(k'{-}1) \notin I$, т.е. $x < 2^{k'}$ и $x \geqslant 2^{k'-1}$. Т.к. $y < x$, то $y < 2^{k'}$. Кроме того, справедлива дизъюнкция: либо $y \geqslant 2^{k'-1}$, либо $y < 2^{k'-1}$. Иными словами, справедлива следующая дизъюнкция:
 $$\left[\begin{array}{lc}
 \exists (n = k') \in \mathds{N} : x < 2^{k'} \wedge y < 2^{k'} \wedge x \geqslant 2^{k'-1} \wedge y \geqslant 2^{k'-1} & (*)\\
 \exists (m = k'{-}1) \in \mathds{N} : y < 2^{k'-1} \leqslant x & (**)\\
