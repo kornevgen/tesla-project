@@ -1,5 +1,7 @@
 % !Mode:: "TeX:UTF-8"
-\chapter{Формальное определение семантики языка описания вариантов инструкций}\label{sec:semantics}
+\chapter{Формальное определение семантики языка описания вариантов исполнения инструкций}\label{sec:semantics}
+
+{\small
 
 \begin{lstlisting}
 scheme semantics = class
@@ -98,10 +100,8 @@ value Assume: Set >< (Var -m-> Value)-set -~-> Set
       pre ( all e: Var -m-> Value :- e isin expr => dom e = vars(s) )
 
 value expand: (Var -m-> Value)-set -~-> Values
-      expand(expr) is { (e,t) |
-		e : Var -m-> Value,
-		t : Table -m-> Content-list :-
-			e isin expr }
+      expand(expr) is { (e,t) |	e : Var -m-> Value,
+		t : Table -m-> Content-list :- e isin expr }
 
 ---- Operator EXPLICIT LET
 value Let: Set >< Var >< Bitlen >< (Var -m-> Value)-set -~-> Set
@@ -262,4 +262,4 @@ value replace_key_with_data: Content >< Key >< Key ><
 value displaced: Content >< Region -> Key
 
 end
-\end{lstlisting} 
+\end{lstlisting} }
