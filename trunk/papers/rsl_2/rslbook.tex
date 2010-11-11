@@ -2129,15 +2129,16 @@ axiom forall o1, o2 : Owner,
 
 Во всех задачах $x_1, x_2, ...$ --- входные переменные, $y_1, y_2, ...$ --- промежуточные переменные, $z_1, z_2, ...$ --- выходные переменные.
 
-\zhead{Доказать частичную корректность следующих числовых алгоритмов}
+\zhead{Доказать частичную корректность следующих числовых алгоритмов\footnote{Часть задач взяты из~\cite{Shen}}}
 
 \z $pre(x_1, x_2)~is~true$, $post(x_1, x_2, z)~is~(z = x_1 \cdot x_2)$
 
 \begin{codebox}
 \Procname{$\proc{Multiply}(x_1,x_2)$}
 \li $y_1 \gets 0$
-\li \For $y_2 \gets 1$ \To $x_2$
-\li \Do $y_1 \gets y_2 + x_1$ \End
+\li $y_2 \gets 1$
+\li \While $y_2 \leq x_2$
+\li \Do $(y_1,~y_2) \gets (y_2 + x_1,~y_2 + 1)$ \End
 \li $z \gets y_1$
 \end{codebox}
 
@@ -2146,8 +2147,9 @@ axiom forall o1, o2 : Owner,
 \begin{codebox}
 \Procname{$\proc{Arithmetic}(x_1)$}
 \li $y_1 \gets 0$
-\li \For $y_2 \gets 1$ \To $x_1$
-\li \Do $y_1 \gets y_1 + 2y_2$ \End
+\li $y_2 \gets 1$
+\li \While $y_2 \leq x_1$
+\li \Do $(y_1,~y_2) \gets (y_1 + 2y_2,~y_2 + 1)$ \End
 \li $z \gets y_1$
 \end{codebox}
 
@@ -2156,8 +2158,9 @@ axiom forall o1, o2 : Owner,
 \begin{codebox}
 \Procname{$\proc{SumSquare}(x_1)$}
 \li $y_1 \gets 0$
-\li \For $y_2 \gets 1$ \To $x_1$
-\li \Do $y_1 \gets y_1 + 6y_2\cdot y_2$ \End
+\li $y_2 \gets 1$
+\li \While $y_2 \leq x_1$
+\li \Do $(y_1,~y_2) \gets (y_1 + 6y_2\cdot y_2,~y_2 + 1)$ \End
 \li $z \gets y_1$
 \end{codebox}
 
@@ -2166,15 +2169,88 @@ axiom forall o1, o2 : Owner,
 \begin{codebox}
 \Procname{$\proc{Power}(x_1,x_2)$}
 \li $y_1 \gets 1$
-\li \For $y_2 \gets 1$ \To $x_2$
-\li \Do $y_1 \gets y_1 * x_1$ \End
+\li $y_2 \gets 1$
+\li \While $y_2 \leq x_2$
+\li \Do $(y_1,~y_2) \gets (y_1 * x_1,~y_2 + 1)$ \End
+\li $z \gets y_1$
+\end{codebox}
+
+\z $pre(x_1, x_2)~is~(x_2 > 0)$, $post(x_1, x_2, z)~is~(z = x_1^{x_2})$
+
+\begin{codebox}
+\Procname{$\proc{Power}(x_1,x_2)$}
+\li $y_1 \gets x_1$
+\li $y_2 \gets 1$
+\li \While $y_2 < x_2$
+\li \Do \If $2y_2 \leq x_2$
+\li \Then $(y_1,~y_2) \gets (y_1 * y_1,~2y_2)$
+\li \Else $(y_1,~y_2) \gets (y_1 * x_1,~y_2 + 1)$ \End \End
 \li $z \gets y_1$
 \end{codebox}
 
 \z $pre(x_1, x_2)~is~true$, $post(x_1, x_2, z)~is~(z = x_1^{x_2})$
 
-бинарное возведение в степень
+\begin{codebox}
+\Procname{$\proc{Power}(x_1,x_2)$}
+\li $y_1 \gets 1$
+\li $y_2 \gets 0$
+\li \While $y_2 < x_2$
+\li \Do \If $y_2 = 0$
+\li \Then $(y_1,~y_2) \gets (x_1,~1)$
+\li \Else \If $2y_2 \leq x_2$
+\li \Then $(y_1,~y_2) \gets (y_1 * y_1,~2y_2)$
+\li \Else $(y_1,~y_2) \gets (y_1 * x_1,~y_2 + 1)$ \End \End \End
+\li $z \gets y_1$
+\end{codebox}
 
+% НОД
+\z (<<GCD>> -- greatest common divisor) $pre(x_1, x_2)~is~(x_1 + x_2 > 0)$, $post(x_1, x_2, z)~is~(z = \gcd(x_1,x_2))$
+
+\begin{codebox}
+\Procname{$\proc{GCD}(x_1,x_2)$}
+\li \If $x_1 > x_2$
+\li \Then $y_1 \gets x_1$
+\li \Else $y_1 \gets x_2$ \End
+\li \While $x_1 \mod y_1 \neq 0 ~\vee~ x_2 \mod y_1 \neq 0$
+\li \Do $y_1 \gets y_1 - 1$ \End
+\li $z \gets y_1$
+\end{codebox}
+
+\z (<<GCD>> -- greatest common divisor) $pre(x_1, x_2)~is~(x_1 + x_2 > 0)$, $post(x_1, x_2, z)~is~(z = \gcd(x_1,x_2))$
+
+\begin{codebox}
+\Procname{$\proc{GCD}(x_1,x_2)$}
+\li $y_1 \gets x_1$
+\li $y_2 \gets x_2$
+\li \While $y_1 > 0 ~\wedge~ y_2 > 0$
+\li \Do \If $y_1 \geq y_2$
+\li     \Then $y_1 \gets y_1 - y_2$
+\li     \Else $y_2 \gets y_2 - y_1$ \End \End
+\li \If $y_1 = 0$
+\li \Then $z \gets y_2$
+\li \Else $z \gets y_1$ \End
+\end{codebox}
+
+\z (<<LCM>> -- least common multiple) $pre(x_1, x_2)~is~(x_1 + x_2 > 0)$, $post(x_1, x_2, z)~is~(z = 2\cdot \mbox{lcm}(x_1,x_2))$
+
+\begin{codebox}
+\Procname{$\proc{2LCM}(x_1,~x_2)$}
+\li $(y_1,~y_2,~y_3,~y_4) \gets (x_1,~x_2,~x_2,~x_1)$
+\li \While $y_1 \neq 0 ~\wedge~ y_2 \neq 0$
+\li \Do \If $y_1 \geq y_2$
+\li     \Then $(y_1,~y_4) \gets (y_1 - y_2,~y_3 + y_4)$
+\li     \Else $(y_2,~y_3) \gets (y_2 - y_1,~y_3 + y_4)$ \End \End
+\li \If $y_1 = 0$
+\li \Then $z \gets y_4$
+\li \Else $z \gets y_3$ \End
+\end{codebox}
+
+
+
+
+% дискретное взятие квадратного корня
+
+% дискретное логарифмирование
 
 
 %%%\chapter{Поведенческие спецификации}
