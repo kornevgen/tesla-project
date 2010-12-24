@@ -93,7 +93,7 @@
 \input{intro}
 
 
-\chapter{Первоначальные сведения} 
+\chapter{Первоначальные сведения}
 
 \section{RSL для императивного программирования}
 
@@ -992,7 +992,7 @@ type Processes = Nat-set
 value fork: Processes -~-> Processes >< Int
    fork(ps) as (ps2, pid)
    post pid = -1 /\ ps2 = ps
-   	\/ pid >= 0 /\ pid ~isin ps /\ ps2 = ps union {pid} 
+   	\/ pid >= 0 /\ pid ~isin ps /\ ps2 = ps union {pid}
 \end{lstlisting}
 
 Обратите внимание:
@@ -1009,7 +1009,7 @@ value fork: Processes -~-> Processes >< Int
 \begin{lstlisting}
 type Segment, Signal
 type Process ::
-		code : Segment, 
+		code : Segment,
 		data : Segment,
 		stack : Segment,
 		instr_pntr : Nat,
@@ -1044,16 +1044,16 @@ value fork: Processes -~-> Processes >< Int
 \textbf{Решение:}
 \begin{lstlisting}
 type Processes = Nat-set
-value getpid: Processes -~-> Int
-   getpid(ps) as pid
-   post pid >= 0 /\ pid isin ps
+value getpid: Processes -~-> Int >< Processes
+   getpid(ps) as (pid, ps2)
+   post pid >= 0 /\ pid isin ps /\ ps2 = ps
 \end{lstlisting}
 
 Обратите внимание, что
 \begin{enumerate}
   \item данная модель не позволяет дать алгоритм вычисления функции getpid (поэтому используется неявная спецификация), но позволяет тем не менее задать те свойства, которые перечислены в постановке задачи;
   \item хоть модель и довольно простая, но она наглядная и позволяет ее читать и делать выводы относительно функции getpid даже тому, кто не знает POSIX;
-  \item пост-выражение можно эквивалентным образом сократить до такого: pid $\Isin$ ps, поскольку в ps входят только натуральные числа.
+  \item пост-выражение можно эквивалентным образом сократить до такого: pid $\Isin$ ps $\wedge$ ps = ps2, поскольку в ps входят только натуральные числа.
 \end{enumerate}
 
 % \z exec
