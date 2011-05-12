@@ -20,8 +20,11 @@
 11. [тезисы] Корныхин Е.В. Определение стратегии вытеснения PseudoLRU на ветвях бинарного дерева // Сборник тезисов "Ломоносов-2010", с.20-21
 12. [статья] Корныхин Е.В. Метод зеркальной генерации ограничений для построения тестовых программ по тестовых шаблонам // Труды ИСП: том 18, с.67-80
 
+2011
+13. Kamkin A., Kornykhin E., Vorobyev D. Reconfigurable Model-Based Test Program Generator for Microprocessors. 7th Workshop on Advances in Model Based Testing (A-MOST) 2011, Berlin, Germany
+
+
 готовятся к печати:
-13. Kamkin A., Kornikhin E., Vorobyev D. Reconfigurable Model-Based Test Program Generator for Microprocessors. Model-based testing workshop, 2011
 14? Springer хотел издать в 2010 году сборник ВАКовский статей из ИСПа ....
 
 ? SERM
