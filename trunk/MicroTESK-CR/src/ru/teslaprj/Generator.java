@@ -19,7 +19,10 @@ public class Generator
 			throw new IllegalStateException("Generator isn't initialized");
 		
 		Map<Parameter, BigInteger> solution = solver.solve(template, with_binsearch );
-		return text_constructor.build_initialization( solution, solver.getInitLengths(), template );
+		if ( solution.isEmpty() )
+			return text_constructor.createEmptyProgram();
+		else
+			return text_constructor.build_initialization( solution, solver.getInitLengths(), template );
 	}
 
 	
