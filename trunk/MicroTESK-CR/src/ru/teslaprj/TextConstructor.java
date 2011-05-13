@@ -10,4 +10,6 @@ public interface TextConstructor
 			Map<Parameter, BigInteger> solve,
 			Map<Table, Integer> initlengths,
 			Template template );
+
+	Program createEmptyProgram();
 }
