@@ -8,5 +8,10 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="tools/antlr-3.1.1.jar"/>
 	<classpathentry kind="lib" path="C:/Program Files/ECLiPSe 6.0/lib/eclipse.jar"/>
+	<classpathentry kind="lib" path="lib/win32/YicesLite.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="C:/Documents and Settings/kornevgen/Desktop/tesla.2008.09.24/TeSLa/lib/win32"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
