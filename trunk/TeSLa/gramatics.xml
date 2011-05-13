@@ -55,7 +55,9 @@
 		        filename="${bin}/${tesla.jar}" 
 		        targetfilename="${tesla.jar}"
 		        summary="Version ${tesla.version2} of TeSLa solver"
-		        labels="Featured" />
+		        labels="Featured"
+				verbose="true"
+		/>
 	</target>
 	
 	<target name="distr.clp">
