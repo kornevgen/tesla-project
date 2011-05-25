@@ -1,0 +1,56 @@
+\documentclass[a4paper, 12pt]{report}
+\usepackage[russian]{babel}
+\usepackage[cp1251]{inputenc}
+\usepackage{pscyr}
+\usepackage{amssymb}
+\usepackage{rsl}
+\usepackage{graphicx}
+
+\title{Сборник задач по курсу \\ Методы Формальных Спецификаций Программ: \\ Язык функционального специфицирования RSL}
+\author{Е.В. Корныхин}
+\date{МГУ, 2007}
+
+\setcounter{tocdepth}{1}
+
+\begin{document}
+\renewcommand{\thesubsection}{\Roman{subsection}}
+
+\maketitle \setcounter{page}{2} \tableofcontents
+
+\input{intro}
+
+\input{01/ch1.tex}
+
+\input{02/ch2.tex}
+
+\input{03/ch3.tex}
+
+\input{04/ch4.tex}
+
+\input{05/ch5.tex}
+
+\input{07/ch7.tex}
+
+\input{06/ch6.tex}
+
+%%TODO:
+% + 1. дописать теоретическое предисловие к каждой главе
+% + 2. дописать задачи с конкретными числами
+% + 3. выверить правильность синтаксиса (скобочки)
+% + 4. приложения
+% + 5. выверить все претензии из распечатки
+% + 6. разобраться с библиографией
+
+
+
+\appendix
+\input{app/grascii.tex}
+\input{app/rslprior.tex}
+
+\bibliographystyle{gost71s}
+\bibliography{refs}
+\addcontentsline{toc}{chapter}{\bibname}
+
+
+
+\end{document}

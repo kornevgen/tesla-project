@@ -1,0 +1,46 @@
+\begin{thebibliography}{1}
+\def\selectlanguageifdefined#1{
+\expandafter\ifx\csname date#1\endcsname\relax
+\else\language\csname l@#1\endcsname\fi}
+\ifx\undefined\url\def\url#1{{\small #1}}\else\fi
+\ifx\undefined\BibUrl\def\BibUrl#1{\url{#1}}\else\fi
+\ifx\undefined\BibAnnote\long\def\BibAnnote#1{}\else\fi
+\ifx\undefined\BibEmph\def\BibEmph#1{\emph{#1}}\else\fi
+
+\bibitem{metodichka}
+\selectlanguageifdefined{russian}
+\BibEmph{Кузьменкова~.~., Петренко~.~.} Формальная спецификация программ на
+  языке RSL. Методическое пособие по практикуму. "---
+\newblock М.: ВМиК, 1999. "---
+\newblock {\cyr\CYRS.}~57.
+
+\bibitem{RSLlanguage}
+\selectlanguageifdefined{russian}
+\BibEmph{Кузьменкова~.~., Петренко~.~.} Формальная спецификация программ на
+  языке RSL. Конспект лекций. "---
+\newblock М.: ВМиК, 2001. "---
+\newblock {\cyr\CYRS.}~106.
+
+\bibitem{MACAOcourse}
+\selectlanguageifdefined{english}
+RAISE course института UNU-IIST. "---
+\newblock ftp://ftp.iist.unu.edu/pub/RAISE/course$\_$material/.
+
+\bibitem{RSLgroup}
+\selectlanguageifdefined{english}
+The Raise Specification Language (Bcs Practitioner Series). "---
+\newblock Prentice Hall, 1992. "---
+\newblock P.~106.
+
+\bibitem{ISPRAStypechecker}
+\selectlanguageifdefined{english}
+RSL Type Checker отдела Технологий программирования ИСП РАН. "---
+\newblock http://www.ispras.ru/$\sim$RedVerst/RedVerst/Lectures and training
+  courses/MSU course Formal specification of software/RSL2CPP/.
+
+\bibitem{MACAOtypechecker}
+\selectlanguageifdefined{english}
+RSL Type Checker института UNU-IIST. "---
+\newblock ftp://ftp.iist.unu.edu/pub/RAISE/dist/.
+
+\end{thebibliography}

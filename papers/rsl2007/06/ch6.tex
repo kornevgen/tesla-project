@@ -1,0 +1,896 @@
+\chapter{Задачи коллоквиума №1}
+
+\section{Вариантные определения}
+
+\subparagraph{Enumeration}
+\begin{verbatim}
+type
+  Colour == black | white
+\end{verbatim}
+это сокращение для:
+\begin{verbatim}
+type Colour
+value
+    black : Colour,
+    white : Colour
+axiom
+   [disjoint] /* нет совпадающих элементов */
+     black ~= white,
+   [induction] /* для док-ва свойств про Colour по индукции */
+      all p : Colour -> Bool :-
+        (p(black) /\ p(white)) => (all cx:Colour :- p(cx))
+\end{verbatim}
+
+\subparagraph{Record constructors}
+\begin{verbatim}
+type Collection == empty | add(Elem, Collection)
+\end{verbatim}
+это сокращение для:
+\begin{verbatim}
+type
+   Collection
+value
+   empty : Collection,
+   add : Elem >< Collection -> Collection
+axiom
+   [disjoint]
+   /* разные композиции вернут разные результаты */
+      all e : Elem, c : Collection :- empty ~= add(e,c),
+   [induction]
+   /* тип Collection создается только с помощью add */
+      all p : Collection -> Bool :-
+            p(empty) /\
+            ( all e : Elem, c : Collection :-
+                   p(c) => p(add(e, c)) )
+            =>
+                (all c: Collection :- p(c))
+\end{verbatim}
+
+\subparagraph{Destructors}
+\begin{verbatim}
+type List == empty | add(head : Elem, tail : List)
+\end{verbatim}
+это сокращение для:
+\begin{verbatim}
+type
+   List
+value
+    empty : List,
+    add : Elem >< List -> List,
+    head : List -~-> Elem,
+    tail : List -~-> List
+axiom
+  [disjont]
+    all e : Elem, l : List :- empty ~= add(e,l),
+  [induction]
+   .............
+  [get_head]
+    all e : Elem, l : List :- head(add(e, l)) is e,
+  [get_tail]
+    all e : Elem, l : List :- tail (add(e, l)) is l
+\end{verbatim}
+
+\subparagraph{Reconstructors}
+\begin{verbatim}
+type List == empty | add(Elem <-> replace_head, List)
+\end{verbatim}
+в дополнение к приведенным выше определениям вводятся следующие определения:
+\begin{verbatim}
+value
+   replace_head : Elem >< List -~-> List
+axiom
+  [replace_head]
+    /*голова списка становится новой, хвост не меняется*/
+    all e,e1 : Elem, l : List :-
+        replace_head(e, add(e1, l)) is add(e, l)
+\end{verbatim}
+
+%\subparagraph{Union Definition}
+%\begin{verbatim}
+%type id = id_1 | … | id_n
+%\end{verbatim}
+% это сокращение для:
+%\begin{verbatim}
+%type
+%  id ==
+%       id_from_id_1(id_to_id_1 : id_1)
+%     | …
+%     | id_from_id_n(id_to_id_n : id_1)
+%\end{verbatim}
+%
+%
+%\subparagraph{Short record definition}
+%\begin{verbatim}
+%type Rec :: field_name_1 : type_expr_1,
+%            field_name_2 : type_expr_2
+%\end{verbatim}
+%это сокращение для:
+%\begin{verbatim}
+%type Rec == mk_Rec(field_name_1 : type_id_1,    -- встроенный конструктор
+%                   field_name_2 : type_id_2)
+%\end{verbatim}
+%
+%В общей форме:
+%
+%\begin{verbatim}
+%type id ::
+%    destr_id_1 : type_expr_1 <-> recon_id_1
+%    …
+%    destr_id_n : type_expr_n <-> recon_id_n
+%\end{verbatim}
+%это сокращение для:
+%\begin{verbatim}
+%type id ==
+%     mk_id  (destr_id_1 : type_expr_1 <-> recon_id_1
+%     …
+%             destr_id_n : type_expr_n <-> recon_id_n)
+%\end{verbatim}
+
+\section{Задачи}
+
+\subsection{Дано explicit определение функции. Написать
+implicit-спецификацию функции эквивалентной данной.}
+
+\begin{enumerate}
+\item
+\begin{verbatim}
+value
+    f : Int -> Nat
+    f(c) is if c > 0 then c else 0-c end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f: Int -> Real
+    f(n) is
+        if n = 0 then 0.0
+        elsif n < 0 then f(n + 1) - 1.0
+        else f(n - 1) + 1.0
+        end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f: Real -> Int
+    f(x) is
+        if x < 0 then 0 - f(0 - x)
+        elsif x >= 1 then f(x - 1.0) + 1
+        else 0.0
+        end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f: Int >< Int -~-> Int
+    f(x, y) is
+        if y = 0 then 1 else x * f(x, y - 1) end
+    pre ~ (y < 0 \/ (x = 0 /\ y = 0))
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f : Int ><Int >< Int -> write x Int >< Int
+    f(a, b, c) is
+        (
+            if a+b > c then c else a+(x:=b; b) end,
+            a * b * (if c>0 then c else 0-c end)
+        )
+\end{verbatim}
+
+\item
+\begin{verbatim}
+variable x, y : Int
+value f : Int >< Int >< Bool -> write x read y Nat>< Bool
+f (a, b, c) is
+    local variable n: Int in
+        if c
+            then x := x + a + b; n := x**2 + y**2
+            else n :=
+                if x>y then x**2 - y**2 else y**2 - x**2 end
+        end  ;
+        if x>y then x:=y end ;
+        (n, x = y)
+    end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+variable x, y : Int
+value
+    f : Int >< Nat >< Bool -> write x, y Nat >< Bool
+    f (a, b, c) is
+        if x>y then x := x**2 - y**2 end;
+        (local variable n: Int in
+            if c
+                then n := x**2 + y**2
+                else n := (x + y)**2; y := n
+            end  ;
+            n
+         end,
+        x ~= y)
+\end{verbatim}
+
+\item
+\begin{verbatim}
+variable x, y : Int
+value
+    f : Int >< Nat >< Bool -> write x, y Nat >< Bool
+    f (a, b, c) is
+        if x>y then y:=x**2 end;
+        (local variable n: Int in
+            if c
+                then n := y**2
+                else n := (x + y)**2; x := n
+            end  ;
+            n
+     end ,
+    x ~= y)
+\end{verbatim}
+
+\item
+\begin{verbatim}
+variable x, y : Int
+value
+    f : Int >< Nat >< Bool -> write x, y Nat >< Bool
+    f (a, b, c) is
+        let xx = x in
+            if x>y then y := x**2 end;
+            (local variable n: Int in
+                if c
+                    then n := y**2
+                    else n := (x + y)**2; x := n
+                end ;
+                n
+             end,
+            xx~=y)
+    end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+variable x, y : Int
+value
+    f : Int >< Int >< Bool -> write x read y Nat >< Bool
+    f (a, b, c) is
+        local variable n: Int in
+            if c
+                then x := x + a + b;n := x**2 + y**2
+                else n := if x>y
+                            then x**2 - y**2
+                            else y**2-x**2
+                          end
+            end  ;
+            if x>y then x:=y end ;
+            (n, x=y)
+       end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+variable x, y : Int
+value
+    f : Int >< Nat >< Bool -> write x, y Nat >< Bool
+    f (a, b, c) is
+        if x>y then x := x**2 - y**2 end;
+        (local variable n: Int in
+            if c
+                then n := x**2 + y**2
+                else n := (x + y)**2; y := n
+            end  ;
+            n
+         end,
+         x ~= y)
+\end{verbatim}
+
+\item
+\begin{verbatim}
+variable x, y : Int
+value
+    f : Int >< Nat >< Bool -> write x, y Nat >< Bool
+    f (a, b, c) is
+        if x > y then y := x**2 end;
+        (local variable n: Int in
+            if c
+                then n := y**2
+                else n := (x + y)**2; x := n
+            end  ;
+            n
+         end ,
+         x ~= y)
+\end{verbatim}
+
+\item
+\begin{verbatim}
+variable x, y : Int
+value
+    f : Int >< Nat >< Bool -> write x, y Nat >< Bool
+    f(a, b, c) is
+        let xx = x in
+            if x>y then y:=x**2 end;
+            (local variable n: Int in
+                if c
+                    then n:= y**2
+                    else n:= ( x+ y)**2; x := n
+                end ;
+                n
+             end,
+             xx ~= y)
+        end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f : Int ><Int >< Int -> write x, y Int >< Int
+    f(a,b,c) is
+        if a = b then
+            (
+                if a+b > c then c else a+b end,
+                b * (if c > 0 then x := c; c else 0-c end)
+            )
+        else (y:=a+b; y, x:=b; a-b)
+        end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f : Int >< Int -> write x, y Int >< Int >< Int
+    f (a, b) is
+        local variable v : Int := 0 in
+            x:= x + a;
+            for i in <.a..b.> do
+                v := v + (x:=v; 2)*i
+            end;
+            (a,b,v)
+        end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f : Int >< Int -> write x, y Int >< Int >< Int
+    f(a, b) is
+        local variable v : Int := 0 in
+            y := x + a;
+            for i in <.a..b.> do
+                v := v + (x:=v; 2) * (x:=i; i)
+            end;
+            (a, b, v)
+        end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f : Int ><Int >< Int -> write x, y Int >< Int
+    f(a, b, c) is
+        if a = b then
+        (
+            if a+b > c then c else a+b end,
+            b * (if c>0 then x := c; c
+                 else local ly : Int in ly:=y; y:=0-c; ly end
+                 end)
+        )
+        else (a+b, x:=b; a-b)
+        end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f : Int ><Int >< Int -> write x, y Int >< Int
+    f(a, b, c) is
+        if a = b then
+            y:=x;
+            (
+                if a > b then c else a+b end,
+                a * (if c>0 then c else x:=c; 0-c end)
+            )
+        else (y:=a+b; y, a-b)
+        end
+\end{verbatim}
+
+\end{enumerate}
+
+
+\subsection{Дана implicit спецификация функции, описать функцию
+эквивалентную данной в explicit форме. Специфицировать слабейшие
+предусловия.}
+
+\begin{enumerate}
+\item
+\begin{verbatim}
+value
+    f: Int -> Nat
+    f(n) as m
+    post
+        if n < 0 then n + m = 0 else n = m end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    gets2: Unit -> Nat
+    gets2() as x
+    post
+        x * x = 4
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    f : Real >< Real -~-> write x Real
+    f(a, b) as y
+post    x + y = 1.0 /\ x**2 + y**2 = a - b
+\end{verbatim}
+\end{enumerate}
+
+
+\subsection{Дать explicit или implicit определение функций (включая
+слабейшие предусловия), отвечающих требованиям аксиом}
+
+\begin{enumerate}
+\item
+\begin{verbatim}
+value
+    create: Unit -> C,
+    add : A >< A >< C -> C,
+    invert : C -~-> C,
+    get : A >< C -~-> A
+axiom
+    all a1, a2 : A, c : C :-
+        invert(add(a2, a1, c)) is add(a1, a2, invert(c))
+
+    all a1, a2 : A, c : C :-
+        invert(create()) is create()
+
+    all a1, a2, a3 : A, c : C :-
+        get(a1, add(a2, a3, c)) is
+            if a1 = a2 then a3 else get(a1, c) end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    empty : Q,
+    put : Q >< E -> Q,
+    toppop : Q -~-> E,
+    bottompop : Q -~-> E
+axiom
+    (all q : Q, e : E :-
+        toppop (put(q,e)) is
+            if q = empty then e
+            elsif e >= 0 then e
+            else toppop (q)
+            end
+    ),
+
+    (all q : Q, e : E :-
+        bottompop (put(q,e)) is
+            if q = empty then e
+            else bottompop(q)
+            end
+    )
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type S, E
+value
+    create : Unit -> S,
+    add : E >< S -> S,
+    del : S -~-> S,
+    next : S  -~-> S,
+    get : S -~-> E,
+    append : S >< S -> S
+axiom
+    all e : E, s : S :-
+        del( add( e, s ) ) is s,
+
+    all s : S :-
+        append (create(), s) is s,
+
+    all e : E, s1, s2 : S :-
+        append (add(e,s1), s2) is add(e, append(s1,s2)),
+
+    next( create()  ) is create(),
+
+    all e : E, s : S :-
+        next( add(e, s) ) is  append ( s, add(e, create() ) ),
+
+    all e : E, s : S :-
+        get( add(e, s) ) is e
+\end{verbatim}
+
+\item
+\begin{verbatim}
+value
+    create: Unit -> C,
+    add : A >< C -> C,
+    invert : C -~-> C,
+    invertable : C  -> Bool,
+    get : C >< A -~-> A,
+axiom
+    all a1, a2 : A, c : C :-
+        invert( add(a2, add(a1, c)) ) is
+                add(a1, add(a2,invert (c)))
+    pre invertable(c),
+
+    all a1, a2, a3 : A, c : C :-
+        get(add(a2, add(a1, c)), a3) is
+            if a1 = a3 then a2 else get(c, a3) end,
+
+    all a : A :- get(create(), a) is a,
+
+    invertable (create()) is true,
+
+    all a1, a2 : A, c : C :-
+        invertable (add(a2,add(a1,c))) is invertable (c)
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type S, K, V
+value
+    create : Unit -> S,
+    add : K >< V >< S -> S,
+    del : K >< S -~-> S,
+    get : K >< S -~-> V
+axiom
+    all k : K :-
+        del( k,create( ) ) is create( ),
+
+    all k1,k2 : K, v : V, s : S :-
+        get (k1, add (k2, v, s)) is
+            if k1 = k2 then v
+            else get( k1, s )
+            end,
+
+    all k1,k2 : K, v : V, s : S :-
+        del( k1, add( k2, v, s )) is
+            if k1 = k2 then del(k1, s)
+            else add(k2, v, del( k1, s ) )
+            end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type S, E
+value
+    create : Unit -> S,
+    add : E >< S -> S,
+    del : E>< Nat >< S -> S,
+    get : E >< S -> Nat
+axiom
+    all e : E :- get( e, create() ) is 0,
+
+    all e : E, n : Nat, s : S :-
+        del (e, n, create() ) is create(),
+
+    all e1,e2 : E, s : S :-
+        get(e1, add (e2, s)) is
+           if e1 = e2 then 1 + get( e1, s )
+           else get( e1, s )
+           end,
+
+    all e1, e2 : E, n : Nat, s : S :-
+        del( e1, n, add( e2, s )) is
+            if n = 0 then add(e2, s)
+            elsif e1 = e2 then del(e1, n - 1, s)
+            else add(e2, del( e1, n, s ) )
+            end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type S, E
+value
+    create : Unit -> S,
+    add : E >< S -> S,
+    del : E>< Nat >< S -~-> S,
+    get : E >< S -> Nat,
+axiom
+    all e : E, s : S :-
+        get( e, create() ) is 0,
+
+    all e1,e2 : E, s : S :-
+        get ( e1, add (e2, s)) is
+            if e1 = e2 then 1 + get( e1, s )
+            else get( e1, s )
+            end,
+
+    all e1, e2 : E, n : Nat, s : S :-
+        del( e1, n, add( e2, s )) is
+            if n <= 1 then add(e2, s )
+            elsif e1 = e2 then del( e1, n-1, s )
+            else add(e2, del( e1, n, s ) )
+            end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+
+type S, E
+value
+    create : Unit -> S,
+    add1 : E >< S -> S,
+    del : S -~-> S,
+    next : S  -~-> S,
+    get : S -~-> E,
+    add2 : S >< S -> S
+axiom
+    all e : E, s : S :-
+        del( add1( e, s ) ) is s,
+
+    all s : S :-
+        add2 (create(), s) is s,
+
+    all e : E, s1, s2 : S :-
+        add2 (add1(e,s1), s2) is add1(e, add2(s1,s2)),
+
+    next( create() ) is create(),
+
+    all e : E, s : S :-
+        next( add1(e, s)) is  add2 ( s, add1(e, create()) ),
+
+    all e : E, s : S :-
+        get( add1( e, s ) ) is e
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type R, Key, Val
+value
+    empty : Unit -> R,
+    put : R >< Key >< Val -> R,
+    del : R >< Key >< Val -~-> R,
+    get: R >< Key -~-> Val-set,
+    find: R >< Key -> Bool,
+axiom
+    forall r : R, k1, k2 : Key, v1, v2 : Val :-
+        [find_empty]
+        find (empty(), k1) is false,
+
+        [find_put]
+        find (put(r, k1, v1), k1) is true,
+
+        [get _put]
+        get (put(r, k1, v1), k1) is
+            if find (r, k1)
+                then get (r, k1) union {v1}
+                else {v1}
+            end,
+
+        [del_put_1]
+        del(put(r, k1, v1), k1, v1) is
+            if find (r, k1) /\ v1 isin get (r, k1)
+                then del(r, k1, v1)
+                else r
+              end,
+
+        [put_put]
+            put(put(r, k1, v1), k2, v2) is
+              if (k1 = k2) /\ (v1 = v2)
+                then put(r, k1, v1)
+                else put(put(r, k2, v2), k1, v1)
+              end
+\end{verbatim}
+\end{enumerate}
+
+\subsection{Проверить, является ли вторая спецификация уточнением
+первой. Если да, доказать это.}
+\begin{enumerate}
+\item
+\begin{verbatim}
+scheme S1 = class
+    type A, L
+    value
+        f1: A >< L -> L,
+        f2: A >< L -> L,
+        f3: L -> Nat
+    axiom
+        all a : A, b : L :-
+            f3(f1(a,b)) is f3(b)+1
+        pre f3(b) = 0,
+
+        all a : A, b : L :-
+            f3(f2(a,b)) is 1+f3(b)
+        pre f3(b) = 0,
+
+        all a: A, b : L :-
+            f1(a, b) is f2(a, b)
+        pre f3(b) = 0
+end
+
+scheme S2 = class
+    type
+        A,
+        L = A-m->A
+    value
+        f1: A >< L -> L
+        f1(a, b) is [a +> a] !! b,
+
+        f2: A >< L  -> L
+        f2(a, b) is
+            if a ~isin dom b then [a +> a] union b else b end,
+
+        f3  : L -> Nat
+        f3(l) is card dom l
+end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+scheme S1 = class
+    type A, B
+    value
+        f1: B >< B  -> Bool,
+        f2: A >< B  -> B
+    axiom
+        all a1, a2 : A, b : B :-
+            f1(f2(a1, b), f2(a2, b)) is a1 = a2,
+
+        all a : A, b : B :-
+            f1(f2(a,b), b) is false
+end
+
+scheme S2 = class
+    type
+        B = A-list, A = Int, S = A-set
+    value
+        f1: B >< B  -> Bool
+        f1(b1, b2) is hd b1 = hd b2,
+
+        f2: A >< B  -> B
+        f2(a, b) is <. a .> ^ b
+end
+\end{verbatim}
+
+\item
+\begin{verbatim}
+scheme S1 = class
+    type A,B,C
+    value
+        f1 : A >< B -> Bool,
+        f2 : A >< B -~-> C,
+        f3 : C -~-> A >< B
+    axiom
+        all  a: A, b: B :-
+            f3( f2(a, b) ) is (a,b)
+        pre f1(a,b) = true
+end
+
+scheme S2 = class
+    type
+        A = Int, B = Nat, C = Int
+    value
+        f1 : A >< B -> Bool
+        f1(i,n) is i * i = n,
+
+        f2 : A >< B -~-> C
+        f2(i, n) is i,
+
+        f3 : C -~-> A >< B
+        f3(cc) as (a,b)
+        post cc = a /\ b = cc * cc
+end
+\end{verbatim}
+
+
+\end{enumerate}
+
+\subsection{Дать определение эквивалентное данному без
+использования вариантных возможностей RSL}
+\begin{enumerate}
+
+\item
+\begin{verbatim}
+type Collection ==
+              empty
+            | add1 (Elem, Collection)
+            | add2(Elem, Elem),
+     Elem
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type Collection ==
+              empty
+            | add1 (Elem, tail:Collection <-> tail),
+     Elem
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type Collection ==
+              empty
+            | add1 (Elem, Collection)
+            | add2(head1 : Elem, Collection),
+     Elem
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type Collection ==
+              empty
+            | add1 (head:Elem)
+            | add2(head : Elem, Collection),
+     Elem
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type Collection ==
+              empty
+            | add1 (head:Elem)
+            | add2(head : Elem <-> head),
+     Elem
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type Collection ==
+              empty
+            | add (Collection <-> head, tail:Collection)
+\end{verbatim}
+
+\item
+\begin{verbatim}
+type Collection ==
+              empty
+            | add1 (Collection <-> tail1,
+                    tail:Collection <-> tail2)
+\end{verbatim}
+
+\end{enumerate}
+
+
+\subsection{Определение типа с учетом его ограничений}
+
+В каждой задаче требуется привести определение типа SYSTEM с нужной по заданию семантикой. В определении должны быть учтены все явные и неявные ограничения на элементы данного типа. При определении типа SYSTEM можно построить определения дополнительных типов. Не разрешается использовать разделы $\Value$ (кроме определения констант), $\Axiom$ и $\Variable$.
+
+\begin{enumerate}
+\item \emph{Анаграммы}. Анаграмма представляет собой пару слов, состоящих из одних и тех же букв. Каждая буква, встречающаяся в одном слове, встречается и в другом, причем ровно в том же количестве. Например, (ВЕШАЛ, ЛЕВША).
+
+\item \emph{Панграммы}. Панграмма -- это набор слов, в которых каждая буква алфавита встречается ровно один раз. Например, АБРЕК ЗЮЙД НЭП СЪЁМ ХЛЫЩ ЦУГ ЧИЖ ШТОФ ЯВЬ.
+
+\item \emph{Линейный палиндром}. Палиндром (перевертыш) -- слово (фраза), читающееся одинаково от первого символа к последнему и от последнего к первому. Самым длинным в мире палиндромом принято считать финское слово KUULILENNUTEETUNNELILUUK. В английском языке самое длинное из этого типа - REDIVIDER (что-то вроде перегородки). Самым коротким русским палиндромом является слово: <<О!>>. Пример фразы-палиндрома -- <<И мал Иван, а лупил у лип улана вилами!>>.
+
+\item \emph{Квадратный палиндром}. Палиндром представляется в виде квадрата из символов. В таком виде палиндром читается 4-мя способами: по горизонтальным и вертикальным рядам - слева направо и справа налево. Пример:\\
+        S A T O R\\
+        A R E P O\\
+        T E N E T\\
+        O P E R A\\
+        R O T A S
+
+\item \emph{Городской метрополитен}. Модель содержит сведения о станциях (и их названиях), линиях и переходах между станциями. Учтите, что внутри линии названия станций не должны повторяться. Станции могут иметь одинаковые имена, но при этом лежать на разных линиях.
+
+\item \emph{Идеальная школа}. Идеальная школа состоит из учителей и школьников. Школьники сгруппированы в классы. В каждом классе не более 20 школьников. В школе имеются учителя по математике, литературе, истории, рисованию, химии, физике, физкультуре и пению. Любой учитель не может вести более 2 различных предметов. При составлении спецификации учтите большое количество предметов в школе.
+
+\item \emph{Общежитие}. Общежитие состоит из этажей одинаковой планировки. Из-за технических особенностей количество этажей не должно превышать 20. Этаж состоит из комнат. Есть комнаты на 2, 3 или 4 человека. Всего этаж должен вмещать не менее 100 человек. Кроме того, на каждом этаже есть 2 кухни и комната дежурной.
+
+\item \emph{Перекидной настенный календарь}. Учтите, что год бывает високосный и невисокосный. Номер года задать в виде константы RSL с неопределенным значением. Предусмотреть возможность хранения комментария к каждому дню (<<To-Do>>).
+
+\item \emph{Комплексный обед}. В столовой решили составлять меню комплексного обеда из расчета не более 100 рублей. В меню выделили первые блюда, вторые блюда, гарниры, салаты, напитки. Комплексный обед должен содержать блюда каждого типа в количество одной позиции.
+
+\item \emph{Позиция в игре <<Морской бой>>}. Позиция представляет из себя поле размером 10 х 10. На поле располагаются корабли. Каждый корабль представляет собой линию длины от 1 до 4. Количество кораблей в сумме с длиной равно 5. Любые два корабля не должны пересекаться. Допускается расположение кораблей с соприкосновением угловых вершин. Соприкосновение граней кораблей недопустимо.
+
+\item \emph{Планировка района}. Район имеет размер $M$ x $N$ единиц. Имеется множество различных зданий, заданных длиной и шириной. Все эти здания расположены без наложений.\\
+    \emph{Дополнительное требование в качестве более сложного варианта:}
+    \begin{itemize}
+    \item[*] между домами должно быть не менее $K$ единиц длины свободного пространства
+    \end{itemize}
+
+\item \emph{Компьютерная сеть}. Компьютерная сеть -- набор компьютеров. На компьютере могут быть запущены как клиентские, так и серверные программы. В сети обязательно должен быть DHCP-, DNS-, SMTP-, HTTP- сервера (машины, на которых запущены DHCP-... сервисы), причем на одной машине не может быть запущено более одного сервиса. Сеть построена на основе топологии:
+    \begin{itemize}
+    \item линия
+    \item иерархической
+    \item кольцо
+    \item звезда
+    \end{itemize}
+\end{enumerate}

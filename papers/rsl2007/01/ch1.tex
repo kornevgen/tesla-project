@@ -1,0 +1,193 @@
+\chapter{Скалярные типы RSL}
+
+
+Для написания предложений на языке RSL можно применять одну из двух
+нотаций: \emph{графическую} или \emph{текстовую}. Различие
+заключается в символах для записи операций и не-ASCII символов,
+привычных в математических текстах (буквах греческого алфавита).
+Полный список соответствия записи в графической и текстовой нотации
+можно посмотреть в Приложении~\ref{grascii}. Далее, если это
+специально не оговорено, будет использоваться графическая нотация
+(более употребительная в книгах об языке RSL).
+
+\section{Скалярные типы RSL}
+Встроенные типы языка RSL с операциями и отношениями перечислены в
+таблице~\ref{scalar_types}.
+
+\begin{table}[h]\label{scalar_types}
+\caption{Встроенные типы языка RSL}
+
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline название & значения & примеры & операции\\
+\hline  \parbox{0.1\textwidth}{\Int}
+        & \parbox{0.3\textwidth}{любое целое число (без ограничения величины)}
+        & \parbox{0.1\textwidth}{1, 0-2}
+        & \parbox{0.2\textwidth}{+, ---, $\star$, /, $\backslash$, $\Power$, $\Abs$, $\Realoperation, =, \neq, \Iden, >, <, \geqslant, \leqslant $}\\
+\hline \parbox{0.1\textwidth}{\Nat}
+        & \parbox{0.3\textwidth}{любое неотрицательное число (без наибольшего по величине числа)}
+        & \parbox{0.1\textwidth}{1}
+        & \parbox{0.2\textwidth}{+, ---, $\star$, /, $\backslash$, $\Power$, $\Abs$, $\Realoperation, =, \neq, \Iden, >, <, \geqslant, \leqslant $}\\
+\hline \parbox{0.1\textwidth}{\Real}
+        & \parbox{0.3\textwidth}{любое вещественное число бесконечной точности (без ограничения величины)}
+        & \parbox{0.1\textwidth}{3.3, 0-4.5}
+        & \parbox{0.2\textwidth}{+, ---, $\star$, /, $\Power$, $\Abs$, $\Intoperation, =, \neq, \Iden, >, <, \geqslant, \leqslant $}\\
+\hline \parbox{0.1\textwidth}{\Bool}
+        & \parbox{0.3\textwidth}{$\True$ и $\False$}
+        & \parbox{0.1\textwidth}{$\True$}
+        & \parbox{0.2\textwidth}{$\And, \Or, \Neg, \Impl, =, \neq, \Iden, \All, \Exists, \ExistsOne$}\\
+\hline \parbox{0.1\textwidth}{\Char}
+        & \parbox{0.3\textwidth}{любой символ, представимый в цифровой-алфавитной системе}
+        & \parbox{0.1\textwidth}{'a'}
+        & \parbox{0.2\textwidth}{$=, \neq, \Iden$}\\
+\hline \parbox{0.1\textwidth}{\Text}
+        & \parbox{0.3\textwidth}{любая последовательность значений типа \Char (список из \Char)}
+        & \parbox{0.1\textwidth}{"abba", "56\$\%"}
+        & \parbox{0.2\textwidth}{см. главу~\ref{lists}, $=, \neq, \Iden$}\\
+\hline \parbox{0.1\textwidth}{\Unit}
+        & \parbox{0.3\textwidth}{$\Skip$ (аналог void)}
+        &
+        &
+        \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+$\Chaos$ - константа, принадлежащая всем типам одновременно (аналог
+результата непредсказуемого поведения).
+
+%<<Унарного минуса>> нет - чтобы получить константу с отрицательной
+%величиной, нужно применять операцию вычитания.
+
+\emph{Условное выражение} имеет привычный синтаксис:
+$\LinIf{e_1}{e_2}{e_3}$. $e_2$ и $e_3$ должны иметь одинаковый тип.
+Верны тождества:
+$$\LinIf{\True}{e_2}{e_3} \Iden e_2$$
+$$\LinIf{\False}{e_2}{e_3} \Iden e_3$$
+$$\LinIf{\Chaos}{e_2}{e_3} \Iden \Chaos$$
+$$\LinIf{e_1}{e_2}{e_3} \Iden \LinIf{e_1}{e_2[\True/e_1]}{e_3[\False/e_1]}, e_1 \Neg\Iden \Chaos$$
+$$\If e_1 \Then e_2 \End \Iden \If e_1 \Then e_2 \Else \Skip \End$$
+
+Синтаксис предикатов: $[\All, \Exists, \ExistsOne] var : type
+\SuchAs boolexpr$. Обратите внимание, что символ $\SuchAs$ не
+является операцией!
+
+\section{Короткая логика в RSL}
+Операции-<<логические связки>> вычисляются согласно короткой логике.
+Остальные бинарные операции выполняются только после вычисления их
+аргументов.
+
+Операция эквивалентности ($\Iden$) возвращает истину в том и только
+в том случае, если её аргументы суть одинаковые \emph{<<черные
+ящики>>}, т.е. такие выражения, результаты вычислений которых будут
+одинаковыми (если прошли до конца, то одинаковые значения; если
+привели к $\Chaos$, то оба одновременно). Сравните: операция
+равенства (=) возвращает истину в том и только в том случае, если её
+аргументы \emph{имеют одинаковое значение}. Операцию эквивалентности
+можно воспринимать, как безопасное сравнение на равенство.
+
+Таблицы истинности логических операций смотрите в~\cite{metodichka}.
+
+
+\section{Задачи}
+
+\subsection{Вычислите значения следующих RSL-выражений}
+    \begin{enumerate}
+    \item 2 + 3
+    \item 3 + 2
+    \item $\Abs 2$
+    \item $\Abs (0-2)$
+    \item $\Realoperation 2$
+    \item $\Intoperation 2$
+    \item $\Intoperation -2$
+    \item $\Intoperation (0-2)$
+    \item $\Intoperation (2 / 4)$
+    \item $\Intoperation (2 \Minus 4)$
+    \item $\Realoperation (2 \Minus 4)$
+    \item $(2.0 \Power 0.5) \Power 2.0$
+    \item $(2 \Power 2) \Power 0.5$
+    \item $2 \Power (2.0 \Power 0.5)$
+    \item $\Realoperation 2 \Power (0.5 \Power 2.0)$
+    \item $'a' \neq 'b'$
+    \item $"aa" \Iden "bbb"$
+    \item $~ \True \And \False$
+    \end{enumerate}
+
+\subsection{Упростить следующие выражения (сделать
+тождественное преобразование)}
+    \begin{enumerate}
+    \item $x$ -- $x$ ($x : \Int$)
+    \item $x$ / $x$ ($x : \Int$)
+    \item $x \Minus x$ ($x : \Int$)
+    \item $\LinIf{\True}{\False}{\Chaos}$
+    \item $\LinIf{a}{\Neg(a \Iden \Chaos)}{\False}$
+    \item $x + \Abs x = 0$
+    \item $x + \Abs (0-x) = 0$
+    \item $\Abs x + \Abs (0-x) = 0$
+    \item $x \And \True$
+    \item $\True \And x$
+    \item $x \Or \True$
+    \item $x \Impl \True$
+    \item $x \Impl \False$
+    \item $x \Impl x$
+    \item $x \Impl x = \True$
+    \item $x \Impl x \Iden \True$
+    \item $x \Impl x \Iden x$
+    \item $x \Impl x \Impl x$
+    \item $x \Impl y \Impl x$
+    \end{enumerate}
+
+\subsection{ Напишите на RSL логическое выражение,
+которое верно в том случае, если}
+    \begin{enumerate}
+    \item $n$ является количеством дней недели
+    \item $n$ является количеством дней в июле
+    \item $n$ является количеством дней в феврале
+    \item $n$ чётно
+    \item $n$ нечётно
+    \item $n$ является составным числом
+    \item $n$ является простым числом
+    \item $n$ является степенью двойки
+    \end{enumerate}
+
+\subsection{Какие из приведённых ниже тождеств верны в RSL:}
+    \begin{enumerate}
+    \item $\Neg \Neg a \Iden a$
+    \item $\True \Or a \Iden \True$
+    \item $a \Or \True \Iden \True$
+    \item $a \Impl \True \Iden \True$
+    \item $a \Impl b \Iden (\Neg a) \Or b$
+    \item $a \Or (\Neg a) \Iden \True$
+    \item $a \And (\Neg a) \Iden \False$
+    \item $(a \And b) \And c \Iden a \And (b \And c)$
+    \item $(a \Or b) \Or c \Iden a \Or (b \Or c)$
+    \item $(a = a) \Iden \True$
+    \item $(a \Iden a) \Iden \True$
+    \item $\All x:\Nat \SuchAs (x = 0) \Or (x > 0) \Iden (\All x:\Nat \SuchAs (x = 0)) \Or (x >
+    0)$
+    \end{enumerate}
+
+\subsection{Какие из следующих выражений верны}
+    \begin{enumerate}
+    \item $\All i: \Int \SuchAs \Exists j:\Int \SuchAs i + j = 0$
+    \item $\All i: \Int \SuchAs \Exists j:\Nat \SuchAs i + j = 0$
+    \item $\Exists i: \Int \SuchAs \All j:\Int \SuchAs i + j = 0$
+    \item $\All i: \Int \SuchAs \ExistsOne j:\Int \SuchAs i + j = 0$
+    \item $\All i,j: \Int \SuchAs \ExistsOne k:\Int \SuchAs i + j =
+    k$
+    \end{enumerate}
+
+%\item Опишите на RSL тип <<Простое число>>
+
+\subsection{Разное}
+    \begin{enumerate}
+    \item Напишите на RSL выражение, выражающее тот факт, что нет
+наибольшего целого числа.
+
+    \item$^\star$ Напишите на RSL выражение, выражающее тот факт, что $n$ четно
+    без использования мультипликативных операций
+
+    \item Запишите константу типа $\Text$, состоящую из двойной кавычки.
+
+    \end{enumerate}

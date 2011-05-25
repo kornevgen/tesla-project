@@ -1,0 +1,2 @@
+\renewcommand{\to}{\mathop{\mapsto}}
+\newcommand{\map}[2]{[$#1$ | $#2$]}
