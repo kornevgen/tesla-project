@@ -1,0 +1,45 @@
+\chapter{ѕриоритет операций в RSL}
+
+ќперации с большим приоритет обрабатываютс€ первее.
+
+%\begin{table}[h]
+%\caption{
+ѕриоритет операций в типовых выражени€х
+%}
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline приоритет & операторы & ассоциативность\\
+\hline  1 & , & права€\\
+\hline  2 & $\Map \NonDeterMap$ & права€\\
+\hline  3 & $\DP$ & \\
+\hline  4 & ${\ }\Set {\ }\Infset {\ }\List {\ }\Inflist$ & \\
+\hline
+\end{tabular}
+\end{center}
+%\end{table}
+
+%\begin{table}[h]
+%\caption{
+ѕриоритет операций в выражени€х со значением
+%}
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline приоритет & операторы & ассоциативность\\
+\hline 1 & $\All \Exists \ExistsOne$ & права€ \\
+\hline 2 & $\Iden$ & \\
+\hline 3 & $\Exc \Nd || \Ilock$ & права€ \\
+\hline 4 & ; & права€ \\
+\hline 5 & := & \\
+\hline 6 & $\Impl$ & права€ \\
+\hline 7 & $\Or$ & права€ \\
+\hline 8 & $\And$ & права€ \\
+\hline 9 & $= \neq > < \geqslant\leqslant \SetL \SetG \SetLE \SetGE
+\Isin \NotIsin$ &  \\
+\hline 10 & $+ - \Minus \Concat \Union \Upd$ & лева€ \\
+\hline 11 & $* / \Superp \Inter$ & лева€ \\
+\hline 12 & $\Power$ & \\
+\hline 13 & $\Not$ префиксы суффиксы& \\
+\hline
+\end{tabular}
+\end{center}
+%\end{table}
