@@ -314,6 +314,7 @@ value
 
 \section*{Задачи}
 
+%TODO
 то, что было в задачнике Кузьменковой
 
 \section{Императивное описание операций}
@@ -354,29 +355,385 @@ end
 
 Как видно, язык RSL предлагает использовать такие известные понятия как глобальные переменные, присваивание, последовательности операторов, условный оператор \textbf{if-then-elsif-else-end}, операторы циклов (\textbf{while}), но это ещё не всё. Заметьте, если операции нужно получить доступ к переменной, то это надо указать в сигнатуре операции при помощи ключевого слова \textbf{write} (и \textbf{read}, см. ниже).
 
-% на следующей строке старый текст!
-    \input{prog/about}
+\head{Глобальные переменные}
+Переменные, определенные вне функции, являются глобальными.
+Каждая глобальная переменная должна быть определена в разделе \textbf{variable}, а в сигнатуре функции должен быть указан режим работы функции с переменной: <<только по чтению>> или <<по записи-чтению>>. Функции разрешено оперировать лишь с теми глобальными переменными, которые указаны в сигнатуре. Обращаться к глобальным переменным (даже просто по чтению), не упомянутым в сигнатуре, запрещается. Например,
+\begin{lstlisting}
+scheme S1 = class
+variable status : Text
+value
+  init : Unit -~-> write status Unit
+  init() is (status := "initialized")	
+end
+\end{lstlisting}
+
+Функция \texttt{init} не имеет аргументов --- для указания этого факта перед стрелкой в сигнатуре функции указан тип \textbf{Unit}. Также у функции нет и результатов. Однако функции разрешено иметь побочный эффект в виде изменения значения глобальной переменной \texttt{status}.
+
+Еще пример:
+\begin{lstlisting}[escapechar={|}]
+scheme S2 = class
+variable status : Text
+value
+  |is\_initialized| : Unit -~-> read status Bool
+  |is\_initialized|() is
+	(status = "initialized")	
+end
+\end{lstlisting}
+
+Здесь глобальная переменная лишь читается в функции, поэтому в сигнатуре переменная \texttt{status} указана с модификатором \textbf{read}.
+
+Можно указать в сигнатуре, что функция может читать или изменять \textbf{любую} глобальную переменную. В этом случае надо после слов \textbf{write} или \textbf{read} вместо имени переменной написать ключевое слово \textbf{any}.
+
+\head{Тело функции}
+Язык RSL позволяет задавать выполнение функции в виде последовательности операторов, условного оператора и операторов цикла:
+\begin{lstlisting}
+scheme S3 = class
+	variable a, b : Nat
+	value
+		swap : Unit -> write a, b Unit
+		swap() is
+		(
+			a := a + b ;
+			b := a - b ;
+			a := a - b ;
+		)
+end
+\end{lstlisting}
+
+Если функции нужно вернуть некоторое значение, последовательность операторов должна завершаться выражением, чей результат будет результатом работы функции:
+\begin{lstlisting}
+scheme S4 = class
+	variable a, b : Nat
+	value
+		swap : Unit -> write a, b Nat
+		swap() is
+		(
+			a := a + b ;
+			b := a - b ;
+			a := a - b ;
+			a + b
+		)
+end
+\end{lstlisting}
+
+Среди операторов, объединяемых в последовательность операторов, может быть присваивание, вызов функций, чей возвращаемый тип \textbf{Unit}, условный оператор, оператор цикла.
+
+Условный оператор:
+\begin{lstlisting}
+scheme S4 = class
+	variable a, b : Nat, s : Text
+	value
+		max : Unit -> read a, b, write s Nat
+		max() is
+		(
+			if a > b then
+				s := "first";
+				a
+			else
+				s := "second";
+				b
+			end
+		)
+end
+\end{lstlisting}
+
+Условный оператор с веткой \emph{elsif}:
+\begin{lstlisting}
+scheme S4 = class
+	variable x : Int, s : Text
+	value
+		Abs : Unit -> read x, write s Nat
+		Abs() is
+		(
+			if x > 0 then
+				s := "positive";
+				x
+			elsif x = 0 then
+				s := "zero";
+				0
+			else
+				s := "negative";
+				-x
+			end
+		)
+end
+\end{lstlisting}
+
+
+Операторы циклов (while, do-until и for):
+
+\begin{lstlisting}
+variable a: Nat, b : Nat
+value
+  euclid: Unit -~-> write a, b Nat
+  euclid() is
+     while a > 0 /\ b > 0 do
+        if a > b then a := a - b
+        else b := b - a end
+     end;
+     if a = 0 then b else a end
+\end{lstlisting}
+
+\begin{lstlisting}
+variable n: Nat, x : Nat
+value
+  digits: Unit -~-> write n, x Nat
+  digits() is
+     n := 0;
+     do n := n + 1; x := x / 10
+     while x = 0;
+     n
+\end{lstlisting}
+
+\begin{lstlisting}
+variable sum : Nat
+value
+  sumN: Nat -~-> write sum Unit
+  sumN(n) is
+	sum := 0;
+        for i in <.1 .. n.> do
+	  sum := sum + i
+	end;
+\end{lstlisting}
+
+\begin{lstlisting}
+variable sum : Nat
+value
+  sumN: Nat -~-> write sum Unit
+  sumN(n) is
+	sum := 0; i := 0;
+    do
+      i := i + 1;
+      sum := sum + i
+    until i = n	end;
+\end{lstlisting}
+
+Способов прервать цикл типа break в RSL нет.
+
+Локальные переменные:
+\begin{lstlisting}
+variable a: Nat, b : Nat
+value
+  euclid: Unit -~-> read a, b Nat
+  euclid() is
+   local variable a1: Nat := a,
+                  b1: Nat := b in
+     while a1 > 0 /\ b1 > 0 do
+        if a1 > b1 then a1 := a1 - b1
+        else b1 := b1 - a1 end
+     end;
+     if a1 = 0 then b1 else a1 end
+   end
+\end{lstlisting}
+
+%%TODO есть ли неявный LET в императивном стиле ?
+
+\head{Массивы}
+Следующая функция использует массив целых чисел:
+\begin{lstlisting}
+value sort: Int-list -~-> Int-list
+\end{lstlisting}
+
+Обращение по индексу делается так: A(1). Нумерация индексов \textbf{с единицы}. Операция \textbf{len} возвращает текущую длину массива. Массивы в RSL могут изменять длину (путем операции конкатенации). Индекс не должен иметь большее значение, чем длина массива, и меньшее, чем 1. Синтаксис RSL запрещает изменять значения отдельных элементов массивов (например, так: <<A(i) := i>>), можно только строить новые массивы целиком (например, вместо <<A(i) := e>> можно писать <<A := $\langle$ if k=i then e else A(k) end | k in $\langle$1 .. \textbf{len} A$\rangle$ $\rangle$>>).
+
+\begin{lstlisting}
+value
+  sum: Int-list -~-> Int
+  sum(ls) is
+    local variable s : Int := 0 in
+       for i in <.1 .. len ls.> do
+             s := s + ls(i)
+       end;
+       s
+    end;
+\end{lstlisting}
+
+
+Эту же функцию, суммирующую элементы массива, можно записать и без использования индексов:
+\begin{lstlisting}
+value
+  sum: Int-list -~-> Int
+  sum(ls) is
+    local variable s : Int := 0 in
+       for l in ls do
+             s := s + l
+       end;
+       s
+    end;
+\end{lstlisting}
+
+Тип \textbf{Text} является массивом из \textbf{Char}.
+
+Операция \textbf{tl} возвращает <<подмассив>> --- от второго элемента до последнего элемента исходного массива. Операция определена только для непустых массивов. Пустой список обозначается символом <..>. Тем самым функцию sum можно записать следующим образом с использованием рекурсии:
+\begin{lstlisting}
+value
+  sum: Int-list -~-> Int
+  sum(ls) is
+    if ls = <..> then 0
+    else ls(1) + sum(tl ls) end
+\end{lstlisting}
+
+
+\head{Структуры}
+\begin{lstlisting}
+type FIO ::
+         name : Text
+         surname : Text
+value
+   hello: FIO -~-> Text
+   hello(fio) is
+      "Hello, " ^ name(fio) ^
+           "  " ^ surname(fio) ^ "!"
+\end{lstlisting}
+
+Обращение к полю делается в виде вызова функции с именем поля.
+
+\begin{lstlisting}
+type FIO ::
+         name : Text
+         surname : Text
+value
+   new_fio: Text >< Text -~-> FIO
+   new_fio(n,sn) is mk_FIO(n,sn)
+\end{lstlisting}
+
+Создание структуры делается с помощью функции с предопределенным именем. Это имя начинается с <<mk\_>>, за которым идет имя типа структуры. В скобках подряд перечисляются выражения, дающие значения полям новой структуры.
+
+\head{Перечисления (enumeration)}
+\begin{lstlisting}
+type Color = red | blue | white | green
+value
+  from_rus : Color -~-> Bool
+  from_rus(c) is c = red \/ c = blue \/ c = white
+\end{lstlisting}
+
+\head{Указатели}
+RSL не содержит встроенных механизмов для задания алгоритмов, работающих с указателями и работающих с динамической памятью.
 
     \section*{Задачи}
 
-% на следующей строке старый текст!
     \input{prog/problems}
 
 \section{Множества, списки, отображения}
 
+Более мощные алгоритмы требуют более сложных структур данных. RSL содержит (в дополнение к уже рассмотренным массивам, структурам и перечислениям) средства для работы с множествами, списками и отображениями. 
+
+\input{model/setlist}  % with problems
+
+
 \section{Эксплицитное и имплицитное описание функций}
 
-написать, что это просто сокращения аксиоматической записи
+Рассмотренный ранее способ описания операций (в виде псевдокода) был \emph{эксплицитным} (explicit, явным) способом описания, поскольку в нем было указано явно <<алгоритм>> вычисления функции. Однако, это не единственный способ описания функций в языке RSL.
+
+\emph{Эксплицитным} назовем следующий способ описания функций:
+\begin{lstlisting}
+value
+	funcname : T1 >< ... >< T2 -~-> T3 >< ... >< T4
+	funcname(t1, ..., t2) is
+		... 
+\end{lstlisting}
+
+Т.е. в эксплицитном способе после сигнатуры идет имя функции с формальными аргументами, далее символ $\Is$ и затем псевдокод функции. Стрелка в сигнатуре функции может быть любой.
+
+\emph{Имплицитным} назовем следующий способ описания функции:
+\begin{lstlisting}
+value
+	funcname : T1 >< ... >< T2 -~-> T3 >< ... >< T4
+	funcname(t1, ..., t2) as (t3, ..., t4)
+	post
+		... 
+\end{lstlisting}
+
+В имплицитном способе после сигнатуры идет имя функции с формальными аргументами, далее слово \textbf{as}, далее формальные имена результатов, далее слово \textbf{post}, после которого идет логическое выражение над именами t1, ..., t2, t3, ..., t4 (стрелка в сигнатуре может быть любой). Т.е. в имплицитном способе описания задается предикат, который истинен на тех и только на тех значениях имен t1, ..., t2, t3, ..., t4, что t3, ..., t4 является правильным результатом функции funcname на аргументах t1, ..., t2. Например:
+\begin{lstlisting}
+value
+	max : Nat >< Nat -> Nat
+	max(a, b) as m
+	post
+		m = a /\ a > b
+		\/ m = b /\ a <= b
+\end{lstlisting}
+
+Выражение после слова \textbf{post} будем называть \emph{поствыражением}. Функцию из последнего примера можно задать и другим поствыражением:
+\begin{lstlisting}
+value
+	max : Nat >< Nat -> Nat
+	max(a, b) as m
+	post
+		if a > b then m = a 
+				else m = b
+		end
+\end{lstlisting}
+
+Сравните эту запись с эксплицитной записью той же функции:
+\begin{lstlisting}
+value
+	max : Nat >< Nat -> Nat
+	max(a, b) is
+		if a > b then a 
+				else b
+		end
+\end{lstlisting}
+
+Несмотря на то, что логика короткая, следующее определение задает другую функцию, нежели функцию из последнего примера (ответьте, почему):
+\begin{lstlisting}
+value
+	max : Nat >< Nat -> Nat
+	max(a, b) as m
+	post
+		m = a /\ a > b
+		\/ m = b
+\end{lstlisting}
+
+В поствыражении могут встречаться <<вызовы>> других функций:
+\begin{lstlisting}
+value
+	sum: Nat-list -> Nat
+	sum(x) as s
+	post
+		if x = <..> then s = 0
+		else s = sum(tl x) + hd x end
+\end{lstlisting}
+
+Вы уже заметили, насколько похожи эксплицитная и имплицитная запись функций. На самом деле если функция не использует глобальных переменных по чтению-записи, то эксплицитная запись может быть переписана в имплицитном виде очень просто: вместо возвращаемых значений запись равенство, как это было сделано в последних примерах.
+
+Однако если функция использует глобальные переменные по чтению-записи, то поствыражение должно содержать описание побочного эффекта. Дело в том, что поствыражение нужно для описания результата функции, поэтому:
+\begin{enumerate}
+\item поствыражение не должно иметь побочного эффекта;
+\item поствыражение пишется только для функций, которые завершаются и завершаются детерминированным образом.
+\end{enumerate}
+Итак, если исходная функция имеет побочный эффект, например
+\begin{lstlisting}
+variable
+	a, b : Int
+value
+	swap : Unit -> write a, b  Unit
+	swap() is
+		local variable temp : Int := a in
+			a := b;
+			b := temp
+		end
+\end{lstlisting} 
+то эквивалентное определение функции в имплицитном виде полностью сохраняет сигнатуру, а в поствыражение должно входить соотношение значений переменных до вызова функции и значений после вызова функции:
+\begin{lstlisting}
+variable
+	a, b : Int
+value
+	swap : Unit -> write a, b  Unit
+	swap()
+	post
+		a = b' /\ b = a'
+\end{lstlisting}
+
+Штрихованные переменные --- это значения переменных \textbf{до} вызова функции.
 
 \section{Контрольная работа №1}
 
 примеры задач
 
 
-%старое!
-\section{Функции в языках спецификации}
-
-    \input{basis/funcs}
+%старое \section{Функции в языках спецификации}
+%старое  \input{basis/funcs}
 
     \section*{Задачи}
 
@@ -386,6 +743,14 @@ end
 
 
 \chapter{Контрактные спецификации}
+
+% тут впервые появляется такая вещь, как СВОЙСТВО функций (до этого про свойства не говорили).
+
+% в этой главе появляется понятие о полноте описания
+% (полное для одной цели описание может быть неполным для другой!)
+% и о недоспецификации (т.е. превыражения!)
+
+%%% на мой взгляд разговор о недетерминированных функциях без упоминания о параллельности и каналах имеет мало смысла !!!
 
 \section{Условия корректности систем}
 
@@ -605,12 +970,6 @@ end
 % январь-2011
 ..............TODO
 
-
-\section{Множества, списки, отображения}
-
-.......TODO вступление, что для выражения свойств данных нужно промоделировать эти данные при помощи простейших средств типа множеств, списков, отображений....
-
-\input{model/setlist}  % with problems
 
 \section{Уточнение требований при помощи модельных спецификаций}
 %\section{Уточнение требований при помощи моделеориентированных спецификаций}
