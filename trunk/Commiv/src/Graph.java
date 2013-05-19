@@ -41,6 +41,10 @@ public class Graph {
 	}
 	
 	public void printGraph(int start, final String filePath) throws IOException {
+		assert 0 <= start;
+		assert start < vertexCount;
+		assert filePath != null;
+		
 		final PrintWriter writer = new PrintWriter(new FileWriter(filePath));
 		
 		writer.print(vertexCount);
