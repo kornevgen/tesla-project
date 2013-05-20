@@ -10,7 +10,7 @@ public class SimpleGenerator {
 		
 		final Graph test = new Graph(vertexCount);
 		
-		List<Integer> hamcycle = new HamGenerator().generateHamilton(vertexCount);
+		List<Integer> hamcycle = new HamGenerator(vertexCount).nextHamilton();
 		assert hamcycle.size() == vertexCount + 1;
 		assert hamcycle.get(0) == hamcycle.get(vertexCount);
 		
