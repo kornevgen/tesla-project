@@ -84,13 +84,13 @@ public class Graph {
 		return edgesCount;
 	}
 
-	public void addCycle(final List<Integer> cycle, final int price) {
+	public void addCycle(final List<Integer> cycle, final PriceGenerator priceGenerator) {
 		assert cycle != null;
 		assert cycle.size() > 0;
 		assert cycle.get(0) == cycle.get(cycle.size() - 1);
 		
 		for(int i = 0; i < cycle.size() - 1; i++) {
-			addEdge(cycle.get(i), cycle.get(i+1), price);
+			addEdge(cycle.get(i), cycle.get(i+1), priceGenerator.nextPrice());
 		}
 	}
 }

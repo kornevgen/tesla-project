@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.util.List;
+import java.util.Random;
 
 
 public class App {
@@ -24,20 +25,23 @@ public class App {
 		int testNumber = 3;
 		final FileNameGenerator f = new FileNameGenerator(".dat");
 
-		for(int i = 0; i < simpleGraphs; i++) {
-			for(int v : vertexesCounts) {
-				new SimpleGenerator().generate(v, f.get(testNumber++));
-			}
-		}
-		
-		for(int i = 0; i < randomGraphs; i++) {
-			for(int v : vertexesCounts) {
-				new RandomGenerator().generate(v, f.get(testNumber++));
-			}
-		}
+//		for(int i = 0; i < simpleGraphs; i++) {
+//			for(int v : vertexesCounts) {
+//				new SimpleGenerator().generate(v, f.get(testNumber++));
+//			}
+//		}
+//		
+//		for(int i = 0; i < randomGraphs; i++) {
+//			for(int v : vertexesCounts) {
+//				new RandomGenerator().generate(v, f.get(testNumber++));
+//			}
+//		}
 
 		
 		for(final int vC : vertexesCounts) {
+			if (vC == 200) {
+				HamGenerator.random = new Random(System.currentTimeMillis());
+			}
 			for(final double fn : fullness) {
 				for(final int cC : cyclesCount) {
 					
@@ -46,25 +50,41 @@ public class App {
 					}
 					
 					final Graph graph = new Graph(vC);
+					final HamGenerator generator = new HamGenerator(vC);
 					
-					final List<Integer> cycle1 = new HamGenerator().generateHamilton(vC);
+					final List<Integer> cycle1 = generator.nextHamilton();
 					final int price = 50;
-					graph.addCycle(cycle1, price);
+					
+					final PriceGenerator priceGenerator =
+							(HamGenerator.random.nextInt(10) > 7) 
+								//? new ConstantPriceGenerator(price)
+								//: (HamGenerator.random.nextInt(10) > 5)
+								? new RandomPriceGenerator(price) 
+								: new SuperRandomPriceGenerator(price);
+							
+					graph.addCycle(cycle1, priceGenerator);
 					
 					for(int i = 0; i < cC - 1; i++) {
-						graph.addCycle(new HamGenerator().generateHamilton(vC), price);
+						final List<Integer> cycle = generator.nextHamilton();
+						if (cycle == null) {
+							System.err.println("Couldn't generate cycle for vC = " + vC + " and cC = " + cC);
+							break;
+						} else {
+							graph.addCycle(cycle, priceGenerator);
+						}
 					}
 					
 					while(graph.getEdgesCount() < fn * vC * vC) {
-						//TODO generate only different cycles !!!!!!!
 						graph.addEdge(
 								HamGenerator.random.nextInt(vC),
 								HamGenerator.random.nextInt(vC),
-								price);
+								priceGenerator.nextPrice());
 					}
-					
+
 					try {
 						graph.printGraph(cycle1.get(0), f.get(testNumber++));
+						
+						System.out.println("Generated: vC = " + vC + " and cC = " + cC + ": all " + testNumber + " tests");
 					} catch (IOException e) {
 						e.printStackTrace();
 					}

@@ -7,7 +7,7 @@ public class RandomGenerator {
 	public void generate(final int vertexCount, final String filePath) {
 		
 		// generate hamiltonian
-		final List<Integer> hamcycle = new HamGenerator().generateHamilton(vertexCount);
+		final List<Integer> hamcycle = new HamGenerator(vertexCount).nextHamilton();
 
 		final Graph result = new Graph(vertexCount);
 		final int price = 50; 
