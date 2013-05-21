@@ -55,11 +55,18 @@ public class App {
 		test4.fullness = 0.5;
 		test4.cyclesCount = 30;
 		test4.priceGenerator = new SuperRandomPriceGenerator(600);
-		
-		generate_test(test1, f, 3);
-		generate_test(test2, f, 4);
-		generate_test(test3, f, 5);
-		generate_test(test4, f, 6);
+
+		final TestData test5 = new TestData();
+		test5.vertexCount = 100;
+		test5.fullness = 0.97;
+		test5.cyclesCount = 15;
+		test5.priceGenerator = new RandomPriceGenerator(50);
+
+//		generate_test(test1, f, 3);
+//		generate_test(test2, f, 4);
+//		generate_test(test3, f, 5);
+		generate_test(test4, f, 3);
+		generate_test(test5, f, 4);
 		
 		
 		return;
