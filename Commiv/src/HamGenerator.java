@@ -9,16 +9,16 @@ import java.util.Set;
 public class HamGenerator {
 
 	public HamGenerator(int vertexCount) {
-		alreadyGeneratedCycles = new HashSet<>();
+		alreadyGeneratedCycles = new HashSet<List<Integer>>();
 		this.vertexCount = vertexCount;
 	}
 	
 	public static Random random = new Random(System.currentTimeMillis());
 	
 	public List<Integer> nextHamilton() {
-		final List<Integer> result = new ArrayList<>();
+		final List<Integer> result = new ArrayList<Integer>();
 
-		final Set<Integer> domain = new HashSet<>();
+		final Set<Integer> domain = new HashSet<Integer>();
 		
 		for(int i = 0; i < vertexCount; i++) {
 			domain.add(i);
@@ -78,7 +78,7 @@ public class HamGenerator {
 	}
 	
 	private Set<Integer> calculatePossibleNexts(int element, Set<Integer> domain) {
-		final Set<Integer> nexts = new HashSet<>(domain);
+		final Set<Integer> nexts = new HashSet<Integer>(domain);
 		
 		
 		for(final List<Integer> cycle : alreadyGeneratedCycles) {
@@ -97,7 +97,7 @@ public class HamGenerator {
 		assert max > 0;
 		// assert all elements e of the set : 0 <= e < max
 
-		final List<Integer> all = new ArrayList<>();
+		final List<Integer> all = new ArrayList<Integer>();
 		for(int i = 0; i < max; i++) {
 			all.add(i);
 		}

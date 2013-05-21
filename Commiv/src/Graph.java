@@ -14,8 +14,8 @@ public class Graph {
 	public Graph(int vertexCount) {
 		this.vertexCount = vertexCount;
 		this.edgesCount = 0;
-		this.edges = new HashMap<>();
-		this.prices = new HashMap<>();
+		this.edges = new HashMap<Integer, Set<Integer>>();
+		this.prices = new HashMap<Edge, Integer>();
 	}
 	
 	public void addEdge(int from, int to, int price) {
@@ -35,7 +35,7 @@ public class Graph {
 				edgesCount ++;
 			}
 		} else {
-			edges.put(from, new HashSet<>(Arrays.asList(to))) ;
+			edges.put(from, new HashSet<Integer>(Arrays.asList(to))) ;
 			prices.put(new Edge(from, to), price);
 			edgesCount ++;
 		}
